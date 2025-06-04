@@ -8,10 +8,10 @@ import (
 
 	// 注册所有处理器
 	_ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
-	_ "go.xbrother.com/nix-operator/pkg/handlers/network"
-	_ "go.xbrother.com/nix-operator/pkg/handlers/serial"
-	_ "go.xbrother.com/nix-operator/pkg/handlers/time"
-	_ "go.xbrother.com/nix-operator/pkg/handlers/udev"
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/network"
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/serial"
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/time"
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/udev"
 )
 
 func main() {

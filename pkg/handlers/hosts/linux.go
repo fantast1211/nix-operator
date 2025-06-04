@@ -3,6 +3,7 @@ package hosts
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -22,6 +23,10 @@ type HostEntry struct {
 	Hostnames []string `json:"hostnames"`
 }
 
+type HostsSpec struct {
+	Hosts []HostEntry `json:"hosts"`
+}
+
 func init() {
 	controller.RegisterHandler("HostsConfiguration", &LinuxHostsHandler{})
 }
@@ -37,16 +42,20 @@ func (h *LinuxHostsHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
 }
 
-func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) error {
+func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
 	// 读取现有的 hosts 文件
 	currentEntries, err := h.getCurrentHosts()
 	if err != nil {
-		return fmt.Errorf("failed to read current hosts: %v", err)
+		return nil, fmt.Errorf("failed to read current hosts: %v", err)
 	}
 
+	var spec HostsSpec
+	if err := json.Unmarshal(cfg.Spec, &spec); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal hosts spec: %v", err)
+	}
 	// 转换期望的配置
-	desiredEntries := make([]hostEntry, len(cfg.Spec.Network.Hosts))
-	for i, host := range cfg.Spec.Network.Hosts {
+	desiredEntries := make([]hostEntry, len(spec.Hosts))
+	for i, host := range spec.Hosts {
 		desiredEntries[i] = hostEntry{
 			IP:        host.IP,
 			Hostnames: host.Hostnames,
@@ -55,7 +64,8 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceC
 
 	// 比较现有配置和期望配置
 	if h.areHostsEqual(currentEntries, desiredEntries) {
-		return nil // 配置一致，无需更新
+		// 配置一致，无需更新
+		return nil, nil
 	}
 
 	// 生成新的 hosts 内容
@@ -69,7 +79,19 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceC
 	}
 
 	// 原子性写入文件
-	return utils.AtomicWriteFile([]byte(content.String()), "/etc/hosts", 0644)
+	utils.AtomicWriteFile([]byte(content.String()), "/etc/hosts", 0644)
+
+	// 构造成功的ReconcileResult
+	result := &controller.ReconcileResult{
+		Effective: cfg,
+		Status: &config.ResourceStatus{
+			Phase:   "Ready",
+			Reason:  "HostsUpdated",
+			Message: "Successfully updated /etc/hosts file",
+		},
+	}
+
+	return result, nil
 }
 
 func (h *LinuxHostsHandler) getCurrentHosts() ([]hostEntry, error) {
