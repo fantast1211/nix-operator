@@ -2,36 +2,24 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"go.xbrother.com/nix-operator/pkg/config"
 
 	"github.com/fsnotify/fsnotify"
 )
 
-type OSInfo struct {
-	ID         string // 发行版ID，如 "ubuntu", "centos"
-	VersionID  string // 发行版版本，如 "20.04", "7"
-	KernelName string // 内核名称，如 "Linux"
-	KernelVer  string // 内核版本
-}
-
+// Controller 是系统配置控制器，负责管理和调谐系统配置
 type Controller struct {
 	configDir string
 	handlers  map[string]Handler // key 是处理器类型
 	osInfo    OSInfo
 }
 
-type ReconcileResult struct {
-	Effective *config.ResourceConfig
-	Status    *config.ResourceStatus
-}
-
+// Handler 是配置处理器接口，负责处理特定类型的配置
 type Handler interface {
 	// Match 检查是否支持该操作系统
 	Match(osInfo OSInfo) bool
@@ -46,6 +34,7 @@ func RegisterHandler(typeName string, handler Handler) {
 	handlerFactories[typeName] = append(handlerFactories[typeName], handler)
 }
 
+// NewController 创建一个新的控制器实例
 func NewController(configDir string) (*Controller, error) {
 	osInfo, err := getOSInfo()
 	if err != nil {
@@ -92,39 +81,7 @@ func NewController(configDir string) (*Controller, error) {
 	}, nil
 }
 
-func getOSInfo() (OSInfo, error) {
-	data, err := os.ReadFile("/etc/os-release")
-	if err != nil {
-		return OSInfo{}, err
-	}
-
-	info := OSInfo{}
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		value := strings.Trim(parts[1], "\"")
-		switch parts[0] {
-		case "ID":
-			info.ID = value
-		case "VERSION_ID":
-			info.VersionID = value
-		}
-	}
-
-	// 获取内核信息
-	kernel, err := os.ReadFile("/proc/sys/kernel/osrelease")
-	if err != nil {
-		return OSInfo{}, err
-	}
-	info.KernelVer = strings.TrimSpace(string(kernel))
-	info.KernelName = "Linux" // 可以根据需要扩展
-
-	return info, nil
-}
-
+// Run 启动控制器，监控配置目录并处理配置变更
 func (c *Controller) Run() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -170,69 +127,4 @@ func (c *Controller) Run() error {
 
 	// 保持运行
 	select {}
-}
-
-func (c *Controller) reconcile() {
-	ctx := context.Background()
-
-	// 扫描配置目录中的所有配置文件
-	err := filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// 跳过目录和非YAML/JSON文件
-		if info.IsDir() {
-			return nil
-		}
-
-		ext := filepath.Ext(path)
-		if ext != ".json" {
-			return nil
-		}
-
-		// 加载并处理配置文件
-		cfg, err := loadConfigFile(path)
-		if err != nil {
-			log.Printf("Error loading config file %s: %v", path, err)
-			return nil
-		}
-
-		// 查找对应的处理器
-		handler, exists := c.handlers[cfg.Kind]
-		if !exists {
-			log.Printf("No handler found for kind: %s", cfg.Kind)
-			return nil
-		}
-
-		// 执行调谐
-		result, err := handler.Reconcile(ctx, cfg)
-		if err != nil {
-			log.Printf("Reconciliation error for %s: %v", path, err)
-		}
-
-		if result.Status != nil {
-			log.Printf("Reconciliation status for %s: %s", path, result.Status.Phase)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		log.Printf("Error walking config directory: %v", err)
-	}
-}
-
-func loadConfigFile(path string) (*config.ResourceConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg config.ResourceConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
 }

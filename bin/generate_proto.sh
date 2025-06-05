@@ -19,18 +19,17 @@ protoc \
   --go-grpc_out=. --go-grpc_opt=module=go.xbrother.com/nix-operator \
   --grpc-gateway_out=. --grpc-gateway_opt=module=go.xbrother.com/nix-operator \
   --openapiv2_out=doc/api \
-  api/system/v1/resource.proto
-
+  api/system/v1/*.proto
 # 生成 system.proto
-echo "生成 system.proto 相关文件..."
-protoc \
-  -I api \
-  -I api/third_party \
-  --go_out=. --go_opt=module=go.xbrother.com/nix-operator \
-  --go-grpc_out=. --go-grpc_opt=module=go.xbrother.com/nix-operator \
-  --grpc-gateway_out=. --grpc-gateway_opt=module=go.xbrother.com/nix-operator \
-  --openapiv2_out=doc/api \
-  api/system/v1/system.proto
+# echo "生成 system.proto 相关文件..."
+# protoc \
+#   -I api \
+#   -I api/third_party \
+#   --go_out=. --go_opt=module=go.xbrother.com/nix-operator \
+#   --go-grpc_out=. --go-grpc_opt=module=go.xbrother.com/nix-operator \
+#   --grpc-gateway_out=. --grpc-gateway_opt=module=go.xbrother.com/nix-operator \
+#   --openapiv2_out=doc/api \
+#   api/system/v1/system.proto
 
 # 移动生成的文件到正确位置
 echo "整理生成的文件..."
