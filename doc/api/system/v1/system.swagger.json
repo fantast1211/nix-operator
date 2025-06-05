@@ -1,0 +1,196 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "system/v1/system.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "SystemService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/network_interfaces": {
+      "get": {
+        "summary": "获取所有网卡",
+        "operationId": "SystemService_ListNetworkInterfaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNetworkInterfacesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "localOnly",
+            "description": "是否只列出本地网卡",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SystemService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1IPv4Config": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "title": "IP 地址和子网掩码，如 192.168.1.100/24"
+        },
+        "gateway": {
+          "type": "string",
+          "title": "网关地址"
+        },
+        "dhcpEnabled": {
+          "type": "boolean",
+          "title": "是否启用 DHCP"
+        }
+      },
+      "title": "IPv4 配置"
+    },
+    "v1IPv6Config": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "title": "IPv6 地址和前缀长度，如 2001:db8::1/64"
+        },
+        "gateway": {
+          "type": "string",
+          "title": "IPv6 网关"
+        },
+        "slaacEnabled": {
+          "type": "boolean",
+          "title": "是否启用 SLAAC"
+        }
+      },
+      "title": "IPv6 配置"
+    },
+    "v1InterfaceStatus": {
+      "type": "string",
+      "enum": [
+        "Unknown",
+        "Up",
+        "Down"
+      ],
+      "default": "Unknown",
+      "title": "接口状态"
+    },
+    "v1ListNetworkInterfacesResponse": {
+      "type": "object",
+      "properties": {
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NetworkInterface"
+          }
+        }
+      }
+    },
+    "v1NetworkInterface": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "$ref": "#/definitions/v1NodeSelector",
+          "title": "节点选择器"
+        },
+        "name": {
+          "type": "string",
+          "title": "接口名称，如 eth0, ens33"
+        },
+        "ipv4": {
+          "$ref": "#/definitions/v1IPv4Config",
+          "title": "IPv4 配置"
+        },
+        "ipv6": {
+          "$ref": "#/definitions/v1IPv6Config",
+          "title": "IPv6 配置"
+        },
+        "mtu": {
+          "type": "integer",
+          "format": "int32",
+          "title": "MTU 大小"
+        },
+        "macAddress": {
+          "type": "string",
+          "title": "MAC 地址"
+        },
+        "status": {
+          "$ref": "#/definitions/v1InterfaceStatus",
+          "title": "接口状态"
+        }
+      },
+      "title": "网络接口配置"
+    },
+    "v1NodeSelector": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "title": "主机名匹配"
+        },
+        "macAddress": {
+          "type": "string",
+          "title": "MAC 地址匹配"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "标签选择器"
+        }
+      },
+      "title": "节点选择器"
+    }
+  }
+}

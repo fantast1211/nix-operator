@@ -26,7 +26,8 @@ type Metadata struct {
 }
 
 type ResourceStatus struct {
-	Phase   string `json:"phase"`
-	Reason  string `json:"reason"`
-	Message string `json:"message"`
+	Phase             string `json:"phase"`
+	Reason            string `json:"reason"`
+	Message           string `json:"message"`
+	LastReconcileTime string `json:"lastReconcileTime"`
 }

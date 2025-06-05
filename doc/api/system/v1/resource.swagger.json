@@ -1,0 +1,255 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "system/v1/resource.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "HardwareConfigService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/resources": {
+      "get": {
+        "summary": "获取所有资源配置",
+        "operationId": "HardwareConfigService_ListResourceConfigs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListResourceConfigsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HardwareConfigService"
+        ]
+      }
+    },
+    "/v1/resources/{name}": {
+      "get": {
+        "summary": "获取资源配置",
+        "operationId": "HardwareConfigService_GetResourceConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Resource"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "HardwareConfigService"
+        ]
+      },
+      "put": {
+        "summary": "更新资源配置",
+        "operationId": "HardwareConfigService_UpdateResourceConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Resource"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/HardwareConfigServiceUpdateResourceConfigBody"
+            }
+          }
+        ],
+        "tags": [
+          "HardwareConfigService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "HardwareConfigServiceUpdateResourceConfigBody": {
+      "type": "object",
+      "properties": {
+        "resource": {
+          "$ref": "#/definitions/v1Resource"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ListResourceConfigsResponse": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Resource"
+          }
+        }
+      }
+    },
+    "v1Metadata": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "resourceVersion": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "creationTime": {
+          "type": "string"
+        },
+        "deletionTime": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1Resource": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/v1ResourceConfig"
+        },
+        "effectiveConfig": {
+          "$ref": "#/definitions/v1ResourceConfig"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ResourceStatus"
+        }
+      }
+    },
+    "v1ResourceConfig": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/definitions/v1Metadata"
+        },
+        "spec": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ResourceStatus": {
+      "type": "object",
+      "properties": {
+        "phase": {
+          "type": "string",
+          "title": "当前阶段"
+        },
+        "reason": {
+          "type": "string",
+          "title": "原因"
+        },
+        "message": {
+          "type": "string",
+          "title": "消息"
+        },
+        "lastReconcileTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "最后同步时间"
+        }
+      }
+    }
+  }
+}
