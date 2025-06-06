@@ -91,13 +91,21 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceC
 		}, nil
 	}
 
+	// 获取当前主机名
+	currentHostname, err := h.getCurrentHostname(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current hostname: %v", err)
+	}
+
 	// 准备模板数据
 	templateData := struct {
-		CommentHeader string
-		Hosts         []hostEntry
+		CommentHeader   string
+		CurrentHostname string
+		Hosts           []hostEntry
 	}{
-		CommentHeader: config.CommentHeader,
-		Hosts:         desiredEntries,
+		CommentHeader:   config.CommentHeader,
+		CurrentHostname: currentHostname,
+		Hosts:           desiredEntries,
 	}
 
 	// 渲染模板
@@ -251,4 +259,20 @@ func (h *LinuxHostsHandler) areHostsEqual(current, desired []hostEntry) bool {
 	}
 
 	return true
+}
+
+// getCurrentHostname 获取当前系统主机名
+func (h *LinuxHostsHandler) getCurrentHostname(ctx context.Context) (string, error) {
+	// 检查上下文是否已取消
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
+	// 使用标准库获取主机名
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname: %v", err)
+	}
+
+	return hostname, nil
 }

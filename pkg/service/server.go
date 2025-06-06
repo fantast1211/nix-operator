@@ -236,16 +236,15 @@ func convertFromAPIResource(apiResource *v1.Resource) (*config.ResourceConfig, e
 		Kind:       apiResource.Config.Kind,
 	}
 
-	// 转换元数据
+	// 转换元数据，但忽略版本和生成号相关字段
 	if apiResource.Config.Metadata != nil {
 		cfg.Metadata = config.Metadata{
-			Name:            apiResource.Config.Metadata.Name,
-			ResourceVersion: apiResource.Config.Metadata.ResourceVersion,
-			Generation:      int(apiResource.Config.Metadata.Generation),
-			CreationTime:    apiResource.Config.Metadata.CreationTime,
-			DeletionTime:    apiResource.Config.Metadata.DeletionTime,
-			Labels:          apiResource.Config.Metadata.Labels,
-			Annotations:     apiResource.Config.Metadata.Annotations,
+			Name: apiResource.Config.Metadata.Name,
+			// ResourceVersion和Generation由服务器端控制，不接受客户端传入的值
+			CreationTime: apiResource.Config.Metadata.CreationTime,
+			DeletionTime: apiResource.Config.Metadata.DeletionTime,
+			Labels:       apiResource.Config.Metadata.Labels,
+			Annotations:  apiResource.Config.Metadata.Annotations,
 		}
 	}
 

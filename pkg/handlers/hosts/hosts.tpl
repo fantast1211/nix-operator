@@ -3,8 +3,8 @@
 # localhost is used to configure the loopback interface
 # when the system is booting. Do not change this entry.
 ##
-127.0.0.1 localhost
-::1 localhost ip6-localhost ip6-loopback
+127.0.0.1 localhost {{.CurrentHostname}}
+::1 localhost ip6-localhost ip6-loopback {{.CurrentHostname}}
 
 # The following lines are desirable for IPv6 capable hosts
 ff02::1 ip6-allnodes

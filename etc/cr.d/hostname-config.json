@@ -1,0 +1,10 @@
+{
+  "apiVersion": "sysconfig.operator/v1",
+  "kind": "HostnameConfiguration",
+  "metadata": {
+    "name": "hostname-config"
+  },
+  "spec": {
+    "hostname": "test-hostname333"
+  }
+}

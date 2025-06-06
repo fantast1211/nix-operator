@@ -1,0 +1,38 @@
+{
+  "apiVersion": "sysconfig.operator/v1",
+  "kind": "HostsConfiguration",
+  "metadata": {
+    "name": "hosts-config",
+    "resourceVersion": "19",
+    "generation": 10,
+    "creationTime": "",
+    "deletionTime": "",
+    "labels": null,
+    "annotations": null
+  },
+  "spec": {
+    "hosts": [
+      {
+        "hostnames": [
+          "host1.example.com",
+          "host1"
+        ],
+        "ip": "192.168.1.10"
+      },
+      {
+        "hostnames": [
+          "host2.example.com",
+          "host2"
+        ],
+        "ip": "192.168.1.11"
+      },
+      {
+        "hostnames": [
+          "newhost.example.com",
+          "newhost1"
+        ],
+        "ip": "192.168.1.12"
+      }
+    ]
+  }
+}

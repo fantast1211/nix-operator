@@ -47,6 +47,7 @@ func NewController(configDir string) (*Controller, error) {
 	requiredTypes := []string{
 		"network",
 		"HostsConfiguration",
+		"HostnameConfiguration",
 		"time",
 		"serial",
 		"udev",
