@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/Metadata",
+    "definitions": {
+        "Metadata": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "resource_version": {
+                    "type": "string"
+                },
+                "generation": {
+                    "type": "integer"
+                },
+                "creation_time": {
+                    "type": "string"
+                },
+                "deletion_time": {
+                    "type": "string"
+                },
+                "labels": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object"
+                },
+                "annotations": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+        }
+    }
+}

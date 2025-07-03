@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/IPv6Config",
+    "definitions": {
+        "IPv6Config": {
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "description": "IPv6 地址和前缀长度，如 2001:db8::1/64"
+                },
+                "gateway": {
+                    "type": "string",
+                    "description": "IPv6 网关"
+                },
+                "slaac_enabled": {
+                    "type": "boolean",
+                    "description": "是否启用 SLAAC"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "I Pv 6 Config",
+            "description": "IPv6 配置"
+        }
+    }
+}

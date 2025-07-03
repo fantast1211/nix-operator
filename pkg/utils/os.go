@@ -2,44 +2,37 @@ package utils
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"strings"
 )
 
 type NodeSelector struct {
-	MACAddress string `yaml:"macAddress"`
-	Hostname   string `yaml:"hostname"`
+	MachineID string `yaml:"machine-id" json:"machine-id"`
 }
 
 func MatchNodeSelector(selector NodeSelector) (bool, error) {
-	if selector.Hostname != "" {
-		hostname, err := os.Hostname()
-		if err != nil {
-			return false, fmt.Errorf("failed to get hostname: %v", err)
-		}
-		if hostname != selector.Hostname {
-			return false, nil
-		}
+	// 如果没有指定MachineID，则认为匹配所有节点
+	if selector.MachineID == "" {
+		return true, nil
 	}
 
-	if selector.MACAddress != "" {
-		interfaces, err := net.Interfaces()
-		if err != nil {
-			return false, fmt.Errorf("failed to get network interfaces: %v", err)
-		}
-
-		macFound := false
-		for _, iface := range interfaces {
-			if strings.EqualFold(iface.HardwareAddr.String(), selector.MACAddress) {
-				macFound = true
-				break
-			}
-		}
-		if !macFound {
-			return false, nil
-		}
+	// 读取本机的machine-id
+	machineID, err := readMachineID()
+	if err != nil {
+		return false, fmt.Errorf("failed to get machine ID: %v", err)
 	}
 
-	return true, nil
+	// 比较machine-id是否匹配
+	return machineID == selector.MachineID, nil
+}
+
+// 读取机器ID的函数
+func readMachineID() (string, error) {
+	// 从/etc/machine-id读取
+	data, err := os.ReadFile("/etc/machine-id")
+	if err != nil {
+		return "", fmt.Errorf("failed to read machine ID: %v", err)
+	}
+
+	return strings.TrimSpace(string(data)), nil
 }

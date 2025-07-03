@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/ResourceStatus",
+    "definitions": {
+        "ResourceStatus": {
+            "properties": {
+                "phase": {
+                    "type": "string",
+                    "description": "当前阶段"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "原因"
+                },
+                "message": {
+                    "type": "string",
+                    "description": "消息"
+                },
+                "last_reconcile_time": {
+                    "type": "string",
+                    "description": "最后同步时间",
+                    "format": "date-time"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Status"
+        }
+    }
+}

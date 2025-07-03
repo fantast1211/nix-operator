@@ -16,6 +16,108 @@
     "application/json"
   ],
   "paths": {
+    "/v1/hosts_configurations": {
+      "get": {
+        "summary": "获取所有hosts配置",
+        "operationId": "SystemService_ListHostsConfigurations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListHostsConfigurationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "localOnly",
+            "description": "是否只列出本地配置",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SystemService"
+        ]
+      }
+    },
+    "/v1/hosts_configurations/{name}": {
+      "get": {
+        "summary": "获取单个hosts配置",
+        "operationId": "SystemService_GetHostsConfiguration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetHostsConfigurationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "配置名称",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SystemService"
+        ]
+      },
+      "put": {
+        "summary": "更新hosts配置",
+        "operationId": "SystemService_UpdateHostsConfiguration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateHostsConfigurationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "配置名称",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SystemServiceUpdateHostsConfigurationBody"
+            }
+          }
+        ],
+        "tags": [
+          "SystemService"
+        ]
+      }
+    },
     "/v1/network_interfaces": {
       "get": {
         "summary": "获取所有网卡",
@@ -47,9 +149,99 @@
           "SystemService"
         ]
       }
+    },
+    "/v1/network_interfaces/{name}": {
+      "get": {
+        "summary": "获取单个网络接口",
+        "operationId": "SystemService_GetNetworkInterface",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetNetworkInterfaceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "接口名称",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SystemService"
+        ]
+      },
+      "put": {
+        "summary": "更新网络接口配置",
+        "operationId": "SystemService_UpdateNetworkInterface",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateNetworkInterfaceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "接口名称",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SystemServiceUpdateNetworkInterfaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "SystemService"
+        ]
+      }
     }
   },
   "definitions": {
+    "SystemServiceUpdateHostsConfigurationBody": {
+      "type": "object",
+      "properties": {
+        "configuration": {
+          "$ref": "#/definitions/v1HostsConfiguration",
+          "title": "hosts配置"
+        }
+      },
+      "title": "更新hosts配置请求"
+    },
+    "SystemServiceUpdateNetworkInterfaceBody": {
+      "type": "object",
+      "properties": {
+        "interface": {
+          "$ref": "#/definitions/v1NetworkInterface",
+          "title": "网络接口配置"
+        }
+      },
+      "title": "更新网络接口请求"
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -77,6 +269,69 @@
           }
         }
       }
+    },
+    "v1GetHostsConfigurationResponse": {
+      "type": "object",
+      "properties": {
+        "configuration": {
+          "$ref": "#/definitions/v1HostsConfiguration",
+          "title": "hosts配置"
+        }
+      },
+      "title": "获取单个hosts配置响应"
+    },
+    "v1GetNetworkInterfaceResponse": {
+      "type": "object",
+      "properties": {
+        "interface": {
+          "$ref": "#/definitions/v1NetworkInterface",
+          "title": "网络接口"
+        }
+      },
+      "title": "获取网络接口响应"
+    },
+    "v1HostEntry": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string",
+          "title": "IP地址"
+        },
+        "hostnames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "主机名列表"
+        }
+      },
+      "title": "Hosts条目"
+    },
+    "v1HostsConfiguration": {
+      "type": "object",
+      "properties": {
+        "nodeSelector": {
+          "$ref": "#/definitions/v1NodeSelector",
+          "title": "节点选择器"
+        },
+        "name": {
+          "type": "string",
+          "title": "配置名称"
+        },
+        "hostname": {
+          "type": "string",
+          "title": "主机名"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HostEntry"
+          },
+          "title": "hosts条目列表"
+        }
+      },
+      "title": "Hosts配置"
     },
     "v1IPv4Config": {
       "type": "object",
@@ -123,6 +378,19 @@
       ],
       "default": "Unknown",
       "title": "接口状态"
+    },
+    "v1ListHostsConfigurationsResponse": {
+      "type": "object",
+      "properties": {
+        "configurations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HostsConfiguration"
+          }
+        }
+      },
+      "title": "获取所有hosts配置响应"
     },
     "v1ListNetworkInterfacesResponse": {
       "type": "object",
@@ -191,6 +459,42 @@
         }
       },
       "title": "节点选择器"
+    },
+    "v1UpdateHostsConfigurationResponse": {
+      "type": "object",
+      "properties": {
+        "configuration": {
+          "$ref": "#/definitions/v1HostsConfiguration",
+          "title": "更新后的hosts配置"
+        },
+        "success": {
+          "type": "boolean",
+          "title": "操作状态"
+        },
+        "errorMessage": {
+          "type": "string",
+          "title": "错误信息，如果有"
+        }
+      },
+      "title": "更新hosts配置响应"
+    },
+    "v1UpdateNetworkInterfaceResponse": {
+      "type": "object",
+      "properties": {
+        "interface": {
+          "$ref": "#/definitions/v1NetworkInterface",
+          "title": "更新后的网络接口"
+        },
+        "success": {
+          "type": "boolean",
+          "title": "操作状态"
+        },
+        "errorMessage": {
+          "type": "string",
+          "title": "错误信息，如果有"
+        }
+      },
+      "title": "更新网络接口响应"
     }
   }
 }

@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/GetNetworkInterfaceRequest",
+    "definitions": {
+        "GetNetworkInterfaceRequest": {
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "接口名称"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Get Network Interface Request",
+            "description": "获取网络接口请求"
+        }
+    }
+}

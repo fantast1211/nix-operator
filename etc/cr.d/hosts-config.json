@@ -1,38 +1,51 @@
 {
-  "apiVersion": "sysconfig.operator/v1",
-  "kind": "HostsConfiguration",
-  "metadata": {
-    "name": "hosts-config",
-    "resourceVersion": "19",
-    "generation": 10,
-    "creationTime": "",
-    "deletionTime": "",
-    "labels": null,
-    "annotations": null
-  },
-  "spec": {
-    "hosts": [
-      {
-        "hostnames": [
-          "host1.example.com",
-          "host1"
-        ],
-        "ip": "192.168.1.10"
-      },
-      {
-        "hostnames": [
-          "host2.example.com",
-          "host2"
-        ],
-        "ip": "192.168.1.11"
-      },
-      {
-        "hostnames": [
-          "newhost.example.com",
-          "newhost1"
-        ],
-        "ip": "192.168.1.12"
-      }
-    ]
+    "apiVersion": "sysconfig.operator/v1",
+    "kind": "HostsConfiguration",
+    "metadata": {
+      "name": "hosts-config"
+    },
+    "spec": {
+      "interfaces": [
+        {
+          "nodeSelector": {
+            "machine-id": "1111"
+          },
+          "hostname": "example-host-1",
+          "hosts": [
+            {
+              "ip": "192.168.1.10",
+              "hostnames": ["server1", "server1.local"]
+            },
+            {
+              "ip": "192.168.1.11",
+              "hostnames": ["server2", "server2.local"]
+            },
+            {
+              "ip": "192.168.1.12",
+              "hostnames": ["server3", "server3.local"]
+            }
+          ]
+        },
+        {
+          "nodeSelector": {
+            "machine-id": "22222"
+          },
+          "hostname": "example-host-2",
+          "hosts": [
+            {
+              "ip": "192.168.1.10",
+              "hostnames": ["server1", "server1.local"]
+            },
+            {
+              "ip": "192.168.1.11",
+              "hostnames": ["server2", "server2.local"]
+            },
+            {
+              "ip": "192.168.1.13",
+              "hostnames": ["server4", "server4.local"]
+            }
+          ]
+        }
+      ]
+    }
   }
-}

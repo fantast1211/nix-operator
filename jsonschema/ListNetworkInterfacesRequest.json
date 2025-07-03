@@ -1,0 +1,17 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/ListNetworkInterfacesRequest",
+    "definitions": {
+        "ListNetworkInterfacesRequest": {
+            "properties": {
+                "local_only": {
+                    "type": "boolean",
+                    "description": "是否只列出本地网卡"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "List Network Interfaces Request"
+        }
+    }
+}

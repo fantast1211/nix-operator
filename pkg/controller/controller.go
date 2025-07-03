@@ -45,10 +45,9 @@ func NewController(configDir string) (*Controller, error) {
 
 	// 为每种类型选择合适的处理器
 	requiredTypes := []string{
-		"network",
+		"NetworkConfiguration",
 		"HostsConfiguration",
-		"HostnameConfiguration",
-		"time",
+		"TimeConfiguration",
 		"serial",
 		"udev",
 	}

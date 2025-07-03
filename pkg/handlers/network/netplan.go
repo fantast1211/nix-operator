@@ -42,7 +42,7 @@ func (np *Netplan) IsInstall(ctx context.Context) bool {
 	return err == nil
 }
 
-func (np *Netplan) findConfig(iface config.Interface) (string, error) {
+func (np *Netplan) findConfig(iface Interface) (string, error) {
 	files, err := os.ReadDir("/etc/netplan")
 	if err != nil {
 		return "", fmt.Errorf("failed to read netplan directory: %v", err)
@@ -82,7 +82,7 @@ func (np *Netplan) findConfig(iface config.Interface) (string, error) {
 	return fmt.Sprintf("/etc/netplan/99-%s.yaml", iface.Name), nil
 }
 
-func (np *Netplan) buildInterfaceConfig(iface config.Interface) NetplanInterface {
+func (np *Netplan) buildInterfaceConfig(iface Interface) NetplanInterface {
 	ifaceConfig := NetplanInterface{
 		MTU: iface.MTU,
 	}
@@ -117,7 +117,7 @@ func (np *Netplan) buildInterfaceConfig(iface config.Interface) NetplanInterface
 	return ifaceConfig
 }
 
-func (np *Netplan) Configure(ctx context.Context, iface config.Interface) error {
+func (np *Netplan) Configure(ctx context.Context, iface Interface) error {
 	configPath, err := np.findConfig(iface)
 	if err != nil {
 		return err

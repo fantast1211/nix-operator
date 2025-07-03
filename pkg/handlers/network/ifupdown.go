@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
-	_ "embed"
 
 	"go.xbrother.com/nix-operator/pkg/config"
 	"go.xbrother.com/nix-operator/pkg/utils"
@@ -26,7 +26,7 @@ func (ifd *Ifupdown) IsInstall(ctx context.Context) bool {
 	return err == nil
 }
 
-func (ifd *Ifupdown) findConfig(iface config.Interface) (string, error) {
+func (ifd *Ifupdown) findConfig(iface Interface) (string, error) {
 	// 检查主配置文件
 	mainConfig, err := os.ReadFile("/etc/network/interfaces")
 	if err == nil {
@@ -63,7 +63,7 @@ func (ifd *Ifupdown) findConfig(iface config.Interface) (string, error) {
 	return fmt.Sprintf("/etc/network/interfaces.d/%s", iface.Name), nil
 }
 
-func (ifd *Ifupdown) Configure(ctx context.Context, iface config.Interface) error {
+func (ifd *Ifupdown) Configure(ctx context.Context, iface Interface) error {
 	configPath, err := ifd.findConfig(iface)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (ifd *Ifupdown) Configure(ctx context.Context, iface config.Interface) erro
 	// 准备模板数据
 	data := struct {
 		CommentHeader string
-		Interface     config.Interface
+		Interface     Interface
 	}{
 		CommentHeader: config.CommentHeader,
 		Interface:     iface,

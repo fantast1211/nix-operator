@@ -24,7 +24,7 @@ func (nm *NetworkManager) IsInstall(ctx context.Context) bool {
 	return err == nil
 }
 
-func (nm *NetworkManager) Configure(ctx context.Context, iface config.Interface) error {
+func (nm *NetworkManager) Configure(ctx context.Context, iface Interface) error {
 	configPath := fmt.Sprintf("/etc/NetworkManager/system-connections/%s.nmconnection", iface.Name)
 
 	// 创建模板并添加自定义函数
@@ -40,7 +40,7 @@ func (nm *NetworkManager) Configure(ctx context.Context, iface config.Interface)
 	// 准备模板数据
 	data := struct {
 		CommentHeader string
-		Interface     config.Interface
+		Interface     Interface
 	}{
 		CommentHeader: config.CommentHeader,
 		Interface:     iface,

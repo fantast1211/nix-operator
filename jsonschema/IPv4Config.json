@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/IPv4Config",
+    "definitions": {
+        "IPv4Config": {
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "description": "IP 地址和子网掩码，如 192.168.1.100/24"
+                },
+                "gateway": {
+                    "type": "string",
+                    "description": "网关地址"
+                },
+                "dhcp_enabled": {
+                    "type": "boolean",
+                    "description": "是否启用 DHCP"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "I Pv 4 Config",
+            "description": "IPv4 配置"
+        }
+    }
+}

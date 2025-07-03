@@ -19,7 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SystemService_ListNetworkInterfaces_FullMethodName = "/xtopus.api.system.v1.SystemService/ListNetworkInterfaces"
+	SystemService_ListNetworkInterfaces_FullMethodName    = "/xtopus.api.system.v1.SystemService/ListNetworkInterfaces"
+	SystemService_GetNetworkInterface_FullMethodName      = "/xtopus.api.system.v1.SystemService/GetNetworkInterface"
+	SystemService_UpdateNetworkInterface_FullMethodName   = "/xtopus.api.system.v1.SystemService/UpdateNetworkInterface"
+	SystemService_ListHostsConfigurations_FullMethodName  = "/xtopus.api.system.v1.SystemService/ListHostsConfigurations"
+	SystemService_GetHostsConfiguration_FullMethodName    = "/xtopus.api.system.v1.SystemService/GetHostsConfiguration"
+	SystemService_UpdateHostsConfiguration_FullMethodName = "/xtopus.api.system.v1.SystemService/UpdateHostsConfiguration"
 )
 
 // SystemServiceClient is the client API for SystemService service.
@@ -30,6 +35,16 @@ const (
 type SystemServiceClient interface {
 	// 获取所有网卡
 	ListNetworkInterfaces(ctx context.Context, in *ListNetworkInterfacesRequest, opts ...grpc.CallOption) (*ListNetworkInterfacesResponse, error)
+	// 获取单个网络接口
+	GetNetworkInterface(ctx context.Context, in *GetNetworkInterfaceRequest, opts ...grpc.CallOption) (*GetNetworkInterfaceResponse, error)
+	// 更新网络接口配置
+	UpdateNetworkInterface(ctx context.Context, in *UpdateNetworkInterfaceRequest, opts ...grpc.CallOption) (*UpdateNetworkInterfaceResponse, error)
+	// 获取所有hosts配置
+	ListHostsConfigurations(ctx context.Context, in *ListHostsConfigurationsRequest, opts ...grpc.CallOption) (*ListHostsConfigurationsResponse, error)
+	// 获取单个hosts配置
+	GetHostsConfiguration(ctx context.Context, in *GetHostsConfigurationRequest, opts ...grpc.CallOption) (*GetHostsConfigurationResponse, error)
+	// 更新hosts配置
+	UpdateHostsConfiguration(ctx context.Context, in *UpdateHostsConfigurationRequest, opts ...grpc.CallOption) (*UpdateHostsConfigurationResponse, error)
 }
 
 type systemServiceClient struct {
@@ -50,6 +65,56 @@ func (c *systemServiceClient) ListNetworkInterfaces(ctx context.Context, in *Lis
 	return out, nil
 }
 
+func (c *systemServiceClient) GetNetworkInterface(ctx context.Context, in *GetNetworkInterfaceRequest, opts ...grpc.CallOption) (*GetNetworkInterfaceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetNetworkInterfaceResponse)
+	err := c.cc.Invoke(ctx, SystemService_GetNetworkInterface_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemServiceClient) UpdateNetworkInterface(ctx context.Context, in *UpdateNetworkInterfaceRequest, opts ...grpc.CallOption) (*UpdateNetworkInterfaceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateNetworkInterfaceResponse)
+	err := c.cc.Invoke(ctx, SystemService_UpdateNetworkInterface_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemServiceClient) ListHostsConfigurations(ctx context.Context, in *ListHostsConfigurationsRequest, opts ...grpc.CallOption) (*ListHostsConfigurationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListHostsConfigurationsResponse)
+	err := c.cc.Invoke(ctx, SystemService_ListHostsConfigurations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemServiceClient) GetHostsConfiguration(ctx context.Context, in *GetHostsConfigurationRequest, opts ...grpc.CallOption) (*GetHostsConfigurationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetHostsConfigurationResponse)
+	err := c.cc.Invoke(ctx, SystemService_GetHostsConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemServiceClient) UpdateHostsConfiguration(ctx context.Context, in *UpdateHostsConfigurationRequest, opts ...grpc.CallOption) (*UpdateHostsConfigurationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateHostsConfigurationResponse)
+	err := c.cc.Invoke(ctx, SystemService_UpdateHostsConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemServiceServer is the server API for SystemService service.
 // All implementations must embed UnimplementedSystemServiceServer
 // for forward compatibility.
@@ -58,6 +123,16 @@ func (c *systemServiceClient) ListNetworkInterfaces(ctx context.Context, in *Lis
 type SystemServiceServer interface {
 	// 获取所有网卡
 	ListNetworkInterfaces(context.Context, *ListNetworkInterfacesRequest) (*ListNetworkInterfacesResponse, error)
+	// 获取单个网络接口
+	GetNetworkInterface(context.Context, *GetNetworkInterfaceRequest) (*GetNetworkInterfaceResponse, error)
+	// 更新网络接口配置
+	UpdateNetworkInterface(context.Context, *UpdateNetworkInterfaceRequest) (*UpdateNetworkInterfaceResponse, error)
+	// 获取所有hosts配置
+	ListHostsConfigurations(context.Context, *ListHostsConfigurationsRequest) (*ListHostsConfigurationsResponse, error)
+	// 获取单个hosts配置
+	GetHostsConfiguration(context.Context, *GetHostsConfigurationRequest) (*GetHostsConfigurationResponse, error)
+	// 更新hosts配置
+	UpdateHostsConfiguration(context.Context, *UpdateHostsConfigurationRequest) (*UpdateHostsConfigurationResponse, error)
 	mustEmbedUnimplementedSystemServiceServer()
 }
 
@@ -70,6 +145,21 @@ type UnimplementedSystemServiceServer struct{}
 
 func (UnimplementedSystemServiceServer) ListNetworkInterfaces(context.Context, *ListNetworkInterfacesRequest) (*ListNetworkInterfacesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListNetworkInterfaces not implemented")
+}
+func (UnimplementedSystemServiceServer) GetNetworkInterface(context.Context, *GetNetworkInterfaceRequest) (*GetNetworkInterfaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNetworkInterface not implemented")
+}
+func (UnimplementedSystemServiceServer) UpdateNetworkInterface(context.Context, *UpdateNetworkInterfaceRequest) (*UpdateNetworkInterfaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateNetworkInterface not implemented")
+}
+func (UnimplementedSystemServiceServer) ListHostsConfigurations(context.Context, *ListHostsConfigurationsRequest) (*ListHostsConfigurationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListHostsConfigurations not implemented")
+}
+func (UnimplementedSystemServiceServer) GetHostsConfiguration(context.Context, *GetHostsConfigurationRequest) (*GetHostsConfigurationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHostsConfiguration not implemented")
+}
+func (UnimplementedSystemServiceServer) UpdateHostsConfiguration(context.Context, *UpdateHostsConfigurationRequest) (*UpdateHostsConfigurationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateHostsConfiguration not implemented")
 }
 func (UnimplementedSystemServiceServer) mustEmbedUnimplementedSystemServiceServer() {}
 func (UnimplementedSystemServiceServer) testEmbeddedByValue()                       {}
@@ -110,6 +200,96 @@ func _SystemService_ListNetworkInterfaces_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemService_GetNetworkInterface_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNetworkInterfaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemServiceServer).GetNetworkInterface(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemService_GetNetworkInterface_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemServiceServer).GetNetworkInterface(ctx, req.(*GetNetworkInterfaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemService_UpdateNetworkInterface_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateNetworkInterfaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemServiceServer).UpdateNetworkInterface(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemService_UpdateNetworkInterface_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemServiceServer).UpdateNetworkInterface(ctx, req.(*UpdateNetworkInterfaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemService_ListHostsConfigurations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListHostsConfigurationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemServiceServer).ListHostsConfigurations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemService_ListHostsConfigurations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemServiceServer).ListHostsConfigurations(ctx, req.(*ListHostsConfigurationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemService_GetHostsConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHostsConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemServiceServer).GetHostsConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemService_GetHostsConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemServiceServer).GetHostsConfiguration(ctx, req.(*GetHostsConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemService_UpdateHostsConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateHostsConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemServiceServer).UpdateHostsConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemService_UpdateHostsConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemServiceServer).UpdateHostsConfiguration(ctx, req.(*UpdateHostsConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemService_ServiceDesc is the grpc.ServiceDesc for SystemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -120,6 +300,26 @@ var SystemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListNetworkInterfaces",
 			Handler:    _SystemService_ListNetworkInterfaces_Handler,
+		},
+		{
+			MethodName: "GetNetworkInterface",
+			Handler:    _SystemService_GetNetworkInterface_Handler,
+		},
+		{
+			MethodName: "UpdateNetworkInterface",
+			Handler:    _SystemService_UpdateNetworkInterface_Handler,
+		},
+		{
+			MethodName: "ListHostsConfigurations",
+			Handler:    _SystemService_ListHostsConfigurations_Handler,
+		},
+		{
+			MethodName: "GetHostsConfiguration",
+			Handler:    _SystemService_GetHostsConfiguration_Handler,
+		},
+		{
+			MethodName: "UpdateHostsConfiguration",
+			Handler:    _SystemService_UpdateHostsConfiguration_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

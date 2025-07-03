@@ -1,0 +1,76 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/HostsConfiguration",
+    "definitions": {
+        "HostsConfiguration": {
+            "properties": {
+                "node_selector": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "additionalProperties": true,
+                    "description": "节点选择器"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "配置名称"
+                },
+                "hostname": {
+                    "type": "string",
+                    "description": "主机名"
+                },
+                "hosts": {
+                    "items": {
+                        "$ref": "#/definitions/xtopus.api.system.v1.HostEntry"
+                    },
+                    "type": "array",
+                    "description": "hosts条目列表"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Hosts Configuration",
+            "description": "Hosts配置"
+        },
+        "xtopus.api.system.v1.HostEntry": {
+            "properties": {
+                "ip": {
+                    "type": "string",
+                    "description": "IP地址"
+                },
+                "hostnames": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "description": "主机名列表"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Host Entry",
+            "description": "Hosts条目"
+        },
+        "xtopus.api.system.v1.NodeSelector": {
+            "properties": {
+                "hostname": {
+                    "type": "string",
+                    "description": "主机名匹配"
+                },
+                "mac_address": {
+                    "type": "string",
+                    "description": "MAC 地址匹配"
+                },
+                "labels": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object",
+                    "description": "标签选择器"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Node Selector",
+            "description": "节点选择器"
+        }
+    }
+}

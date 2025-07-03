@@ -12,7 +12,7 @@ import (
 	"go.xbrother.com/nix-operator/pkg/service"
 
 	// 注册所有处理器
-	_ "go.xbrother.com/nix-operator/pkg/handlers/hostname"
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/hostname"
 	_ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
 	// _ "go.xbrother.com/nix-operator/pkg/handlers/network"
 	// _ "go.xbrother.com/nix-operator/pkg/handlers/serial"

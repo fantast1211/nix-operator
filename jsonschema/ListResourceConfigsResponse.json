@@ -1,0 +1,116 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/ListResourceConfigsResponse",
+    "definitions": {
+        "ListResourceConfigsResponse": {
+            "properties": {
+                "resources": {
+                    "items": {
+                        "$ref": "#/definitions/xtopus.api.system.v1.Resource"
+                    },
+                    "type": "array"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "List Resource Configs Response"
+        },
+        "xtopus.api.system.v1.Metadata": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "resource_version": {
+                    "type": "string"
+                },
+                "generation": {
+                    "type": "integer"
+                },
+                "creation_time": {
+                    "type": "string"
+                },
+                "deletion_time": {
+                    "type": "string"
+                },
+                "labels": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object"
+                },
+                "annotations": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+        },
+        "xtopus.api.system.v1.Resource": {
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
+                    "additionalProperties": true
+                },
+                "effective_config": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
+                    "additionalProperties": true
+                },
+                "status": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceStatus",
+                    "additionalProperties": true
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource"
+        },
+        "xtopus.api.system.v1.ResourceConfig": {
+            "properties": {
+                "api_version": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.Metadata",
+                    "additionalProperties": true
+                },
+                "spec": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Config"
+        },
+        "xtopus.api.system.v1.ResourceStatus": {
+            "properties": {
+                "phase": {
+                    "type": "string",
+                    "description": "当前阶段"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "原因"
+                },
+                "message": {
+                    "type": "string",
+                    "description": "消息"
+                },
+                "last_reconcile_time": {
+                    "type": "string",
+                    "description": "最后同步时间",
+                    "format": "date-time"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Status"
+        }
+    }
+}

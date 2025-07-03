@@ -1,18 +1,15 @@
 package hosts
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
+	"syscall"
 	"text/template"
-	"time"
 
 	"go.xbrother.com/nix-operator/pkg/config"
 	"go.xbrother.com/nix-operator/pkg/controller"
@@ -21,6 +18,9 @@ import (
 
 //go:embed hosts.tpl
 var hostsTemplate string
+
+//go:embed hostname.tpl
+var hostnameTemplate string
 
 // 外部模板目录，用于高优先级覆盖
 const externalTemplateDir = "/etc/nix-operator/templates"
@@ -35,7 +35,13 @@ type HostEntry struct {
 }
 
 type HostsSpec struct {
-	Hosts []HostEntry `json:"hosts"`
+	Interfaces []HostInterface `json:"interfaces"`
+}
+
+type HostInterface struct {
+	NodeSelector utils.NodeSelector `json:"nodeSelector"`
+	Hostname     string             `json:"hostname"`
+	Hosts        []HostEntry        `json:"hosts"`
 }
 
 func init() {
@@ -53,226 +59,175 @@ func (h *LinuxHostsHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
 }
 
-func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
-	// 创建一个带超时的上下文
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+// 获取模板内容，优先使用外部模板
+func getTemplateContent(templateName, defaultContent string) (string, error) {
+	externalPath := filepath.Join(externalTemplateDir, templateName)
+	if _, err := os.Stat(externalPath); err == nil {
+		content, err := os.ReadFile(externalPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read external template %s: %v", externalPath, err)
+		}
+		return string(content), nil
+	}
+	return defaultContent, nil
+}
 
-	// 读取现有的 hosts 文件
-	currentEntries, err := h.getCurrentHosts(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read current hosts: %v", err)
+func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
+	// 解析hosts配置
+	var hostsSpec struct {
+		Interfaces []struct {
+			NodeSelector utils.NodeSelector `json:"nodeSelector"`
+			Hostname     string             `json:"hostname"`
+			Hosts        []HostEntry        `json:"hosts"`
+		} `json:"interfaces"`
 	}
 
-	var spec HostsSpec
-	if err := json.Unmarshal(cfg.Spec, &spec); err != nil {
+	// 将Spec转换为hosts配置
+	specBytes, err := json.Marshal(cfg.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal spec: %v", err)
+	}
+
+	if err := json.Unmarshal(specBytes, &hostsSpec); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal hosts spec: %v", err)
 	}
-	// 转换期望的配置
-	desiredEntries := make([]hostEntry, len(spec.Hosts))
-	for i, host := range spec.Hosts {
-		desiredEntries[i] = hostEntry{
-			IP:        host.IP,
-			Hostnames: host.Hostnames,
+
+	// 标记是否找到匹配的配置
+	configured := false
+
+	// 遍历所有接口配置
+	for _, iface := range hostsSpec.Interfaces {
+		// 检查节点选择器
+		match, err := utils.MatchNodeSelector(iface.NodeSelector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check node selector: %v", err)
 		}
+		if !match {
+			continue
+		}
+
+		// 匹配当前节点，应用配置
+		configured = true
+
+		// 处理hostname配置
+		if iface.Hostname != "" {
+			if err := h.configureHostname(ctx, iface.Hostname); err != nil {
+				return nil, fmt.Errorf("failed to configure hostname: %v", err)
+			}
+		}
+
+		// 处理hosts配置
+		if len(iface.Hosts) > 0 {
+			if err := h.configureHosts(ctx, iface.Hosts); err != nil {
+				return nil, fmt.Errorf("failed to configure hosts: %v", err)
+			}
+		}
+
+		// 找到匹配的配置后退出
+		break
 	}
 
-	// 比较现有配置和期望配置
-	if h.areHostsEqual(currentEntries, desiredEntries) {
-		// 配置一致，无需更新
+	if !configured {
 		return &controller.ReconcileResult{
-			Effective: cfg,
 			Status: &config.ResourceStatus{
-				Phase:             "Ready",
-				Reason:            "NoChangeNeeded",
-				Message:           "Hosts configuration is already up to date",
-				LastReconcileTime: time.Now().Format(time.RFC3339),
+				Phase:   "Skipped",
+				Reason:  "NoMatchingNodeSelector",
+				Message: "No matching node selector found for this host",
 			},
 		}, nil
 	}
 
-	// 获取当前主机名
-	currentHostname, err := h.getCurrentHostname(ctx)
+	return &controller.ReconcileResult{
+		Status: &config.ResourceStatus{
+			Phase:   "Ready",
+			Reason:  "Configured",
+			Message: "Hosts configuration applied successfully",
+		},
+	}, nil
+}
+
+func (h *LinuxHostsHandler) configureHostname(ctx context.Context, hostname string) error {
+	// 获取hostname模板
+	templateContent, err := getTemplateContent("hostname.tpl", hostnameTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current hostname: %v", err)
+		return err
+	}
+
+	// 解析模板
+	tmpl, err := template.New("hostname").Parse(templateContent)
+	if err != nil {
+		return fmt.Errorf("failed to parse hostname template: %v", err)
 	}
 
 	// 准备模板数据
-	templateData := struct {
-		CommentHeader   string
-		CurrentHostname string
-		Hosts           []hostEntry
+	data := struct {
+		Hostname string
 	}{
-		CommentHeader:   config.CommentHeader,
-		CurrentHostname: currentHostname,
-		Hosts:           desiredEntries,
+		Hostname: hostname,
 	}
 
 	// 渲染模板
-	content, err := h.renderHostsTemplate(ctx, templateData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to render hosts template: %v", err)
+	var content strings.Builder
+	if err := tmpl.Execute(&content, data); err != nil {
+		return fmt.Errorf("failed to execute hostname template: %v", err)
 	}
 
-	// 原子性写入文件
-	if err := utils.AtomicWriteFile([]byte(content), "/etc/hosts", 0644); err != nil {
-		return nil, fmt.Errorf("failed to write hosts file: %v", err)
+	desiredContent := content.String()
+
+	// 读取现有配置
+	currentContent, err := os.ReadFile("/etc/hostname")
+	if err == nil && string(currentContent) == desiredContent {
+		return nil // 配置相同，无需更新
 	}
 
-	// 构造成功的ReconcileResult
-	result := &controller.ReconcileResult{
-		Effective: cfg,
-		Status: &config.ResourceStatus{
-			Phase:             "Ready",
-			Reason:            "HostsUpdated",
-			Message:           "Successfully updated /etc/hosts file",
-			LastReconcileTime: time.Now().Format(time.RFC3339),
-		},
+	// 使用工具函数原子性写入文件
+	if err := utils.AtomicWriteFile([]byte(desiredContent), "/etc/hostname", 0644); err != nil {
+		return fmt.Errorf("failed to write hostname file: %v", err)
 	}
 
-	return result, nil
+	// 使用系统调用设置主机名
+	return h.setHostname(ctx, hostname)
 }
 
-func (h *LinuxHostsHandler) renderHostsTemplate(ctx context.Context, data interface{}) (string, error) {
-	// 检查上下文是否已取消
-	if err := ctx.Err(); err != nil {
-		return "", err
+func (h *LinuxHostsHandler) setHostname(ctx context.Context, hostname string) error {
+	// 使用系统调用设置主机名
+	return syscall.Sethostname([]byte(hostname))
+}
+
+func (h *LinuxHostsHandler) configureHosts(ctx context.Context, hosts []HostEntry) error {
+	// 获取hosts模板
+	templateContent, err := getTemplateContent("hosts.tpl", hostsTemplate)
+	if err != nil {
+		return err
 	}
-
-	// 首先检查是否有外部模板
-	externalTemplatePath := filepath.Join(externalTemplateDir, "hosts.tpl")
-	var tmplContent string
-
-	// 尝试读取外部模板
-	if _, err := os.Stat(externalTemplatePath); err == nil {
-		externalTemplateBytes, err := os.ReadFile(externalTemplatePath)
-		if err == nil {
-			tmplContent = string(externalTemplateBytes)
-		}
-	}
-
-	// 如果没有外部模板，使用嵌入的模板
-	if tmplContent == "" {
-		tmplContent = hostsTemplate
-	}
-
-	// 创建模板并添加自定义函数
-	tmpl := template.New("hosts").Funcs(template.FuncMap{
-		"join": strings.Join,
-	})
 
 	// 解析模板
-	tmpl, err := tmpl.Parse(tmplContent)
+	tmpl, err := template.New("hosts").Parse(templateContent)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse template: %v", err)
+		return fmt.Errorf("failed to parse hosts template: %v", err)
+	}
+
+	// 准备模板数据
+	data := struct {
+		Hosts []HostEntry
+	}{
+		Hosts: hosts,
 	}
 
 	// 渲染模板
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("failed to execute template: %v", err)
+	var content strings.Builder
+	if err := tmpl.Execute(&content, data); err != nil {
+		return fmt.Errorf("failed to execute hosts template: %v", err)
 	}
 
-	return buf.String(), nil
-}
+	desiredContent := content.String()
 
-func (h *LinuxHostsHandler) getCurrentHosts(ctx context.Context) ([]hostEntry, error) {
-	// 检查上下文是否已取消
-	if err := ctx.Err(); err != nil {
-		return nil, err
+	// 读取现有配置
+	currentContent, err := os.ReadFile("/etc/hosts")
+	if err == nil && string(currentContent) == desiredContent {
+		return nil // 配置相同，无需更新
 	}
 
-	file, err := os.Open("/etc/hosts")
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []hostEntry{}, nil
-		}
-		return nil, err
-	}
-	defer file.Close()
-
-	var entries []hostEntry
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		// 检查上下文是否已取消
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		line := strings.TrimSpace(scanner.Text())
-		// 跳过空行和注释
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		fields := strings.Fields(line)
-		if len(fields) >= 2 {
-			entries = append(entries, hostEntry{
-				IP:        fields[0],
-				Hostnames: fields[1:],
-			})
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return entries, nil
-}
-
-func (h *LinuxHostsHandler) areHostsEqual(current, desired []hostEntry) bool {
-	if len(current) != len(desired) {
-		return false
-	}
-
-	// 复制切片以避免修改原始数据
-	currentCopy := make([]hostEntry, len(current))
-	desiredCopy := make([]hostEntry, len(desired))
-	copy(currentCopy, current)
-	copy(desiredCopy, desired)
-
-	// 对每个条目的主机名进行排序
-	for i := range currentCopy {
-		slices.Sort(currentCopy[i].Hostnames)
-	}
-	for i := range desiredCopy {
-		slices.Sort(desiredCopy[i].Hostnames)
-	}
-
-	// 对条目进行排序（按IP地址）
-	slices.SortFunc(currentCopy, func(a, b hostEntry) int {
-		return strings.Compare(a.IP, b.IP)
-	})
-	slices.SortFunc(desiredCopy, func(a, b hostEntry) int {
-		return strings.Compare(a.IP, b.IP)
-	})
-
-	// 比较每个条目
-	for i := range currentCopy {
-		if currentCopy[i].IP != desiredCopy[i].IP {
-			return false
-		}
-		if !slices.Equal(currentCopy[i].Hostnames, desiredCopy[i].Hostnames) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// getCurrentHostname 获取当前系统主机名
-func (h *LinuxHostsHandler) getCurrentHostname(ctx context.Context) (string, error) {
-	// 检查上下文是否已取消
-	if err := ctx.Err(); err != nil {
-		return "", err
-	}
-
-	// 使用标准库获取主机名
-	hostname, err := os.Hostname()
-	if err != nil {
-		return "", fmt.Errorf("failed to get hostname: %v", err)
-	}
-
-	return hostname, nil
+	// 使用工具函数原子性写入文件
+	return utils.AtomicWriteFile([]byte(desiredContent), "/etc/hosts", 0644)
 }

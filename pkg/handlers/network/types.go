@@ -3,13 +3,11 @@ package network
 import (
 	"context"
 	"os/exec"
-
-	"go.xbrother.com/nix-operator/pkg/config"
 )
 
 type INetworkManager interface {
 	IsInstall(ctx context.Context) bool
-	Configure(ctx context.Context, iface config.Interface) error
+	Configure(ctx context.Context, iface Interface) error
 	ReloadIfy(ctx context.Context) error
 }
 

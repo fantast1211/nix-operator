@@ -245,9 +245,9 @@ func (c *Controller) GetResourceConfig(ctx context.Context, name string) (*Resou
 		return nil, fmt.Errorf("error searching for resource: %v", err)
 	}
 
-	if foundResource == nil {
-		return nil, fmt.Errorf("resource not found: %s", name)
-	}
+	// if foundResource == nil {
+	// 	return nil, nil
+	// }
 
 	return foundResource, nil
 }

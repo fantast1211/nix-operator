@@ -453,6 +453,647 @@ func (x *NodeSelector) GetLabels() map[string]string {
 	return nil
 }
 
+// 获取网络接口请求
+type GetNetworkInterfaceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 接口名称
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNetworkInterfaceRequest) Reset() {
+	*x = GetNetworkInterfaceRequest{}
+	mi := &file_system_v1_system_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNetworkInterfaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNetworkInterfaceRequest) ProtoMessage() {}
+
+func (x *GetNetworkInterfaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNetworkInterfaceRequest.ProtoReflect.Descriptor instead.
+func (*GetNetworkInterfaceRequest) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetNetworkInterfaceRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// 获取网络接口响应
+type GetNetworkInterfaceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 网络接口
+	Interface     *NetworkInterface `protobuf:"bytes,1,opt,name=interface,proto3" json:"interface,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNetworkInterfaceResponse) Reset() {
+	*x = GetNetworkInterfaceResponse{}
+	mi := &file_system_v1_system_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNetworkInterfaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNetworkInterfaceResponse) ProtoMessage() {}
+
+func (x *GetNetworkInterfaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNetworkInterfaceResponse.ProtoReflect.Descriptor instead.
+func (*GetNetworkInterfaceResponse) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetNetworkInterfaceResponse) GetInterface() *NetworkInterface {
+	if x != nil {
+		return x.Interface
+	}
+	return nil
+}
+
+// 更新网络接口请求
+type UpdateNetworkInterfaceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 接口名称
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// 网络接口配置
+	Interface     *NetworkInterface `protobuf:"bytes,2,opt,name=interface,proto3" json:"interface,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateNetworkInterfaceRequest) Reset() {
+	*x = UpdateNetworkInterfaceRequest{}
+	mi := &file_system_v1_system_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateNetworkInterfaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateNetworkInterfaceRequest) ProtoMessage() {}
+
+func (x *UpdateNetworkInterfaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateNetworkInterfaceRequest.ProtoReflect.Descriptor instead.
+func (*UpdateNetworkInterfaceRequest) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UpdateNetworkInterfaceRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateNetworkInterfaceRequest) GetInterface() *NetworkInterface {
+	if x != nil {
+		return x.Interface
+	}
+	return nil
+}
+
+// 更新网络接口响应
+type UpdateNetworkInterfaceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 更新后的网络接口
+	Interface *NetworkInterface `protobuf:"bytes,1,opt,name=interface,proto3" json:"interface,omitempty"`
+	// 操作状态
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// 错误信息，如果有
+	ErrorMessage  string `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateNetworkInterfaceResponse) Reset() {
+	*x = UpdateNetworkInterfaceResponse{}
+	mi := &file_system_v1_system_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateNetworkInterfaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateNetworkInterfaceResponse) ProtoMessage() {}
+
+func (x *UpdateNetworkInterfaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateNetworkInterfaceResponse.ProtoReflect.Descriptor instead.
+func (*UpdateNetworkInterfaceResponse) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UpdateNetworkInterfaceResponse) GetInterface() *NetworkInterface {
+	if x != nil {
+		return x.Interface
+	}
+	return nil
+}
+
+func (x *UpdateNetworkInterfaceResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *UpdateNetworkInterfaceResponse) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+// 获取所有hosts配置请求
+type ListHostsConfigurationsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 是否只列出本地配置
+	LocalOnly     bool `protobuf:"varint,1,opt,name=local_only,json=localOnly,proto3" json:"local_only,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListHostsConfigurationsRequest) Reset() {
+	*x = ListHostsConfigurationsRequest{}
+	mi := &file_system_v1_system_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListHostsConfigurationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListHostsConfigurationsRequest) ProtoMessage() {}
+
+func (x *ListHostsConfigurationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListHostsConfigurationsRequest.ProtoReflect.Descriptor instead.
+func (*ListHostsConfigurationsRequest) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListHostsConfigurationsRequest) GetLocalOnly() bool {
+	if x != nil {
+		return x.LocalOnly
+	}
+	return false
+}
+
+// 获取所有hosts配置响应
+type ListHostsConfigurationsResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Configurations []*HostsConfiguration  `protobuf:"bytes,1,rep,name=configurations,proto3" json:"configurations,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListHostsConfigurationsResponse) Reset() {
+	*x = ListHostsConfigurationsResponse{}
+	mi := &file_system_v1_system_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListHostsConfigurationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListHostsConfigurationsResponse) ProtoMessage() {}
+
+func (x *ListHostsConfigurationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListHostsConfigurationsResponse.ProtoReflect.Descriptor instead.
+func (*ListHostsConfigurationsResponse) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListHostsConfigurationsResponse) GetConfigurations() []*HostsConfiguration {
+	if x != nil {
+		return x.Configurations
+	}
+	return nil
+}
+
+// Hosts配置
+type HostsConfiguration struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 节点选择器
+	NodeSelector *NodeSelector `protobuf:"bytes,1,opt,name=node_selector,json=nodeSelector,proto3" json:"node_selector,omitempty"`
+	// 配置名称
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// 主机名
+	Hostname string `protobuf:"bytes,3,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	// hosts条目列表
+	Hosts         []*HostEntry `protobuf:"bytes,4,rep,name=hosts,proto3" json:"hosts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HostsConfiguration) Reset() {
+	*x = HostsConfiguration{}
+	mi := &file_system_v1_system_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HostsConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HostsConfiguration) ProtoMessage() {}
+
+func (x *HostsConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HostsConfiguration.ProtoReflect.Descriptor instead.
+func (*HostsConfiguration) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *HostsConfiguration) GetNodeSelector() *NodeSelector {
+	if x != nil {
+		return x.NodeSelector
+	}
+	return nil
+}
+
+func (x *HostsConfiguration) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *HostsConfiguration) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *HostsConfiguration) GetHosts() []*HostEntry {
+	if x != nil {
+		return x.Hosts
+	}
+	return nil
+}
+
+// Hosts条目
+type HostEntry struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// IP地址
+	Ip string `protobuf:"bytes,1,opt,name=ip,proto3" json:"ip,omitempty"`
+	// 主机名列表
+	Hostnames     []string `protobuf:"bytes,2,rep,name=hostnames,proto3" json:"hostnames,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HostEntry) Reset() {
+	*x = HostEntry{}
+	mi := &file_system_v1_system_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HostEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HostEntry) ProtoMessage() {}
+
+func (x *HostEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HostEntry.ProtoReflect.Descriptor instead.
+func (*HostEntry) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *HostEntry) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+func (x *HostEntry) GetHostnames() []string {
+	if x != nil {
+		return x.Hostnames
+	}
+	return nil
+}
+
+// 获取单个hosts配置请求
+type GetHostsConfigurationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 配置名称
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHostsConfigurationRequest) Reset() {
+	*x = GetHostsConfigurationRequest{}
+	mi := &file_system_v1_system_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHostsConfigurationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHostsConfigurationRequest) ProtoMessage() {}
+
+func (x *GetHostsConfigurationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHostsConfigurationRequest.ProtoReflect.Descriptor instead.
+func (*GetHostsConfigurationRequest) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetHostsConfigurationRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// 获取单个hosts配置响应
+type GetHostsConfigurationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// hosts配置
+	Configuration *HostsConfiguration `protobuf:"bytes,1,opt,name=configuration,proto3" json:"configuration,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHostsConfigurationResponse) Reset() {
+	*x = GetHostsConfigurationResponse{}
+	mi := &file_system_v1_system_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHostsConfigurationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHostsConfigurationResponse) ProtoMessage() {}
+
+func (x *GetHostsConfigurationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHostsConfigurationResponse.ProtoReflect.Descriptor instead.
+func (*GetHostsConfigurationResponse) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetHostsConfigurationResponse) GetConfiguration() *HostsConfiguration {
+	if x != nil {
+		return x.Configuration
+	}
+	return nil
+}
+
+// 更新hosts配置请求
+type UpdateHostsConfigurationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 配置名称
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// hosts配置
+	Configuration *HostsConfiguration `protobuf:"bytes,2,opt,name=configuration,proto3" json:"configuration,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateHostsConfigurationRequest) Reset() {
+	*x = UpdateHostsConfigurationRequest{}
+	mi := &file_system_v1_system_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateHostsConfigurationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateHostsConfigurationRequest) ProtoMessage() {}
+
+func (x *UpdateHostsConfigurationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateHostsConfigurationRequest.ProtoReflect.Descriptor instead.
+func (*UpdateHostsConfigurationRequest) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *UpdateHostsConfigurationRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateHostsConfigurationRequest) GetConfiguration() *HostsConfiguration {
+	if x != nil {
+		return x.Configuration
+	}
+	return nil
+}
+
+// 更新hosts配置响应
+type UpdateHostsConfigurationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 更新后的hosts配置
+	Configuration *HostsConfiguration `protobuf:"bytes,1,opt,name=configuration,proto3" json:"configuration,omitempty"`
+	// 操作状态
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// 错误信息，如果有
+	ErrorMessage  string `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateHostsConfigurationResponse) Reset() {
+	*x = UpdateHostsConfigurationResponse{}
+	mi := &file_system_v1_system_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateHostsConfigurationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateHostsConfigurationResponse) ProtoMessage() {}
+
+func (x *UpdateHostsConfigurationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_system_v1_system_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateHostsConfigurationResponse.ProtoReflect.Descriptor instead.
+func (*UpdateHostsConfigurationResponse) Descriptor() ([]byte, []int) {
+	return file_system_v1_system_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *UpdateHostsConfigurationResponse) GetConfiguration() *HostsConfiguration {
+	if x != nil {
+		return x.Configuration
+	}
+	return nil
+}
+
+func (x *UpdateHostsConfigurationResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *UpdateHostsConfigurationResponse) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
 var File_system_v1_system_proto protoreflect.FileDescriptor
 
 const file_system_v1_system_proto_rawDesc = "" +
@@ -491,13 +1132,53 @@ const file_system_v1_system_proto_rawDesc = "" +
 	"\x06labels\x18\x03 \x03(\v2..xtopus.api.system.v1.NodeSelector.LabelsEntryR\x06labels\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*0\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"0\n" +
+	"\x1aGetNetworkInterfaceRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"c\n" +
+	"\x1bGetNetworkInterfaceResponse\x12D\n" +
+	"\tinterface\x18\x01 \x01(\v2&.xtopus.api.system.v1.NetworkInterfaceR\tinterface\"y\n" +
+	"\x1dUpdateNetworkInterfaceRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12D\n" +
+	"\tinterface\x18\x02 \x01(\v2&.xtopus.api.system.v1.NetworkInterfaceR\tinterface\"\xa5\x01\n" +
+	"\x1eUpdateNetworkInterfaceResponse\x12D\n" +
+	"\tinterface\x18\x01 \x01(\v2&.xtopus.api.system.v1.NetworkInterfaceR\tinterface\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12#\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"?\n" +
+	"\x1eListHostsConfigurationsRequest\x12\x1d\n" +
+	"\n" +
+	"local_only\x18\x01 \x01(\bR\tlocalOnly\"s\n" +
+	"\x1fListHostsConfigurationsResponse\x12P\n" +
+	"\x0econfigurations\x18\x01 \x03(\v2(.xtopus.api.system.v1.HostsConfigurationR\x0econfigurations\"\xc4\x01\n" +
+	"\x12HostsConfiguration\x12G\n" +
+	"\rnode_selector\x18\x01 \x01(\v2\".xtopus.api.system.v1.NodeSelectorR\fnodeSelector\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bhostname\x18\x03 \x01(\tR\bhostname\x125\n" +
+	"\x05hosts\x18\x04 \x03(\v2\x1f.xtopus.api.system.v1.HostEntryR\x05hosts\"9\n" +
+	"\tHostEntry\x12\x0e\n" +
+	"\x02ip\x18\x01 \x01(\tR\x02ip\x12\x1c\n" +
+	"\thostnames\x18\x02 \x03(\tR\thostnames\"2\n" +
+	"\x1cGetHostsConfigurationRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"o\n" +
+	"\x1dGetHostsConfigurationResponse\x12N\n" +
+	"\rconfiguration\x18\x01 \x01(\v2(.xtopus.api.system.v1.HostsConfigurationR\rconfiguration\"\x85\x01\n" +
+	"\x1fUpdateHostsConfigurationRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12N\n" +
+	"\rconfiguration\x18\x02 \x01(\v2(.xtopus.api.system.v1.HostsConfigurationR\rconfiguration\"\xb1\x01\n" +
+	" UpdateHostsConfigurationResponse\x12N\n" +
+	"\rconfiguration\x18\x01 \x01(\v2(.xtopus.api.system.v1.HostsConfigurationR\rconfiguration\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12#\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage*0\n" +
 	"\x0fInterfaceStatus\x12\v\n" +
 	"\aUnknown\x10\x00\x12\x06\n" +
 	"\x02Up\x10\x01\x12\b\n" +
-	"\x04Down\x10\x022\xb2\x01\n" +
+	"\x04Down\x10\x022\x95\b\n" +
 	"\rSystemService\x12\xa0\x01\n" +
-	"\x15ListNetworkInterfaces\x122.xtopus.api.system.v1.ListNetworkInterfacesRequest\x1a3.xtopus.api.system.v1.ListNetworkInterfacesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/network_interfacesB,Z*go.xbrother.com/nix-operator/api/system/v1b\x06proto3"
+	"\x15ListNetworkInterfaces\x122.xtopus.api.system.v1.ListNetworkInterfacesRequest\x1a3.xtopus.api.system.v1.ListNetworkInterfacesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/network_interfaces\x12\xa1\x01\n" +
+	"\x13GetNetworkInterface\x120.xtopus.api.system.v1.GetNetworkInterfaceRequest\x1a1.xtopus.api.system.v1.GetNetworkInterfaceResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/network_interfaces/{name}\x12\xad\x01\n" +
+	"\x16UpdateNetworkInterface\x123.xtopus.api.system.v1.UpdateNetworkInterfaceRequest\x1a4.xtopus.api.system.v1.UpdateNetworkInterfaceResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\x1a\x1d/v1/network_interfaces/{name}\x12\xa8\x01\n" +
+	"\x17ListHostsConfigurations\x124.xtopus.api.system.v1.ListHostsConfigurationsRequest\x1a5.xtopus.api.system.v1.ListHostsConfigurationsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/hosts_configurations\x12\xa9\x01\n" +
+	"\x15GetHostsConfiguration\x122.xtopus.api.system.v1.GetHostsConfigurationRequest\x1a3.xtopus.api.system.v1.GetHostsConfigurationResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/v1/hosts_configurations/{name}\x12\xb5\x01\n" +
+	"\x18UpdateHostsConfiguration\x125.xtopus.api.system.v1.UpdateHostsConfigurationRequest\x1a6.xtopus.api.system.v1.UpdateHostsConfigurationResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/v1/hosts_configurations/{name}B,Z*go.xbrother.com/nix-operator/api/system/v1b\x06proto3"
 
 var (
 	file_system_v1_system_proto_rawDescOnce sync.Once
@@ -512,31 +1193,62 @@ func file_system_v1_system_proto_rawDescGZIP() []byte {
 }
 
 var file_system_v1_system_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_system_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_system_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_system_v1_system_proto_goTypes = []any{
-	(InterfaceStatus)(0),                  // 0: xtopus.api.system.v1.InterfaceStatus
-	(*ListNetworkInterfacesRequest)(nil),  // 1: xtopus.api.system.v1.ListNetworkInterfacesRequest
-	(*ListNetworkInterfacesResponse)(nil), // 2: xtopus.api.system.v1.ListNetworkInterfacesResponse
-	(*NetworkInterface)(nil),              // 3: xtopus.api.system.v1.NetworkInterface
-	(*IPv4Config)(nil),                    // 4: xtopus.api.system.v1.IPv4Config
-	(*IPv6Config)(nil),                    // 5: xtopus.api.system.v1.IPv6Config
-	(*NodeSelector)(nil),                  // 6: xtopus.api.system.v1.NodeSelector
-	nil,                                   // 7: xtopus.api.system.v1.NodeSelector.LabelsEntry
+	(InterfaceStatus)(0),                     // 0: xtopus.api.system.v1.InterfaceStatus
+	(*ListNetworkInterfacesRequest)(nil),     // 1: xtopus.api.system.v1.ListNetworkInterfacesRequest
+	(*ListNetworkInterfacesResponse)(nil),    // 2: xtopus.api.system.v1.ListNetworkInterfacesResponse
+	(*NetworkInterface)(nil),                 // 3: xtopus.api.system.v1.NetworkInterface
+	(*IPv4Config)(nil),                       // 4: xtopus.api.system.v1.IPv4Config
+	(*IPv6Config)(nil),                       // 5: xtopus.api.system.v1.IPv6Config
+	(*NodeSelector)(nil),                     // 6: xtopus.api.system.v1.NodeSelector
+	(*GetNetworkInterfaceRequest)(nil),       // 7: xtopus.api.system.v1.GetNetworkInterfaceRequest
+	(*GetNetworkInterfaceResponse)(nil),      // 8: xtopus.api.system.v1.GetNetworkInterfaceResponse
+	(*UpdateNetworkInterfaceRequest)(nil),    // 9: xtopus.api.system.v1.UpdateNetworkInterfaceRequest
+	(*UpdateNetworkInterfaceResponse)(nil),   // 10: xtopus.api.system.v1.UpdateNetworkInterfaceResponse
+	(*ListHostsConfigurationsRequest)(nil),   // 11: xtopus.api.system.v1.ListHostsConfigurationsRequest
+	(*ListHostsConfigurationsResponse)(nil),  // 12: xtopus.api.system.v1.ListHostsConfigurationsResponse
+	(*HostsConfiguration)(nil),               // 13: xtopus.api.system.v1.HostsConfiguration
+	(*HostEntry)(nil),                        // 14: xtopus.api.system.v1.HostEntry
+	(*GetHostsConfigurationRequest)(nil),     // 15: xtopus.api.system.v1.GetHostsConfigurationRequest
+	(*GetHostsConfigurationResponse)(nil),    // 16: xtopus.api.system.v1.GetHostsConfigurationResponse
+	(*UpdateHostsConfigurationRequest)(nil),  // 17: xtopus.api.system.v1.UpdateHostsConfigurationRequest
+	(*UpdateHostsConfigurationResponse)(nil), // 18: xtopus.api.system.v1.UpdateHostsConfigurationResponse
+	nil,                                      // 19: xtopus.api.system.v1.NodeSelector.LabelsEntry
 }
 var file_system_v1_system_proto_depIdxs = []int32{
-	3, // 0: xtopus.api.system.v1.ListNetworkInterfacesResponse.interfaces:type_name -> xtopus.api.system.v1.NetworkInterface
-	6, // 1: xtopus.api.system.v1.NetworkInterface.node_selector:type_name -> xtopus.api.system.v1.NodeSelector
-	4, // 2: xtopus.api.system.v1.NetworkInterface.ipv4:type_name -> xtopus.api.system.v1.IPv4Config
-	5, // 3: xtopus.api.system.v1.NetworkInterface.ipv6:type_name -> xtopus.api.system.v1.IPv6Config
-	0, // 4: xtopus.api.system.v1.NetworkInterface.status:type_name -> xtopus.api.system.v1.InterfaceStatus
-	7, // 5: xtopus.api.system.v1.NodeSelector.labels:type_name -> xtopus.api.system.v1.NodeSelector.LabelsEntry
-	1, // 6: xtopus.api.system.v1.SystemService.ListNetworkInterfaces:input_type -> xtopus.api.system.v1.ListNetworkInterfacesRequest
-	2, // 7: xtopus.api.system.v1.SystemService.ListNetworkInterfaces:output_type -> xtopus.api.system.v1.ListNetworkInterfacesResponse
-	7, // [7:8] is the sub-list for method output_type
-	6, // [6:7] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	3,  // 0: xtopus.api.system.v1.ListNetworkInterfacesResponse.interfaces:type_name -> xtopus.api.system.v1.NetworkInterface
+	6,  // 1: xtopus.api.system.v1.NetworkInterface.node_selector:type_name -> xtopus.api.system.v1.NodeSelector
+	4,  // 2: xtopus.api.system.v1.NetworkInterface.ipv4:type_name -> xtopus.api.system.v1.IPv4Config
+	5,  // 3: xtopus.api.system.v1.NetworkInterface.ipv6:type_name -> xtopus.api.system.v1.IPv6Config
+	0,  // 4: xtopus.api.system.v1.NetworkInterface.status:type_name -> xtopus.api.system.v1.InterfaceStatus
+	19, // 5: xtopus.api.system.v1.NodeSelector.labels:type_name -> xtopus.api.system.v1.NodeSelector.LabelsEntry
+	3,  // 6: xtopus.api.system.v1.GetNetworkInterfaceResponse.interface:type_name -> xtopus.api.system.v1.NetworkInterface
+	3,  // 7: xtopus.api.system.v1.UpdateNetworkInterfaceRequest.interface:type_name -> xtopus.api.system.v1.NetworkInterface
+	3,  // 8: xtopus.api.system.v1.UpdateNetworkInterfaceResponse.interface:type_name -> xtopus.api.system.v1.NetworkInterface
+	13, // 9: xtopus.api.system.v1.ListHostsConfigurationsResponse.configurations:type_name -> xtopus.api.system.v1.HostsConfiguration
+	6,  // 10: xtopus.api.system.v1.HostsConfiguration.node_selector:type_name -> xtopus.api.system.v1.NodeSelector
+	14, // 11: xtopus.api.system.v1.HostsConfiguration.hosts:type_name -> xtopus.api.system.v1.HostEntry
+	13, // 12: xtopus.api.system.v1.GetHostsConfigurationResponse.configuration:type_name -> xtopus.api.system.v1.HostsConfiguration
+	13, // 13: xtopus.api.system.v1.UpdateHostsConfigurationRequest.configuration:type_name -> xtopus.api.system.v1.HostsConfiguration
+	13, // 14: xtopus.api.system.v1.UpdateHostsConfigurationResponse.configuration:type_name -> xtopus.api.system.v1.HostsConfiguration
+	1,  // 15: xtopus.api.system.v1.SystemService.ListNetworkInterfaces:input_type -> xtopus.api.system.v1.ListNetworkInterfacesRequest
+	7,  // 16: xtopus.api.system.v1.SystemService.GetNetworkInterface:input_type -> xtopus.api.system.v1.GetNetworkInterfaceRequest
+	9,  // 17: xtopus.api.system.v1.SystemService.UpdateNetworkInterface:input_type -> xtopus.api.system.v1.UpdateNetworkInterfaceRequest
+	11, // 18: xtopus.api.system.v1.SystemService.ListHostsConfigurations:input_type -> xtopus.api.system.v1.ListHostsConfigurationsRequest
+	15, // 19: xtopus.api.system.v1.SystemService.GetHostsConfiguration:input_type -> xtopus.api.system.v1.GetHostsConfigurationRequest
+	17, // 20: xtopus.api.system.v1.SystemService.UpdateHostsConfiguration:input_type -> xtopus.api.system.v1.UpdateHostsConfigurationRequest
+	2,  // 21: xtopus.api.system.v1.SystemService.ListNetworkInterfaces:output_type -> xtopus.api.system.v1.ListNetworkInterfacesResponse
+	8,  // 22: xtopus.api.system.v1.SystemService.GetNetworkInterface:output_type -> xtopus.api.system.v1.GetNetworkInterfaceResponse
+	10, // 23: xtopus.api.system.v1.SystemService.UpdateNetworkInterface:output_type -> xtopus.api.system.v1.UpdateNetworkInterfaceResponse
+	12, // 24: xtopus.api.system.v1.SystemService.ListHostsConfigurations:output_type -> xtopus.api.system.v1.ListHostsConfigurationsResponse
+	16, // 25: xtopus.api.system.v1.SystemService.GetHostsConfiguration:output_type -> xtopus.api.system.v1.GetHostsConfigurationResponse
+	18, // 26: xtopus.api.system.v1.SystemService.UpdateHostsConfiguration:output_type -> xtopus.api.system.v1.UpdateHostsConfigurationResponse
+	21, // [21:27] is the sub-list for method output_type
+	15, // [15:21] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_system_v1_system_proto_init() }
@@ -550,7 +1262,7 @@ func file_system_v1_system_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_system_v1_system_proto_rawDesc), len(file_system_v1_system_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
