@@ -3,6 +3,7 @@ package hosts
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -13,8 +14,8 @@ import (
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
-type Config struct {
-	Hosts []hostEntry `json:"hosts"`
+type HostsSpec struct {
+	Hosts []HostEntry `json:"hosts"`
 }
 
 type HostEntry struct {
@@ -37,16 +38,29 @@ func (h *LinuxHostsHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
 }
 
-func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) error {
+func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
+	// 解析主机配置
+	var hostsSpec HostsSpec
+
+	// 将Spec转换为主机配置
+	specBytes, err := json.Marshal(cfg.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal spec: %v", err)
+	}
+
+	if err := json.Unmarshal(specBytes, &hostsSpec); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal hosts spec: %v", err)
+	}
+
 	// 读取现有的 hosts 文件
 	currentEntries, err := h.getCurrentHosts()
 	if err != nil {
-		return fmt.Errorf("failed to read current hosts: %v", err)
+		return nil, fmt.Errorf("failed to read current hosts: %v", err)
 	}
 
 	// 转换期望的配置
-	desiredEntries := make([]hostEntry, len(cfg.Spec.Network.Hosts))
-	for i, host := range cfg.Spec.Network.Hosts {
+	desiredEntries := make([]hostEntry, len(hostsSpec.Hosts))
+	for i, host := range hostsSpec.Hosts {
 		desiredEntries[i] = hostEntry{
 			IP:        host.IP,
 			Hostnames: host.Hostnames,
@@ -55,7 +69,12 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceC
 
 	// 比较现有配置和期望配置
 	if h.areHostsEqual(currentEntries, desiredEntries) {
-		return nil // 配置一致，无需更新
+		return &controller.ReconcileResult{
+			Effective: cfg,
+			Status: &config.ResourceStatus{
+				Phase: "Ready",
+			},
+		}, nil // 配置一致，无需更新
 	}
 
 	// 生成新的 hosts 内容
@@ -69,7 +88,16 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceC
 	}
 
 	// 原子性写入文件
-	return utils.AtomicWriteFile([]byte(content.String()), "/etc/hosts", 0644)
+	if err := utils.AtomicWriteFile([]byte(content.String()), "/etc/hosts", 0644); err != nil {
+		return nil, err
+	}
+
+	return &controller.ReconcileResult{
+		Effective: cfg,
+		Status: &config.ResourceStatus{
+			Phase: "Ready",
+		},
+	}, nil
 }
 
 func (h *LinuxHostsHandler) getCurrentHosts() ([]hostEntry, error) {

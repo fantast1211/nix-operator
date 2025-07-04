@@ -42,30 +42,35 @@ type chronyConfig struct {
 	Servers []string
 }
 
-func (h *LinuxTimeHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) error {
+func (h *LinuxTimeHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
 	// 解析时间配置
 	var timeSpec TimeSpec
 
 	// 将Spec转换为时间配置
 	specBytes, err := json.Marshal(cfg.Spec)
 	if err != nil {
-		return fmt.Errorf("failed to marshal spec: %v", err)
+		return nil, fmt.Errorf("failed to marshal spec: %v", err)
 	}
 
 	if err := json.Unmarshal(specBytes, &timeSpec); err != nil {
-		return fmt.Errorf("failed to unmarshal time spec: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal time spec: %v", err)
 	}
 
 	// 设置时区
 	if timeSpec.Timezone != "" {
 		if err := h.setTimezone(ctx, timeSpec.Timezone); err != nil {
-			return fmt.Errorf("failed to set timezone: %v", err)
+			return nil, fmt.Errorf("failed to set timezone: %v", err)
 		}
 	}
 
 	// 配置NTP
 	if !timeSpec.NTP.Enable {
-		return nil
+		return &controller.ReconcileResult{
+			Effective: cfg,
+			Status: &config.ResourceStatus{
+				Phase: "Ready",
+			},
+		}, nil
 	}
 
 	// 准备模板数据
@@ -76,13 +81,13 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, cfg *config.ResourceCo
 	// 解析模板
 	tmpl, err := template.New("chrony").Parse(chronyConfigTemplate)
 	if err != nil {
-		return fmt.Errorf("failed to parse template: %v", err)
+		return nil, fmt.Errorf("failed to parse template: %v", err)
 	}
 
 	// 渲染配置
 	var content strings.Builder
 	if err := tmpl.Execute(&content, templateData); err != nil {
-		return fmt.Errorf("failed to execute template: %v", err)
+		return nil, fmt.Errorf("failed to execute template: %v", err)
 	}
 
 	desiredContent := content.String()
@@ -92,24 +97,34 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, cfg *config.ResourceCo
 	if err == nil {
 		// 配置文件存在，比较内容
 		if string(currentContent) == desiredContent {
-			return nil // 配置相同，无需更新
+			return &controller.ReconcileResult{
+				Effective: cfg,
+				Status: &config.ResourceStatus{
+					Phase: "Ready",
+				},
+			}, nil // 配置相同，无需更新
 		}
 	}
 	// 如果文件不存在或读取失败，继续写入新配置
 
 	// 使用工具函数原子性写入文件
 	if err := utils.AtomicWriteFile([]byte(desiredContent), "/etc/chrony.conf", 0644); err != nil {
-		return fmt.Errorf("failed to write chrony.conf: %v", err)
+		return nil, fmt.Errorf("failed to write chrony.conf: %v", err)
 	}
 
 	// 重新加载配置（不需要 root 权限）
 	cmd := exec.CommandContext(ctx, "chronyc", "reload", "sources")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to reload chronyd config: %v, output: %s", err, output)
+		return nil, fmt.Errorf("failed to reload chronyd config: %v, output: %s", err, output)
 	}
 
-	return nil
+	return &controller.ReconcileResult{
+		Effective: cfg,
+		Status: &config.ResourceStatus{
+			Phase: "Ready",
+		},
+	}, nil
 }
 
 func (h *LinuxTimeHandler) setTimezone(ctx context.Context, timezone string) error {

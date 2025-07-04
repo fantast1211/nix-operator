@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/NodeSelector",
+    "definitions": {
+        "NodeSelector": {
+            "properties": {
+                "machine_id": {
+                    "type": "string",
+                    "description": "机器ID匹配"
+                },
+                "ip": {
+                    "type": "string",
+                    "description": "IP地址匹配"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Node Selector",
+            "description": "节点选择器"
+        }
+    }
+}

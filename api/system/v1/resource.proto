@@ -4,23 +4,26 @@ package xtopus.api.system.v1;
 
 option go_package = "go.xbrother.com/nix-operator/api/system/v1";
 
+import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 
-// 硬件配置服务
-service HardwareConfigService {
+// 统一系统配置服务
+service SystemConfigService {
   // 获取所有资源配置
   rpc ListResourceConfigs(ListResourceConfigsRequest) returns (ListResourceConfigsResponse) {
     option (google.api.http) = {
       get: "/v1/resources"
     };
   }
+  
   // 获取资源配置
   rpc GetResourceConfig(GetResourceConfigRequest) returns (Resource) {
     option (google.api.http) = {
       get: "/v1/resources/{name}"
     };
   }
+  
   // 更新资源配置
   rpc UpdateResourceConfig(UpdateResourceConfigRequest) returns (Resource) {
     option (google.api.http) = {
@@ -30,11 +33,49 @@ service HardwareConfigService {
   }
 }
 
+// 资源配置
 message ResourceConfig {
   string api_version = 1;
-  string kind = 2;
+  string kind = 2;  // HostsConfiguration, TimeConfiguration, NetworkConfiguration
   Metadata metadata = 3;
-  string spec = 4;
+  google.protobuf.Any spec = 4;  // 使用Any类型支持强类型
+}
+
+// 具体的配置类型定义
+message HostsConfigurationSpec {
+  repeated HostsConfiguration configurations = 1;
+}
+
+message TimeConfigurationSpec {
+  string timezone = 1;
+  bool ntp_enabled = 2;
+  repeated string ntp_servers = 3;
+}
+
+
+// 保留原有的具体类型定义
+message HostsConfiguration {
+  NodeSelector node_selector = 1;
+  string hostname = 2;
+  repeated HostEntry hosts = 3;
+}
+
+// Hosts条目
+message HostEntry {
+  // IP地址
+  string ip = 1;
+  
+  // 主机名列表
+  repeated string hostnames = 2;
+}
+
+// 节点选择器
+message NodeSelector {
+  // 机器ID匹配
+  string machine_id = 1 [json_name="machineId"];
+  
+  // IP地址匹配
+  string ip = 2 [json_name="ip"];
 }
 
 message Metadata {

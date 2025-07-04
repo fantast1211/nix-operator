@@ -1,0 +1,25 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/TimeConfigurationSpec",
+    "definitions": {
+        "TimeConfigurationSpec": {
+            "properties": {
+                "timezone": {
+                    "type": "string"
+                },
+                "ntp_enabled": {
+                    "type": "boolean"
+                },
+                "ntp_servers": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Time Configuration Spec"
+        }
+    }
+}

@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"go.xbrother.com/nix-operator/pkg/config"
+	"go.xbrother.com/nix-operator/pkg/utils"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -25,6 +25,7 @@ type Controller struct {
 	configDir string
 	handlers  map[string]Handler // key 是处理器类型
 	osInfo    OSInfo
+	logger    *utils.Logger
 }
 
 type ReconcileResult struct {
@@ -46,7 +47,7 @@ func RegisterHandler(typeName string, handler Handler) {
 	handlerFactories[typeName] = append(handlerFactories[typeName], handler)
 }
 
-func NewController(configDir string) (*Controller, error) {
+func NewController(configDir string, logger *utils.Logger) (*Controller, error) {
 	osInfo, err := getOSInfo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OS info: %v", err)
@@ -56,16 +57,13 @@ func NewController(configDir string) (*Controller, error) {
 
 	// 为每种类型选择合适的处理器
 	requiredTypes := []string{
-		"network",
 		"hosts",
 		"time",
-		"serial",
-		"udev",
 	}
 	for _, typeName := range requiredTypes {
 		typedHandlers := handlerFactories[typeName]
 		if len(typedHandlers) == 0 {
-			log.Printf("Warning: no handler registered for type: %s", typeName)
+			logger.Warnf("controller", "No handler registered for type: %s", typeName)
 			continue
 		}
 
@@ -75,20 +73,25 @@ func NewController(configDir string) (*Controller, error) {
 			if handler.Match(osInfo) {
 				handlers[typeName] = handler
 				matched = true
+				logger.Infof("controller", "Registered handler for type: %s", typeName)
 				break
 			}
 		}
 
 		if !matched {
-			log.Printf("Warning: no compatible handler found for type %s on OS %s %s",
+			logger.Warnf("controller", "No compatible handler found for type %s on OS %s %s",
 				typeName, osInfo.ID, osInfo.VersionID)
 		}
 	}
+
+	logger.Infof("controller", "Controller initialized with OS: %s %s, kernel: %s",
+		osInfo.ID, osInfo.VersionID, osInfo.KernelVer)
 
 	return &Controller{
 		configDir: configDir,
 		handlers:  handlers,
 		osInfo:    osInfo,
+		logger:    logger,
 	}, nil
 }
 
@@ -132,15 +135,17 @@ func (c *Controller) Run() error {
 	}
 	defer watcher.Close()
 
+	c.logger.Info("controller", "Starting file system watcher...")
 	go func() {
 		for {
 			select {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write {
+					c.logger.Debugf("controller", "Config file changed: %s", event.Name)
 					c.reconcile()
 				}
 			case err := <-watcher.Errors:
-				log.Printf("Error: %v", err)
+				c.logger.Errorf("controller", "File watcher error: %v", err)
 			}
 		}
 	}()
@@ -150,6 +155,7 @@ func (c *Controller) Run() error {
 	if err != nil {
 		return err
 	}
+	c.logger.Infof("controller", "Watching config directory: %s", c.configDir)
 
 	// 递归监控子目录
 	err = filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
@@ -157,6 +163,7 @@ func (c *Controller) Run() error {
 			return err
 		}
 		if info.IsDir() {
+			c.logger.Debugf("controller", "Adding directory to watch: %s", path)
 			return watcher.Add(path)
 		}
 		return nil
@@ -166,8 +173,10 @@ func (c *Controller) Run() error {
 	}
 
 	// 初始调谐
+	c.logger.Info("controller", "Starting initial reconciliation...")
 	c.reconcile()
 
+	c.logger.Info("controller", "Controller is running and watching for changes...")
 	// 保持运行
 	select {}
 }
@@ -194,32 +203,35 @@ func (c *Controller) reconcile() {
 		// 加载并处理配置文件
 		cfg, err := loadConfigFile(path)
 		if err != nil {
-			log.Printf("Error loading config file %s: %v", path, err)
+			c.logger.Errorf("controller", "Error loading config file %s: %v", path, err)
 			return nil
 		}
+
+		c.logger.Debugf("controller", "Processing config file: %s (kind: %s)", path, cfg.Kind)
 
 		// 查找对应的处理器
 		handler, exists := c.handlers[cfg.Kind]
 		if !exists {
-			log.Printf("No handler found for kind: %s", cfg.Kind)
+			c.logger.Warnf("controller", "No handler found for kind: %s", cfg.Kind)
 			return nil
 		}
 
 		// 执行调谐
 		result, err := handler.Reconcile(ctx, cfg)
 		if err != nil {
-			log.Printf("Reconciliation error for %s: %v", path, err)
+			c.logger.Errorf("controller", "Reconciliation error for %s: %v", path, err)
+			return nil
 		}
 
-		if result.Status != nil {
-			log.Printf("Reconciliation status for %s: %s", path, result.Status.Phase)
+		if result != nil && result.Status != nil {
+			c.logger.Infof("controller", "Reconciliation completed for %s: %s", path, result.Status.Phase)
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		log.Printf("Error walking config directory: %v", err)
+		c.logger.Errorf("controller", "Error walking config directory: %v", err)
 	}
 }
 

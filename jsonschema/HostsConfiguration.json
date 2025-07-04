@@ -1,0 +1,62 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/HostsConfiguration",
+    "definitions": {
+        "HostsConfiguration": {
+            "properties": {
+                "node_selector": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "additionalProperties": true
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "hosts": {
+                    "items": {
+                        "$ref": "#/definitions/xtopus.api.system.v1.HostEntry"
+                    },
+                    "type": "array"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Hosts Configuration",
+            "description": "保留原有的具体类型定义"
+        },
+        "xtopus.api.system.v1.HostEntry": {
+            "properties": {
+                "ip": {
+                    "type": "string",
+                    "description": "IP地址"
+                },
+                "hostnames": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "description": "主机名列表"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Host Entry",
+            "description": "Hosts条目"
+        },
+        "xtopus.api.system.v1.NodeSelector": {
+            "properties": {
+                "machine_id": {
+                    "type": "string",
+                    "description": "机器ID匹配"
+                },
+                "ip": {
+                    "type": "string",
+                    "description": "IP地址匹配"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Node Selector",
+            "description": "节点选择器"
+        }
+    }
+}
