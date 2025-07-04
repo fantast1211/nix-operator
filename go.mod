@@ -2,8 +2,6 @@ module go.xbrother.com/nix-operator
 
 go 1.23.0
 
-toolchain go1.24.3
-
 require (
 	github.com/fsnotify/fsnotify v1.7.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -19,6 +17,8 @@ require (
 )
 
 require (
+	github.com/Wifx/gonetworkmanager v0.5.0 // indirect
+	github.com/godbus/dbus/v5 v5.0.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	golang.org/x/net v0.37.0 // indirect

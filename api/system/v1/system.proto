@@ -37,13 +37,6 @@ service SystemService {
     };
   }
   
-  // 获取单个hosts配置
-  rpc GetHostsConfiguration(GetHostsConfigurationRequest) returns (GetHostsConfigurationResponse) {
-    option (google.api.http) = {
-      get: "/v1/hosts_configurations/{name}"
-    };
-  }
-  
   // 更新hosts配置
   rpc UpdateHostsConfiguration(UpdateHostsConfigurationRequest) returns (UpdateHostsConfigurationResponse) {
     option (google.api.http) = {
@@ -119,14 +112,11 @@ enum InterfaceStatus {
 
 // 节点选择器
 message NodeSelector {
-  // 主机名匹配
-  string hostname = 1;
+  // 机器ID匹配
+  string machine_id = 1 [json_name="machineId"];
   
-  // MAC 地址匹配
-  string mac_address = 2;
-  
-  // 标签选择器
-  map<string, string> labels = 3;
+  // IP地址匹配
+  string ip = 2 [json_name="ip"];
 }
 
 // 获取网络接口请求
@@ -173,21 +163,19 @@ message ListHostsConfigurationsRequest {
 // 获取所有hosts配置响应
 message ListHostsConfigurationsResponse {
   repeated HostsConfiguration configurations = 1;
+  string name = 2;
 }
 
-// Hosts配置
+// Hosts配置项
 message HostsConfiguration {
   // 节点选择器
   NodeSelector node_selector = 1;
   
-  // 配置名称
-  string name = 2;
-  
   // 主机名
-  string hostname = 3;
+  string hostname = 2;
   
   // hosts条目列表
-  repeated HostEntry hosts = 4;
+  repeated HostEntry hosts = 3;
 }
 
 // Hosts条目
@@ -199,35 +187,25 @@ message HostEntry {
   repeated string hostnames = 2;
 }
 
-// 获取单个hosts配置请求
-message GetHostsConfigurationRequest {
-  // 配置名称
-  string name = 1;
-}
-
-// 获取单个hosts配置响应
-message GetHostsConfigurationResponse {
-  // hosts配置
-  HostsConfiguration configuration = 1;
-}
-
 // 更新hosts配置请求
 message UpdateHostsConfigurationRequest {
   // 配置名称
   string name = 1;
   
-  // hosts配置
-  HostsConfiguration configuration = 2;
+  // hosts配置项列表
+  repeated HostsConfiguration configuration = 2;
 }
 
 // 更新hosts配置响应
 message UpdateHostsConfigurationResponse {
-  // 更新后的hosts配置
-  HostsConfiguration configuration = 1;
+  // 更新后的hosts配置项列表
+  repeated HostsConfiguration configuration = 1;
   
   // 操作状态
   bool success = 2;
   
   // 错误信息，如果有
   string error_message = 3;
+
+  string name = 4;
 }

@@ -106,7 +106,12 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/HardwareConfigServiceUpdateResourceConfigBody"
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "$ref": "#/definitions/v1Resource"
+                }
+              }
             }
           }
         ],
@@ -117,14 +122,6 @@
     }
   },
   "definitions": {
-    "HardwareConfigServiceUpdateResourceConfigBody": {
-      "type": "object",
-      "properties": {
-        "resource": {
-          "$ref": "#/definitions/v1Resource"
-        }
-      }
-    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -147,7 +144,6 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -159,7 +155,6 @@
         "resources": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/v1Resource"
           }
         }

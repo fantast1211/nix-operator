@@ -116,20 +116,13 @@
         },
         "xtopus.api.system.v1.NodeSelector": {
             "properties": {
-                "hostname": {
+                "machine_id": {
                     "type": "string",
-                    "description": "主机名匹配"
+                    "description": "机器ID匹配"
                 },
-                "mac_address": {
+                "ip": {
                     "type": "string",
-                    "description": "MAC 地址匹配"
-                },
-                "labels": {
-                    "additionalProperties": {
-                        "type": "string"
-                    },
-                    "type": "object",
-                    "description": "标签选择器"
+                    "description": "IP地址匹配"
                 }
             },
             "additionalProperties": true,

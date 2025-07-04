@@ -3,7 +3,7 @@
 set -e
 
 # 切换到项目根目录
-cd /root/workspcae/nix-operator
+cd /root/workspace/nix-operator
 
 # 创建 API 文档目录
 mkdir -p doc/api

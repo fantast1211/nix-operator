@@ -49,36 +49,6 @@
       }
     },
     "/v1/hosts_configurations/{name}": {
-      "get": {
-        "summary": "获取单个hosts配置",
-        "operationId": "SystemService_GetHostsConfiguration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetHostsConfigurationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "description": "配置名称",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SystemService"
-        ]
-      },
       "put": {
         "summary": "更新hosts配置",
         "operationId": "SystemService_UpdateHostsConfiguration",
@@ -109,7 +79,17 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/SystemServiceUpdateHostsConfigurationBody"
+              "type": "object",
+              "properties": {
+                "configuration": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/v1HostsConfiguration"
+                  },
+                  "title": "hosts配置项列表"
+                }
+              },
+              "title": "更新hosts配置请求"
             }
           }
         ],
@@ -211,7 +191,14 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/SystemServiceUpdateNetworkInterfaceBody"
+              "type": "object",
+              "properties": {
+                "interface": {
+                  "$ref": "#/definitions/v1NetworkInterface",
+                  "title": "网络接口配置"
+                }
+              },
+              "title": "更新网络接口请求"
             }
           }
         ],
@@ -222,26 +209,6 @@
     }
   },
   "definitions": {
-    "SystemServiceUpdateHostsConfigurationBody": {
-      "type": "object",
-      "properties": {
-        "configuration": {
-          "$ref": "#/definitions/v1HostsConfiguration",
-          "title": "hosts配置"
-        }
-      },
-      "title": "更新hosts配置请求"
-    },
-    "SystemServiceUpdateNetworkInterfaceBody": {
-      "type": "object",
-      "properties": {
-        "interface": {
-          "$ref": "#/definitions/v1NetworkInterface",
-          "title": "网络接口配置"
-        }
-      },
-      "title": "更新网络接口请求"
-    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -264,21 +231,10 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
       }
-    },
-    "v1GetHostsConfigurationResponse": {
-      "type": "object",
-      "properties": {
-        "configuration": {
-          "$ref": "#/definitions/v1HostsConfiguration",
-          "title": "hosts配置"
-        }
-      },
-      "title": "获取单个hosts配置响应"
     },
     "v1GetNetworkInterfaceResponse": {
       "type": "object",
@@ -314,10 +270,6 @@
           "$ref": "#/definitions/v1NodeSelector",
           "title": "节点选择器"
         },
-        "name": {
-          "type": "string",
-          "title": "配置名称"
-        },
         "hostname": {
           "type": "string",
           "title": "主机名"
@@ -325,13 +277,12 @@
         "hosts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/v1HostEntry"
           },
           "title": "hosts条目列表"
         }
       },
-      "title": "Hosts配置"
+      "title": "Hosts配置项"
     },
     "v1IPv4Config": {
       "type": "object",
@@ -385,9 +336,11 @@
         "configurations": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/v1HostsConfiguration"
           }
+        },
+        "name": {
+          "type": "string"
         }
       },
       "title": "获取所有hosts配置响应"
@@ -398,7 +351,6 @@
         "interfaces": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/v1NetworkInterface"
           }
         }
@@ -442,20 +394,13 @@
     "v1NodeSelector": {
       "type": "object",
       "properties": {
-        "hostname": {
+        "machineId": {
           "type": "string",
-          "title": "主机名匹配"
+          "title": "机器ID匹配"
         },
-        "macAddress": {
+        "ip": {
           "type": "string",
-          "title": "MAC 地址匹配"
-        },
-        "labels": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "标签选择器"
+          "title": "IP地址匹配"
         }
       },
       "title": "节点选择器"
@@ -464,8 +409,11 @@
       "type": "object",
       "properties": {
         "configuration": {
-          "$ref": "#/definitions/v1HostsConfiguration",
-          "title": "更新后的hosts配置"
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1HostsConfiguration"
+          },
+          "title": "更新后的hosts配置项列表"
         },
         "success": {
           "type": "boolean",
@@ -474,6 +422,9 @@
         "errorMessage": {
           "type": "string",
           "title": "错误信息，如果有"
+        },
+        "name": {
+          "type": "string"
         }
       },
       "title": "更新hosts配置响应"

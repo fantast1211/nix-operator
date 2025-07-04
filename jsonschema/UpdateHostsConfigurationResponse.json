@@ -5,9 +5,11 @@
         "UpdateHostsConfigurationResponse": {
             "properties": {
                 "configuration": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.HostsConfiguration",
-                    "additionalProperties": true,
-                    "description": "更新后的hosts配置"
+                    "items": {
+                        "$ref": "#/definitions/xtopus.api.system.v1.HostsConfiguration"
+                    },
+                    "type": "array",
+                    "description": "更新后的hosts配置项列表"
                 },
                 "success": {
                     "type": "boolean",
@@ -16,6 +18,9 @@
                 "error_message": {
                     "type": "string",
                     "description": "错误信息，如果有"
+                },
+                "name": {
+                    "type": "string"
                 }
             },
             "additionalProperties": true,
@@ -49,10 +54,6 @@
                     "additionalProperties": true,
                     "description": "节点选择器"
                 },
-                "name": {
-                    "type": "string",
-                    "description": "配置名称"
-                },
                 "hostname": {
                     "type": "string",
                     "description": "主机名"
@@ -68,24 +69,17 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Hosts Configuration",
-            "description": "Hosts配置"
+            "description": "Hosts配置项"
         },
         "xtopus.api.system.v1.NodeSelector": {
             "properties": {
-                "hostname": {
+                "machine_id": {
                     "type": "string",
-                    "description": "主机名匹配"
+                    "description": "机器ID匹配"
                 },
-                "mac_address": {
+                "ip": {
                     "type": "string",
-                    "description": "MAC 地址匹配"
-                },
-                "labels": {
-                    "additionalProperties": {
-                        "type": "string"
-                    },
-                    "type": "object",
-                    "description": "标签选择器"
+                    "description": "IP地址匹配"
                 }
             },
             "additionalProperties": true,

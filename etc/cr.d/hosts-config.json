@@ -1,51 +1,49 @@
 {
-    "apiVersion": "sysconfig.operator/v1",
-    "kind": "HostsConfiguration",
-    "metadata": {
-      "name": "hosts-config"
-    },
-    "spec": {
-      "interfaces": [
-        {
-          "nodeSelector": {
-            "machine-id": "1111"
-          },
-          "hostname": "example-host-1",
-          "hosts": [
-            {
-              "ip": "192.168.1.10",
-              "hostnames": ["server1", "server1.local"]
-            },
-            {
-              "ip": "192.168.1.11",
-              "hostnames": ["server2", "server2.local"]
-            },
-            {
-              "ip": "192.168.1.12",
-              "hostnames": ["server3", "server3.local"]
-            }
-          ]
+  "apiVersion": "sysconfig.operator/v1",
+  "kind": "HostsConfiguration",
+  "metadata": {
+    "name": "hosts-config",
+    "resourceVersion": "20",
+    "generation": 12,
+    "creationTime": "",
+    "deletionTime": "",
+    "labels": null,
+    "annotations": null
+  },
+  "spec": {
+    "configurations": [
+      {
+        "nodeSelector": {},
+        "hostname": "updatetest01",
+        "hosts": [
+          {
+            "ip": "1.1.1.1",
+            "hostnames": [
+              "111server"
+            ]
+          }
+        ]
+      },
+      {
+        "nodeSelector": {
+          "machineId": "3d9ce2218ab44a449ad06db380db68f0"
         },
-        {
-          "nodeSelector": {
-            "machine-id": "22222"
+        "hostname": "test01",
+        "hosts": [
+          {
+            "ip": "8.8.8.8",
+            "hostnames": [
+              "dns"
+            ]
           },
-          "hostname": "example-host-2",
-          "hosts": [
-            {
-              "ip": "192.168.1.10",
-              "hostnames": ["server1", "server1.local"]
-            },
-            {
-              "ip": "192.168.1.11",
-              "hostnames": ["server2", "server2.local"]
-            },
-            {
-              "ip": "192.168.1.13",
-              "hostnames": ["server4", "server4.local"]
-            }
-          ]
-        }
-      ]
-    }
+          {
+            "ip": "9.9.9.9",
+            "hostnames": [
+              "dns2"
+            ]
+          }
+        ]
+      }
+    ]
   }
+}

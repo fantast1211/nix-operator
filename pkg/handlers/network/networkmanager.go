@@ -74,3 +74,24 @@ func (nm *NetworkManager) ReloadIfy(ctx context.Context) error {
 	}
 	return nil
 }
+
+// func (nm *NetworkManager) ReloadIfy(ctx context.Context) error {
+// 	if !isServiceActive(ctx, "NetworkManager") {
+// 		return nil
+// 	}
+
+// 	// 使用 D-Bus API 替代命令行调用
+// 	// 获取Settings对象而不是NetworkManager对象
+// 	settings, err := gonetworkmanager.NewSettings()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to connect to NetworkManager Settings: %v", err)
+// 	}
+
+// 	// 调用Settings对象的ReloadConnections方法
+// 	err = settings.ReloadConnections()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to reload NetworkManager connections: %v", err)
+// 	}
+
+// 	return nil
+// }

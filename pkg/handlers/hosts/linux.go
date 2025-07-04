@@ -25,20 +25,16 @@ var hostnameTemplate string
 // 外部模板目录，用于高优先级覆盖
 const externalTemplateDir = "/etc/nix-operator/templates"
 
-type Config struct {
-	Hosts []hostEntry `json:"hosts"`
-}
-
 type HostEntry struct {
 	IP        string   `json:"ip"`
 	Hostnames []string `json:"hostnames"`
 }
 
 type HostsSpec struct {
-	Interfaces []HostInterface `json:"interfaces"`
+	Configurations []HostsConfigurationItem `json:"configurations"`
 }
 
-type HostInterface struct {
+type HostsConfigurationItem struct {
 	NodeSelector utils.NodeSelector `json:"nodeSelector"`
 	Hostname     string             `json:"hostname"`
 	Hosts        []HostEntry        `json:"hosts"`
@@ -49,11 +45,6 @@ func init() {
 }
 
 type LinuxHostsHandler struct{}
-
-type hostEntry struct {
-	IP        string
-	Hostnames []string
-}
 
 func (h *LinuxHostsHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
@@ -75,11 +66,7 @@ func getTemplateContent(templateName, defaultContent string) (string, error) {
 func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
 	// 解析hosts配置
 	var hostsSpec struct {
-		Interfaces []struct {
-			NodeSelector utils.NodeSelector `json:"nodeSelector"`
-			Hostname     string             `json:"hostname"`
-			Hosts        []HostEntry        `json:"hosts"`
-		} `json:"interfaces"`
+		Configurations []HostsConfigurationItem `json:"configurations"`
 	}
 
 	// 将Spec转换为hosts配置
@@ -92,56 +79,36 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceC
 		return nil, fmt.Errorf("failed to unmarshal hosts spec: %v", err)
 	}
 
-	// 标记是否找到匹配的配置
-	configured := false
+	// 第一阶段：优先匹配有 nodeSelector 的配置项
 
-	// 遍历所有接口配置
-	for _, iface := range hostsSpec.Interfaces {
-		// 检查节点选择器
-		match, err := utils.MatchNodeSelector(iface.NodeSelector)
-		if err != nil {
-			return nil, fmt.Errorf("failed to check node selector: %v", err)
-		}
-		if !match {
-			continue
-		}
-
-		// 匹配当前节点，应用配置
-		configured = true
-
-		// 处理hostname配置
-		if iface.Hostname != "" {
-			if err := h.configureHostname(ctx, iface.Hostname); err != nil {
-				return nil, fmt.Errorf("failed to configure hostname: %v", err)
+	for _, configItem := range hostsSpec.Configurations {
+		// 检查是否有有效的 nodeSelector
+		if h.hasValidNodeSelector(configItem.NodeSelector) {
+			match, err := utils.MatchNodeSelector(configItem.NodeSelector)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check node selector: %v", err)
+			}
+			if match {
+				// 找到匹配的特定配置，应用并退出
+				return h.applyConfiguration(ctx, configItem)
 			}
 		}
+	}
 
-		// 处理hosts配置
-		if len(iface.Hosts) > 0 {
-			if err := h.configureHosts(ctx, iface.Hosts); err != nil {
-				return nil, fmt.Errorf("failed to configure hosts: %v", err)
-			}
+	// 第二阶段：如果没有匹配的特定配置，使用通用配置
+	for _, configItem := range hostsSpec.Configurations {
+		if !h.hasValidNodeSelector(configItem.NodeSelector) {
+			// 应用通用配置并退出
+			return h.applyConfiguration(ctx, configItem)
 		}
-
-		// 找到匹配的配置后退出
-		break
 	}
 
-	if !configured {
-		return &controller.ReconcileResult{
-			Status: &config.ResourceStatus{
-				Phase:   "Skipped",
-				Reason:  "NoMatchingNodeSelector",
-				Message: "No matching node selector found for this host",
-			},
-		}, nil
-	}
-
+	// 没有找到任何匹配的配置
 	return &controller.ReconcileResult{
 		Status: &config.ResourceStatus{
-			Phase:   "Ready",
-			Reason:  "Configured",
-			Message: "Hosts configuration applied successfully",
+			Phase:   "Skipped",
+			Reason:  "NoMatchingConfiguration",
+			Message: "No matching configuration found for this host",
 		},
 	}, nil
 }
@@ -230,4 +197,39 @@ func (h *LinuxHostsHandler) configureHosts(ctx context.Context, hosts []HostEntr
 
 	// 使用工具函数原子性写入文件
 	return utils.AtomicWriteFile([]byte(desiredContent), "/etc/hosts", 0644)
+}
+
+// hasValidNodeSelector 检查是否有有效的 nodeSelector
+func (h *LinuxHostsHandler) hasValidNodeSelector(selector utils.NodeSelector) bool {
+	return selector.MachineID != "" || selector.IP != ""
+}
+
+// applyConfiguration 应用配置项
+func (h *LinuxHostsHandler) applyConfiguration(ctx context.Context, configItem struct {
+	NodeSelector utils.NodeSelector `json:"nodeSelector"`
+	Hostname     string             `json:"hostname"`
+	Hosts        []HostEntry        `json:"hosts"`
+}) (*controller.ReconcileResult, error) {
+	// 这里传参没有换成HostsConfigurationItem，考虑语义上有歧义，也怕耦合，未来变更影响到这个方法
+	// 处理hostname配置
+	if configItem.Hostname != "" {
+		if err := h.configureHostname(ctx, configItem.Hostname); err != nil {
+			return nil, fmt.Errorf("failed to configure hostname: %v", err)
+		}
+	}
+
+	// 处理hosts配置
+	if len(configItem.Hosts) > 0 {
+		if err := h.configureHosts(ctx, configItem.Hosts); err != nil {
+			return nil, fmt.Errorf("failed to configure hosts: %v", err)
+		}
+	}
+
+	return &controller.ReconcileResult{
+		Status: &config.ResourceStatus{
+			Phase:   "Ready",
+			Reason:  "Configured",
+			Message: "Hosts configuration applied successfully",
+		},
+	}, nil
 }
