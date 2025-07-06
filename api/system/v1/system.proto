@@ -37,3 +37,23 @@ message HostEntry {
   // 主机名列表
   repeated string hostnames = 2;
 }
+
+// 时间配置相关定义
+
+// 时间配置项
+message TimeConfigurationSpec {
+  // 时区设置
+  string timezone = 1;
+  
+  // NTP配置
+  NtpConfig ntp = 2;
+}
+
+// NTP配置
+message NtpConfig {
+  // 是否启用NTP
+  bool enable = 1;
+  
+  // NTP服务器列表
+  repeated string servers = 2;
+}

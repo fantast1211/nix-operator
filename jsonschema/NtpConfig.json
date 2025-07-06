@@ -1,0 +1,25 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/NtpConfig",
+    "definitions": {
+        "NtpConfig": {
+            "properties": {
+                "enable": {
+                    "type": "boolean",
+                    "description": "是否启用NTP"
+                },
+                "servers": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "description": "NTP服务器列表"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ntp Config",
+            "description": "NTP配置"
+        }
+    }
+}

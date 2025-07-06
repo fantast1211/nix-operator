@@ -27,7 +27,7 @@ import (
 
 	// 注册所有处理器
 	_ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
-	// _ "go.xbrother.com/nix-operator/pkg/handlers/time"
+	_ "go.xbrother.com/nix-operator/pkg/handlers/time"
 )
 
 const (
@@ -149,6 +149,12 @@ func initializeValidators() map[string]validator.SpecValidator {
 	validators["HostsConfiguration"] = validator.NewProtoValidator(
 		"HostsConfiguration",
 		&systemv1.HostsConfigurationSpec{},
+	)
+
+	// 添加 TimeConfiguration 校验器
+	validators["TimeConfiguration"] = validator.NewProtoValidator(
+		"TimeConfiguration",
+		&systemv1.TimeConfigurationSpec{},
 	)
 
 	return validators
