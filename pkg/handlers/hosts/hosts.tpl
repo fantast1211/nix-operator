@@ -7,5 +7,5 @@ ff02::1		ip6-allnodes
 ff02::2		ip6-allrouters
 
 # Custom hosts entries
-{{range .Hosts}}{{.IP}}	{{range $i, $h := .Hostnames}}{{if $i}} {{end}}{{$h}}{{end}}
+{{range .Hosts}}{{.Ip}}	{{range $i, $h := .Hostnames}}{{if $i}} {{end}}{{$h}}{{end}}
 {{end}}

@@ -4,17 +4,27 @@
     "definitions": {
         "HostsConfigurationSpec": {
             "properties": {
-                "configurations": {
+                "node_selector": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "additionalProperties": true,
+                    "description": "节点选择器"
+                },
+                "hostname": {
+                    "type": "string",
+                    "description": "主机名"
+                },
+                "hosts": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.HostsConfiguration"
+                        "$ref": "#/definitions/xtopus.api.system.v1.HostEntry"
                     },
-                    "type": "array"
+                    "type": "array",
+                    "description": "hosts条目列表"
                 }
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "Hosts Configuration Spec",
-            "description": "具体的配置类型定义"
+            "title": "Hosts配置相关定义",
+            "description": "Hosts配置相关定义  Hosts配置项"
         },
         "xtopus.api.system.v1.HostEntry": {
             "properties": {
@@ -34,27 +44,6 @@
             "type": "object",
             "title": "Host Entry",
             "description": "Hosts条目"
-        },
-        "xtopus.api.system.v1.HostsConfiguration": {
-            "properties": {
-                "node_selector": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
-                    "additionalProperties": true
-                },
-                "hostname": {
-                    "type": "string"
-                },
-                "hosts": {
-                    "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.HostEntry"
-                    },
-                    "type": "array"
-                }
-            },
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Hosts Configuration",
-            "description": "保留原有的具体类型定义"
         },
         "xtopus.api.system.v1.NodeSelector": {
             "properties": {

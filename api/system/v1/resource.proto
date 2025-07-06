@@ -41,43 +41,6 @@ message ResourceConfig {
   google.protobuf.Any spec = 4;  // 使用Any类型支持强类型
 }
 
-// 具体的配置类型定义
-message HostsConfigurationSpec {
-  repeated HostsConfiguration configurations = 1;
-}
-
-message TimeConfigurationSpec {
-  string timezone = 1;
-  bool ntp_enabled = 2;
-  repeated string ntp_servers = 3;
-}
-
-
-// 保留原有的具体类型定义
-message HostsConfiguration {
-  NodeSelector node_selector = 1;
-  string hostname = 2;
-  repeated HostEntry hosts = 3;
-}
-
-// Hosts条目
-message HostEntry {
-  // IP地址
-  string ip = 1;
-  
-  // 主机名列表
-  repeated string hostnames = 2;
-}
-
-// 节点选择器
-message NodeSelector {
-  // 机器ID匹配
-  string machine_id = 1 [json_name="machineId"];
-  
-  // IP地址匹配
-  string ip = 2 [json_name="ip"];
-}
-
 message Metadata {
   string name = 1;
   string resource_version = 2;
@@ -122,5 +85,5 @@ message GetResourceConfigRequest {
 
 message UpdateResourceConfigRequest {
   string name = 1;
-  Resource resource = 2;
+  ResourceConfig config = 2;
 }

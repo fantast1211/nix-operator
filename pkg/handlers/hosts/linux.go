@@ -1,27 +1,33 @@
 package hosts
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
+	_ "embed"
 	"fmt"
 	"os"
-	"slices"
+	"path/filepath"
+	"reflect"
 	"strings"
+	"syscall"
+	"text/template"
 
-	"go.xbrother.com/nix-operator/pkg/config"
+	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
+	"go.xbrother.com/nix-operator/pkg/domain"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
-type HostsSpec struct {
-	Hosts []HostEntry `json:"hosts"`
-}
+//go:embed hosts.tpl
+var hostsTemplate string
 
-type HostEntry struct {
-	IP        string   `json:"ip"`
-	Hostnames []string `json:"hostnames"`
-}
+//go:embed hostname.tpl
+var hostnameTemplate string
+
+// 外部模板目录，用于高优先级覆盖
+const externalTemplateDir = "/etc/nix-operator/templates"
 
 func init() {
 	controller.RegisterHandler("HostsConfiguration", &LinuxHostsHandler{})
@@ -29,148 +35,220 @@ func init() {
 
 type LinuxHostsHandler struct{}
 
-type hostEntry struct {
-	IP        string
-	Hostnames []string
-}
-
 func (h *LinuxHostsHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
 }
 
-func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
-	// 解析主机配置
-	var hostsSpec HostsSpec
+// 获取模板内容，优先使用外部模板
+func getTemplateContent(templateName, defaultContent string) (string, error) {
+	externalPath := filepath.Join(externalTemplateDir, templateName)
+	if _, err := os.Stat(externalPath); err == nil {
+		content, err := os.ReadFile(externalPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read external template %s: %v", externalPath, err)
+		}
+		return string(content), nil
+	}
+	return defaultContent, nil
+}
 
-	// 将Spec转换为主机配置
-	specBytes, err := json.Marshal(cfg.Spec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal spec: %v", err)
+func UnmarshalSpec[T proto.Message](anySpec *anypb.Any) (T, error) {
+	var zero T
+	if anySpec == nil {
+		return zero, fmt.Errorf("spec is nil")
 	}
 
-	if err := json.Unmarshal(specBytes, &hostsSpec); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal hosts spec: %v", err)
+	// 直接将 anypb.Any 解包为目标类型
+	msg := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(proto.Message)
+	if err := anySpec.UnmarshalTo(msg); err != nil {
+		return zero, fmt.Errorf("failed to unmarshal Any to target type: %w", err)
 	}
 
-	// 读取现有的 hosts 文件
-	currentEntries, err := h.getCurrentHosts()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read current hosts: %v", err)
+	return msg.(T), nil
+}
+
+func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.ResourceConfig) (*domain.ReconcileResult, error) {
+	// 解析hosts配置
+	var hostsSpec *systemv1.HostsConfigurationSpec
+
+	// 从 anypb.Any 中解析 HostsConfigurationSpec
+	if cfg.Spec != nil {
+		// 尝试将 cfg.Spec 解码为目标结构体
+		// if err := cfg.Spec.UnmarshalTo(&hostsSpec); err != nil {
+		// 	return nil, fmt.Errorf("failed to unmarshal spec to HostsConfigurationSpec: %w", err)
+		// }
+		var err error
+		hostsSpec, err = UnmarshalSpec[*systemv1.HostsConfigurationSpec](cfg.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("decode spec failed: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("spec is nil")
 	}
 
-	// 转换期望的配置
-	desiredEntries := make([]hostEntry, len(hostsSpec.Hosts))
-	for i, host := range hostsSpec.Hosts {
-		desiredEntries[i] = hostEntry{
-			IP:        host.IP,
-			Hostnames: host.Hostnames,
+	utils.Debugf("hosts", "Parsed hostsSpec: nodeSelector=%+v, hostname=%s, hosts=%+v",
+		hostsSpec.NodeSelector, hostsSpec.Hostname, hostsSpec.Hosts)
+
+	// 第一阶段：优先匹配有 nodeSelector 的配置项
+	// 检查是否有有效的 nodeSelector
+	if h.hasValidNodeSelector(hostsSpec.NodeSelector) {
+		match, err := utils.MatchNodeSelector(hostsSpec.NodeSelector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check node selector: %v", err)
+		}
+		if match {
+			// 找到匹配的特定配置，应用并返回有效配置
+			result, err := h.applyConfiguration(ctx, hostsSpec)
+			if err != nil {
+				return nil, err
+			}
+			// 设置有效配置，多机场景下Config = EffectiveConfig，在按节点拆分的场景下，
+			// 由于每个配置文件只包含一个节点的配置， Config 和 EffectiveConfig 实际上是相同的
+			result.Effective = cfg
+			return result, nil
 		}
 	}
 
-	// 比较现有配置和期望配置
-	if h.areHostsEqual(currentEntries, desiredEntries) {
-		return &controller.ReconcileResult{
-			Effective: cfg,
-			Status: &config.ResourceStatus{
-				Phase: "Ready",
-			},
-		}, nil // 配置一致，无需更新
+	// 第二阶段：如果没有匹配的特定配置，使用通用配置
+	if !h.hasValidNodeSelector(hostsSpec.NodeSelector) {
+		// 应用通用配置并返回有效配置
+		result, err := h.applyConfiguration(ctx, hostsSpec)
+		if err != nil {
+			return nil, err
+		}
+		// 设置有效配置，多机场景下Config = EffectiveConfig，在按节点拆分的场景下，
+		// 由于每个配置文件只包含一个节点的配置， Config 和 EffectiveConfig 实际上是相同的
+		result.Effective = cfg
+		return result, nil
 	}
 
-	// 生成新的 hosts 内容
-	var content strings.Builder
-	content.WriteString(config.CommentHeader)
-	content.WriteString("127.0.0.1 localhost\n")
-	content.WriteString("::1 localhost ip6-localhost ip6-loopback\n\n")
-
-	for _, host := range desiredEntries {
-		content.WriteString(fmt.Sprintf("%s %s\n", host.IP, strings.Join(host.Hostnames, " ")))
-	}
-
-	// 原子性写入文件
-	if err := utils.AtomicWriteFile([]byte(content.String()), "/etc/hosts", 0644); err != nil {
-		return nil, err
-	}
-
-	return &controller.ReconcileResult{
-		Effective: cfg,
-		Status: &config.ResourceStatus{
-			Phase: "Ready",
+	// 没有找到任何匹配的配置
+	return &domain.ReconcileResult{
+		Status: &systemv1.ResourceStatus{
+			Phase:   "Skipped",
+			Reason:  "NoMatchingConfiguration",
+			Message: "No matching configuration found for this host",
 		},
+		// 即使跳过，也应该返回原始配置作为有效配置
+		Effective: cfg,
 	}, nil
 }
 
-func (h *LinuxHostsHandler) getCurrentHosts() ([]hostEntry, error) {
-	file, err := os.Open("/etc/hosts")
+func (h *LinuxHostsHandler) configureHostname(ctx context.Context, hostname string) error {
+	// 获取hostname模板
+	templateContent, err := getTemplateContent("hostname.tpl", hostnameTemplate)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return []hostEntry{}, nil
-		}
-		return nil, err
-	}
-	defer file.Close()
-
-	var entries []hostEntry
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// 跳过空行和注释
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		fields := strings.Fields(line)
-		if len(fields) >= 2 {
-			entries = append(entries, hostEntry{
-				IP:        fields[0],
-				Hostnames: fields[1:],
-			})
-		}
+		return err
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	// 解析模板
+	tmpl, err := template.New("hostname").Parse(templateContent)
+	if err != nil {
+		return fmt.Errorf("failed to parse hostname template: %v", err)
 	}
 
-	return entries, nil
+	// 准备模板数据
+	data := struct {
+		Hostname string
+	}{
+		Hostname: hostname,
+	}
+
+	// 渲染模板
+	var content strings.Builder
+	if err := tmpl.Execute(&content, data); err != nil {
+		return fmt.Errorf("failed to execute hostname template: %v", err)
+	}
+
+	desiredContent := content.String()
+
+	// 读取现有配置
+	currentContent, err := os.ReadFile("/etc/hostname")
+	if err == nil && string(currentContent) == desiredContent {
+		return nil // 配置相同，无需更新
+	}
+
+	// 使用工具函数原子性写入文件
+	if err := utils.AtomicWriteFile([]byte(desiredContent), "/etc/hostname", 0644); err != nil {
+		return fmt.Errorf("failed to write hostname file: %v", err)
+	}
+
+	// 使用系统调用设置主机名
+	return h.setHostname(ctx, hostname)
 }
 
-func (h *LinuxHostsHandler) areHostsEqual(current, desired []hostEntry) bool {
-	if len(current) != len(desired) {
+func (h *LinuxHostsHandler) setHostname(ctx context.Context, hostname string) error {
+	// 使用系统调用设置主机名
+	return syscall.Sethostname([]byte(hostname))
+}
+
+func (h *LinuxHostsHandler) configureHosts(ctx context.Context, hosts []*systemv1.HostEntry) error {
+	// 获取hosts模板
+	templateContent, err := getTemplateContent("hosts.tpl", hostsTemplate)
+	if err != nil {
+		return err
+	}
+
+	// 解析模板
+	tmpl, err := template.New("hosts").Parse(templateContent)
+	if err != nil {
+		return fmt.Errorf("failed to parse hosts template: %v", err)
+	}
+
+	// 准备模板数据
+	data := struct {
+		Hosts []*systemv1.HostEntry
+	}{
+		Hosts: hosts,
+	}
+
+	// 渲染模板
+	var content strings.Builder
+	if err := tmpl.Execute(&content, data); err != nil {
+		return fmt.Errorf("failed to execute hosts template: %v", err)
+	}
+
+	desiredContent := content.String()
+
+	// 读取现有配置
+	currentContent, err := os.ReadFile("/etc/hosts")
+	if err == nil && string(currentContent) == desiredContent {
+		return nil // 配置相同，无需更新
+	}
+
+	// 使用工具函数原子性写入文件
+	return utils.AtomicWriteFile([]byte(desiredContent), "/etc/hosts", 0644)
+}
+
+// hasValidNodeSelector 检查是否有有效的 nodeSelector
+func (h *LinuxHostsHandler) hasValidNodeSelector(selector *systemv1.NodeSelector) bool {
+	if selector == nil {
 		return false
 	}
+	return selector.MachineId != "" || selector.Ip != ""
+}
 
-	// 复制切片以避免修改原始数据
-	currentCopy := make([]hostEntry, len(current))
-	desiredCopy := make([]hostEntry, len(desired))
-	copy(currentCopy, current)
-	copy(desiredCopy, desired)
-
-	// 对每个条目的主机名进行排序
-	for i := range currentCopy {
-		slices.Sort(currentCopy[i].Hostnames)
-	}
-	for i := range desiredCopy {
-		slices.Sort(desiredCopy[i].Hostnames)
-	}
-
-	// 对条目进行排序（按IP地址）
-	slices.SortFunc(currentCopy, func(a, b hostEntry) int {
-		return strings.Compare(a.IP, b.IP)
-	})
-	slices.SortFunc(desiredCopy, func(a, b hostEntry) int {
-		return strings.Compare(a.IP, b.IP)
-	})
-
-	// 比较每个条目
-	for i := range currentCopy {
-		if currentCopy[i].IP != desiredCopy[i].IP {
-			return false
-		}
-		if !slices.Equal(currentCopy[i].Hostnames, desiredCopy[i].Hostnames) {
-			return false
+// applyConfiguration 应用配置项
+func (h *LinuxHostsHandler) applyConfiguration(ctx context.Context, hostsSpec *systemv1.HostsConfigurationSpec) (*domain.ReconcileResult, error) {
+	// 处理hostname配置
+	if hostsSpec.Hostname != "" {
+		if err := h.configureHostname(ctx, hostsSpec.Hostname); err != nil {
+			return nil, fmt.Errorf("failed to configure hostname: %v", err)
 		}
 	}
 
-	return true
+	// 处理hosts配置
+	if len(hostsSpec.Hosts) > 0 {
+		if err := h.configureHosts(ctx, hostsSpec.Hosts); err != nil {
+			return nil, fmt.Errorf("failed to configure hosts: %v", err)
+		}
+	}
+
+	return &domain.ReconcileResult{
+		Status: &systemv1.ResourceStatus{
+			Phase:   "Ready",
+			Reason:  "Configured",
+			Message: "Hosts configuration applied successfully",
+		},
+	}, nil
 }

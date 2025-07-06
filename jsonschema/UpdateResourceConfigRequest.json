@@ -7,8 +7,8 @@
                 "name": {
                     "type": "string"
                 },
-                "resource": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.Resource",
+                "config": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
                     "additionalProperties": true
                 }
             },
@@ -50,25 +50,6 @@
             "type": "object",
             "title": "Metadata"
         },
-        "xtopus.api.system.v1.Resource": {
-            "properties": {
-                "config": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
-                    "additionalProperties": true
-                },
-                "effective_config": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
-                    "additionalProperties": true
-                },
-                "status": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceStatus",
-                    "additionalProperties": true
-                }
-            },
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Resource"
-        },
         "xtopus.api.system.v1.ResourceConfig": {
             "properties": {
                 "api_version": {
@@ -104,30 +85,6 @@
             "type": "object",
             "title": "Resource Config",
             "description": "资源配置"
-        },
-        "xtopus.api.system.v1.ResourceStatus": {
-            "properties": {
-                "phase": {
-                    "type": "string",
-                    "description": "当前阶段"
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "原因"
-                },
-                "message": {
-                    "type": "string",
-                    "description": "消息"
-                },
-                "last_reconcile_time": {
-                    "type": "string",
-                    "description": "最后同步时间",
-                    "format": "date-time"
-                }
-            },
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Resource Status"
         }
     }
 }

@@ -95,297 +95,6 @@ func (x *ResourceConfig) GetSpec() *anypb.Any {
 	return nil
 }
 
-// 具体的配置类型定义
-type HostsConfigurationSpec struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Configurations []*HostsConfiguration `protobuf:"bytes,1,rep,name=configurations,proto3" json:"configurations,omitempty"`
-}
-
-func (x *HostsConfigurationSpec) Reset() {
-	*x = HostsConfigurationSpec{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[1]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HostsConfigurationSpec) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HostsConfigurationSpec) ProtoMessage() {}
-
-func (x *HostsConfigurationSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[1]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HostsConfigurationSpec.ProtoReflect.Descriptor instead.
-func (*HostsConfigurationSpec) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *HostsConfigurationSpec) GetConfigurations() []*HostsConfiguration {
-	if x != nil {
-		return x.Configurations
-	}
-	return nil
-}
-
-type TimeConfigurationSpec struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Timezone   string   `protobuf:"bytes,1,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	NtpEnabled bool     `protobuf:"varint,2,opt,name=ntp_enabled,json=ntpEnabled,proto3" json:"ntp_enabled,omitempty"`
-	NtpServers []string `protobuf:"bytes,3,rep,name=ntp_servers,json=ntpServers,proto3" json:"ntp_servers,omitempty"`
-}
-
-func (x *TimeConfigurationSpec) Reset() {
-	*x = TimeConfigurationSpec{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *TimeConfigurationSpec) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TimeConfigurationSpec) ProtoMessage() {}
-
-func (x *TimeConfigurationSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TimeConfigurationSpec.ProtoReflect.Descriptor instead.
-func (*TimeConfigurationSpec) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *TimeConfigurationSpec) GetTimezone() string {
-	if x != nil {
-		return x.Timezone
-	}
-	return ""
-}
-
-func (x *TimeConfigurationSpec) GetNtpEnabled() bool {
-	if x != nil {
-		return x.NtpEnabled
-	}
-	return false
-}
-
-func (x *TimeConfigurationSpec) GetNtpServers() []string {
-	if x != nil {
-		return x.NtpServers
-	}
-	return nil
-}
-
-// 保留原有的具体类型定义
-type HostsConfiguration struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	NodeSelector *NodeSelector `protobuf:"bytes,1,opt,name=node_selector,json=nodeSelector,proto3" json:"node_selector,omitempty"`
-	Hostname     string        `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
-	Hosts        []*HostEntry  `protobuf:"bytes,3,rep,name=hosts,proto3" json:"hosts,omitempty"`
-}
-
-func (x *HostsConfiguration) Reset() {
-	*x = HostsConfiguration{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HostsConfiguration) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HostsConfiguration) ProtoMessage() {}
-
-func (x *HostsConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HostsConfiguration.ProtoReflect.Descriptor instead.
-func (*HostsConfiguration) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *HostsConfiguration) GetNodeSelector() *NodeSelector {
-	if x != nil {
-		return x.NodeSelector
-	}
-	return nil
-}
-
-func (x *HostsConfiguration) GetHostname() string {
-	if x != nil {
-		return x.Hostname
-	}
-	return ""
-}
-
-func (x *HostsConfiguration) GetHosts() []*HostEntry {
-	if x != nil {
-		return x.Hosts
-	}
-	return nil
-}
-
-// Hosts条目
-type HostEntry struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	// IP地址
-	Ip string `protobuf:"bytes,1,opt,name=ip,proto3" json:"ip,omitempty"`
-	// 主机名列表
-	Hostnames []string `protobuf:"bytes,2,rep,name=hostnames,proto3" json:"hostnames,omitempty"`
-}
-
-func (x *HostEntry) Reset() {
-	*x = HostEntry{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[4]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HostEntry) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HostEntry) ProtoMessage() {}
-
-func (x *HostEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[4]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HostEntry.ProtoReflect.Descriptor instead.
-func (*HostEntry) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *HostEntry) GetIp() string {
-	if x != nil {
-		return x.Ip
-	}
-	return ""
-}
-
-func (x *HostEntry) GetHostnames() []string {
-	if x != nil {
-		return x.Hostnames
-	}
-	return nil
-}
-
-// 节点选择器
-type NodeSelector struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	// 机器ID匹配
-	MachineId string `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
-	// IP地址匹配
-	Ip string `protobuf:"bytes,2,opt,name=ip,proto3" json:"ip,omitempty"`
-}
-
-func (x *NodeSelector) Reset() {
-	*x = NodeSelector{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[5]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *NodeSelector) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NodeSelector) ProtoMessage() {}
-
-func (x *NodeSelector) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[5]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NodeSelector.ProtoReflect.Descriptor instead.
-func (*NodeSelector) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *NodeSelector) GetMachineId() string {
-	if x != nil {
-		return x.MachineId
-	}
-	return ""
-}
-
-func (x *NodeSelector) GetIp() string {
-	if x != nil {
-		return x.Ip
-	}
-	return ""
-}
-
 type Metadata struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -403,7 +112,7 @@ type Metadata struct {
 func (x *Metadata) Reset() {
 	*x = Metadata{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[6]
+		mi := &file_system_v1_resource_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -416,7 +125,7 @@ func (x *Metadata) String() string {
 func (*Metadata) ProtoMessage() {}
 
 func (x *Metadata) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[6]
+	mi := &file_system_v1_resource_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +138,7 @@ func (x *Metadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Metadata.ProtoReflect.Descriptor instead.
 func (*Metadata) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{6}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Metadata) GetName() string {
@@ -499,7 +208,7 @@ type ResourceStatus struct {
 func (x *ResourceStatus) Reset() {
 	*x = ResourceStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[7]
+		mi := &file_system_v1_resource_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -512,7 +221,7 @@ func (x *ResourceStatus) String() string {
 func (*ResourceStatus) ProtoMessage() {}
 
 func (x *ResourceStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[7]
+	mi := &file_system_v1_resource_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -525,7 +234,7 @@ func (x *ResourceStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceStatus.ProtoReflect.Descriptor instead.
 func (*ResourceStatus) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{7}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ResourceStatus) GetPhase() string {
@@ -569,7 +278,7 @@ type Resource struct {
 func (x *Resource) Reset() {
 	*x = Resource{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[8]
+		mi := &file_system_v1_resource_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -582,7 +291,7 @@ func (x *Resource) String() string {
 func (*Resource) ProtoMessage() {}
 
 func (x *Resource) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[8]
+	mi := &file_system_v1_resource_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +304,7 @@ func (x *Resource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Resource.ProtoReflect.Descriptor instead.
 func (*Resource) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{8}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Resource) GetConfig() *ResourceConfig {
@@ -630,7 +339,7 @@ type ListResourceConfigsRequest struct {
 func (x *ListResourceConfigsRequest) Reset() {
 	*x = ListResourceConfigsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[9]
+		mi := &file_system_v1_resource_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -643,7 +352,7 @@ func (x *ListResourceConfigsRequest) String() string {
 func (*ListResourceConfigsRequest) ProtoMessage() {}
 
 func (x *ListResourceConfigsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[9]
+	mi := &file_system_v1_resource_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -656,7 +365,7 @@ func (x *ListResourceConfigsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListResourceConfigsRequest.ProtoReflect.Descriptor instead.
 func (*ListResourceConfigsRequest) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{9}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListResourceConfigsRequest) GetKind() string {
@@ -677,7 +386,7 @@ type ListResourceConfigsResponse struct {
 func (x *ListResourceConfigsResponse) Reset() {
 	*x = ListResourceConfigsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[10]
+		mi := &file_system_v1_resource_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -690,7 +399,7 @@ func (x *ListResourceConfigsResponse) String() string {
 func (*ListResourceConfigsResponse) ProtoMessage() {}
 
 func (x *ListResourceConfigsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[10]
+	mi := &file_system_v1_resource_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +412,7 @@ func (x *ListResourceConfigsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListResourceConfigsResponse.ProtoReflect.Descriptor instead.
 func (*ListResourceConfigsResponse) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{10}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListResourceConfigsResponse) GetResources() []*Resource {
@@ -724,7 +433,7 @@ type GetResourceConfigRequest struct {
 func (x *GetResourceConfigRequest) Reset() {
 	*x = GetResourceConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[11]
+		mi := &file_system_v1_resource_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -737,7 +446,7 @@ func (x *GetResourceConfigRequest) String() string {
 func (*GetResourceConfigRequest) ProtoMessage() {}
 
 func (x *GetResourceConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[11]
+	mi := &file_system_v1_resource_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -750,7 +459,7 @@ func (x *GetResourceConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetResourceConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetResourceConfigRequest) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{11}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetResourceConfigRequest) GetName() string {
@@ -765,14 +474,14 @@ type UpdateResourceConfigRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name     string    `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Resource *Resource `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
+	Name   string          `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Config *ResourceConfig `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
 }
 
 func (x *UpdateResourceConfigRequest) Reset() {
 	*x = UpdateResourceConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_system_v1_resource_proto_msgTypes[12]
+		mi := &file_system_v1_resource_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -785,7 +494,7 @@ func (x *UpdateResourceConfigRequest) String() string {
 func (*UpdateResourceConfigRequest) ProtoMessage() {}
 
 func (x *UpdateResourceConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_system_v1_resource_proto_msgTypes[12]
+	mi := &file_system_v1_resource_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -798,7 +507,7 @@ func (x *UpdateResourceConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateResourceConfigRequest.ProtoReflect.Descriptor instead.
 func (*UpdateResourceConfigRequest) Descriptor() ([]byte, []int) {
-	return file_system_v1_resource_proto_rawDescGZIP(), []int{12}
+	return file_system_v1_resource_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateResourceConfigRequest) GetName() string {
@@ -808,9 +517,9 @@ func (x *UpdateResourceConfigRequest) GetName() string {
 	return ""
 }
 
-func (x *UpdateResourceConfigRequest) GetResource() *Resource {
+func (x *UpdateResourceConfigRequest) GetConfig() *ResourceConfig {
 	if x != nil {
-		return x.Resource
+		return x.Config
 	}
 	return nil
 }
@@ -837,40 +546,7 @@ var file_system_v1_resource_proto_rawDesc = []byte{
 	0x64, 0x61, 0x74, 0x61, 0x52, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x12, 0x28,
 	0x0a, 0x04, 0x73, 0x70, 0x65, 0x63, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x67,
 	0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x41,
-	0x6e, 0x79, 0x52, 0x04, 0x73, 0x70, 0x65, 0x63, 0x22, 0x6a, 0x0a, 0x16, 0x48, 0x6f, 0x73, 0x74,
-	0x73, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x70,
-	0x65, 0x63, 0x12, 0x50, 0x0a, 0x0e, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x28, 0x2e, 0x78, 0x74, 0x6f,
-	0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76,
-	0x31, 0x2e, 0x48, 0x6f, 0x73, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61,
-	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0e, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x73, 0x22, 0x75, 0x0a, 0x15, 0x54, 0x69, 0x6d, 0x65, 0x43, 0x6f, 0x6e, 0x66,
-	0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x70, 0x65, 0x63, 0x12, 0x1a, 0x0a,
-	0x08, 0x74, 0x69, 0x6d, 0x65, 0x7a, 0x6f, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x08, 0x74, 0x69, 0x6d, 0x65, 0x7a, 0x6f, 0x6e, 0x65, 0x12, 0x1f, 0x0a, 0x0b, 0x6e, 0x74, 0x70,
-	0x5f, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0a,
-	0x6e, 0x74, 0x70, 0x45, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x12, 0x1f, 0x0a, 0x0b, 0x6e, 0x74,
-	0x70, 0x5f, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52,
-	0x0a, 0x6e, 0x74, 0x70, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x22, 0xb0, 0x01, 0x0a, 0x12,
-	0x48, 0x6f, 0x73, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x12, 0x47, 0x0a, 0x0d, 0x6e, 0x6f, 0x64, 0x65, 0x5f, 0x73, 0x65, 0x6c, 0x65, 0x63,
-	0x74, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x78, 0x74, 0x6f, 0x70,
-	0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31,
-	0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x52, 0x0c, 0x6e,
-	0x6f, 0x64, 0x65, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x68,
-	0x6f, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x68,
-	0x6f, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x35, 0x0a, 0x05, 0x68, 0x6f, 0x73, 0x74, 0x73,
-	0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e,
-	0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x48, 0x6f,
-	0x73, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x05, 0x68, 0x6f, 0x73, 0x74, 0x73, 0x22, 0x39,
-	0x0a, 0x09, 0x48, 0x6f, 0x73, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x0e, 0x0a, 0x02, 0x69,
-	0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x70, 0x12, 0x1c, 0x0a, 0x09, 0x68,
-	0x6f, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09,
-	0x68, 0x6f, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x22, 0x3d, 0x0a, 0x0c, 0x4e, 0x6f, 0x64,
-	0x65, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x12, 0x1d, 0x0a, 0x0a, 0x6d, 0x61, 0x63,
-	0x68, 0x69, 0x6e, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d,
-	0x61, 0x63, 0x68, 0x69, 0x6e, 0x65, 0x49, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x70, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x70, 0x22, 0xc5, 0x03, 0x0a, 0x08, 0x4d, 0x65, 0x74,
+	0x6e, 0x79, 0x52, 0x04, 0x73, 0x70, 0x65, 0x63, 0x22, 0xc5, 0x03, 0x0a, 0x08, 0x4d, 0x65, 0x74,
 	0x61, 0x64, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x29, 0x0a, 0x10, 0x72, 0x65, 0x73,
 	0x6f, 0x75, 0x72, 0x63, 0x65, 0x5f, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20,
@@ -935,45 +611,45 @@ var file_system_v1_resource_proto_rawDesc = []byte{
 	0x22, 0x2e, 0x0a, 0x18, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43,
 	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04,
 	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x22, 0x6d, 0x0a, 0x1b, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72,
+	0x22, 0x6f, 0x0a, 0x1b, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72,
 	0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
 	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
-	0x61, 0x6d, 0x65, 0x12, 0x3a, 0x0a, 0x08, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1e, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61,
-	0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73,
-	0x6f, 0x75, 0x72, 0x63, 0x65, 0x52, 0x08, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x32,
-	0xba, 0x03, 0x0a, 0x13, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
-	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x91, 0x01, 0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74,
-	0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x12,
-	0x30, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73,
-	0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75,
-	0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x31, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73,
+	0x61, 0x6d, 0x65, 0x12, 0x3c, 0x0a, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x24, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69,
+	0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75,
+	0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x32, 0xba, 0x03, 0x0a, 0x13, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x43, 0x6f, 0x6e, 0x66,
+	0x69, 0x67, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x91, 0x01, 0x0a, 0x13, 0x4c, 0x69,
+	0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x73, 0x12, 0x30, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73,
 	0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73,
-	0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x15, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x0f, 0x12, 0x0d, 0x2f, 0x76,
-	0x31, 0x2f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x12, 0x81, 0x01, 0x0a, 0x11,
-	0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69,
-	0x67, 0x12, 0x2e, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73,
-	0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x6f,
-	0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x1e, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73,
-	0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63,
-	0x65, 0x22, 0x1c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x16, 0x12, 0x14, 0x2f, 0x76, 0x31, 0x2f, 0x72,
-	0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x2f, 0x7b, 0x6e, 0x61, 0x6d, 0x65, 0x7d, 0x12,
-	0x8a, 0x01, 0x0a, 0x14, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72,
-	0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x31, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75,
-	0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e,
-	0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x78, 0x74,
-	0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e,
-	0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x22, 0x1f, 0x82, 0xd3, 0xe4,
-	0x93, 0x02, 0x19, 0x1a, 0x14, 0x2f, 0x76, 0x31, 0x2f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63,
-	0x65, 0x73, 0x2f, 0x7b, 0x6e, 0x61, 0x6d, 0x65, 0x7d, 0x3a, 0x01, 0x2a, 0x42, 0x2c, 0x5a, 0x2a,
-	0x67, 0x6f, 0x2e, 0x78, 0x62, 0x72, 0x6f, 0x74, 0x68, 0x65, 0x72, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x6e, 0x69, 0x78, 0x2d, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x61, 0x70, 0x69,
-	0x2f, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2f, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x31, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69,
+	0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x52,
+	0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x15, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x0f, 0x12, 0x0d,
+	0x2f, 0x76, 0x31, 0x2f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x12, 0x81, 0x01,
+	0x0a, 0x11, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x12, 0x2e, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69,
+	0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65,
+	0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69,
+	0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75,
+	0x72, 0x63, 0x65, 0x22, 0x1c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x16, 0x12, 0x14, 0x2f, 0x76, 0x31,
+	0x2f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x2f, 0x7b, 0x6e, 0x61, 0x6d, 0x65,
+	0x7d, 0x12, 0x8a, 0x01, 0x0a, 0x14, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f,
+	0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x31, 0x2e, 0x78, 0x74, 0x6f,
+	0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x76,
+	0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e,
+	0x78, 0x74, 0x6f, 0x70, 0x75, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x73, 0x79, 0x73, 0x74, 0x65,
+	0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x22, 0x1f, 0x82,
+	0xd3, 0xe4, 0x93, 0x02, 0x19, 0x1a, 0x14, 0x2f, 0x76, 0x31, 0x2f, 0x72, 0x65, 0x73, 0x6f, 0x75,
+	0x72, 0x63, 0x65, 0x73, 0x2f, 0x7b, 0x6e, 0x61, 0x6d, 0x65, 0x7d, 0x3a, 0x01, 0x2a, 0x42, 0x2c,
+	0x5a, 0x2a, 0x67, 0x6f, 0x2e, 0x78, 0x62, 0x72, 0x6f, 0x74, 0x68, 0x65, 0x72, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2f, 0x6e, 0x69, 0x78, 0x2d, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x61,
+	0x70, 0x69, 0x2f, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2f, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -988,51 +664,43 @@ func file_system_v1_resource_proto_rawDescGZIP() []byte {
 	return file_system_v1_resource_proto_rawDescData
 }
 
-var file_system_v1_resource_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_system_v1_resource_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_system_v1_resource_proto_goTypes = []interface{}{
 	(*ResourceConfig)(nil),              // 0: xtopus.api.system.v1.ResourceConfig
-	(*HostsConfigurationSpec)(nil),      // 1: xtopus.api.system.v1.HostsConfigurationSpec
-	(*TimeConfigurationSpec)(nil),       // 2: xtopus.api.system.v1.TimeConfigurationSpec
-	(*HostsConfiguration)(nil),          // 3: xtopus.api.system.v1.HostsConfiguration
-	(*HostEntry)(nil),                   // 4: xtopus.api.system.v1.HostEntry
-	(*NodeSelector)(nil),                // 5: xtopus.api.system.v1.NodeSelector
-	(*Metadata)(nil),                    // 6: xtopus.api.system.v1.Metadata
-	(*ResourceStatus)(nil),              // 7: xtopus.api.system.v1.ResourceStatus
-	(*Resource)(nil),                    // 8: xtopus.api.system.v1.Resource
-	(*ListResourceConfigsRequest)(nil),  // 9: xtopus.api.system.v1.ListResourceConfigsRequest
-	(*ListResourceConfigsResponse)(nil), // 10: xtopus.api.system.v1.ListResourceConfigsResponse
-	(*GetResourceConfigRequest)(nil),    // 11: xtopus.api.system.v1.GetResourceConfigRequest
-	(*UpdateResourceConfigRequest)(nil), // 12: xtopus.api.system.v1.UpdateResourceConfigRequest
-	nil,                                 // 13: xtopus.api.system.v1.Metadata.LabelsEntry
-	nil,                                 // 14: xtopus.api.system.v1.Metadata.AnnotationsEntry
-	(*anypb.Any)(nil),                   // 15: google.protobuf.Any
-	(*timestamppb.Timestamp)(nil),       // 16: google.protobuf.Timestamp
+	(*Metadata)(nil),                    // 1: xtopus.api.system.v1.Metadata
+	(*ResourceStatus)(nil),              // 2: xtopus.api.system.v1.ResourceStatus
+	(*Resource)(nil),                    // 3: xtopus.api.system.v1.Resource
+	(*ListResourceConfigsRequest)(nil),  // 4: xtopus.api.system.v1.ListResourceConfigsRequest
+	(*ListResourceConfigsResponse)(nil), // 5: xtopus.api.system.v1.ListResourceConfigsResponse
+	(*GetResourceConfigRequest)(nil),    // 6: xtopus.api.system.v1.GetResourceConfigRequest
+	(*UpdateResourceConfigRequest)(nil), // 7: xtopus.api.system.v1.UpdateResourceConfigRequest
+	nil,                                 // 8: xtopus.api.system.v1.Metadata.LabelsEntry
+	nil,                                 // 9: xtopus.api.system.v1.Metadata.AnnotationsEntry
+	(*anypb.Any)(nil),                   // 10: google.protobuf.Any
+	(*timestamppb.Timestamp)(nil),       // 11: google.protobuf.Timestamp
 }
 var file_system_v1_resource_proto_depIdxs = []int32{
-	6,  // 0: xtopus.api.system.v1.ResourceConfig.metadata:type_name -> xtopus.api.system.v1.Metadata
-	15, // 1: xtopus.api.system.v1.ResourceConfig.spec:type_name -> google.protobuf.Any
-	3,  // 2: xtopus.api.system.v1.HostsConfigurationSpec.configurations:type_name -> xtopus.api.system.v1.HostsConfiguration
-	5,  // 3: xtopus.api.system.v1.HostsConfiguration.node_selector:type_name -> xtopus.api.system.v1.NodeSelector
-	4,  // 4: xtopus.api.system.v1.HostsConfiguration.hosts:type_name -> xtopus.api.system.v1.HostEntry
-	13, // 5: xtopus.api.system.v1.Metadata.labels:type_name -> xtopus.api.system.v1.Metadata.LabelsEntry
-	14, // 6: xtopus.api.system.v1.Metadata.annotations:type_name -> xtopus.api.system.v1.Metadata.AnnotationsEntry
-	16, // 7: xtopus.api.system.v1.ResourceStatus.last_reconcile_time:type_name -> google.protobuf.Timestamp
-	0,  // 8: xtopus.api.system.v1.Resource.config:type_name -> xtopus.api.system.v1.ResourceConfig
-	0,  // 9: xtopus.api.system.v1.Resource.effective_config:type_name -> xtopus.api.system.v1.ResourceConfig
-	7,  // 10: xtopus.api.system.v1.Resource.status:type_name -> xtopus.api.system.v1.ResourceStatus
-	8,  // 11: xtopus.api.system.v1.ListResourceConfigsResponse.resources:type_name -> xtopus.api.system.v1.Resource
-	8,  // 12: xtopus.api.system.v1.UpdateResourceConfigRequest.resource:type_name -> xtopus.api.system.v1.Resource
-	9,  // 13: xtopus.api.system.v1.SystemConfigService.ListResourceConfigs:input_type -> xtopus.api.system.v1.ListResourceConfigsRequest
-	11, // 14: xtopus.api.system.v1.SystemConfigService.GetResourceConfig:input_type -> xtopus.api.system.v1.GetResourceConfigRequest
-	12, // 15: xtopus.api.system.v1.SystemConfigService.UpdateResourceConfig:input_type -> xtopus.api.system.v1.UpdateResourceConfigRequest
-	10, // 16: xtopus.api.system.v1.SystemConfigService.ListResourceConfigs:output_type -> xtopus.api.system.v1.ListResourceConfigsResponse
-	8,  // 17: xtopus.api.system.v1.SystemConfigService.GetResourceConfig:output_type -> xtopus.api.system.v1.Resource
-	8,  // 18: xtopus.api.system.v1.SystemConfigService.UpdateResourceConfig:output_type -> xtopus.api.system.v1.Resource
-	16, // [16:19] is the sub-list for method output_type
-	13, // [13:16] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	1,  // 0: xtopus.api.system.v1.ResourceConfig.metadata:type_name -> xtopus.api.system.v1.Metadata
+	10, // 1: xtopus.api.system.v1.ResourceConfig.spec:type_name -> google.protobuf.Any
+	8,  // 2: xtopus.api.system.v1.Metadata.labels:type_name -> xtopus.api.system.v1.Metadata.LabelsEntry
+	9,  // 3: xtopus.api.system.v1.Metadata.annotations:type_name -> xtopus.api.system.v1.Metadata.AnnotationsEntry
+	11, // 4: xtopus.api.system.v1.ResourceStatus.last_reconcile_time:type_name -> google.protobuf.Timestamp
+	0,  // 5: xtopus.api.system.v1.Resource.config:type_name -> xtopus.api.system.v1.ResourceConfig
+	0,  // 6: xtopus.api.system.v1.Resource.effective_config:type_name -> xtopus.api.system.v1.ResourceConfig
+	2,  // 7: xtopus.api.system.v1.Resource.status:type_name -> xtopus.api.system.v1.ResourceStatus
+	3,  // 8: xtopus.api.system.v1.ListResourceConfigsResponse.resources:type_name -> xtopus.api.system.v1.Resource
+	0,  // 9: xtopus.api.system.v1.UpdateResourceConfigRequest.config:type_name -> xtopus.api.system.v1.ResourceConfig
+	4,  // 10: xtopus.api.system.v1.SystemConfigService.ListResourceConfigs:input_type -> xtopus.api.system.v1.ListResourceConfigsRequest
+	6,  // 11: xtopus.api.system.v1.SystemConfigService.GetResourceConfig:input_type -> xtopus.api.system.v1.GetResourceConfigRequest
+	7,  // 12: xtopus.api.system.v1.SystemConfigService.UpdateResourceConfig:input_type -> xtopus.api.system.v1.UpdateResourceConfigRequest
+	5,  // 13: xtopus.api.system.v1.SystemConfigService.ListResourceConfigs:output_type -> xtopus.api.system.v1.ListResourceConfigsResponse
+	3,  // 14: xtopus.api.system.v1.SystemConfigService.GetResourceConfig:output_type -> xtopus.api.system.v1.Resource
+	3,  // 15: xtopus.api.system.v1.SystemConfigService.UpdateResourceConfig:output_type -> xtopus.api.system.v1.Resource
+	13, // [13:16] is the sub-list for method output_type
+	10, // [10:13] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_system_v1_resource_proto_init() }
@@ -1054,66 +722,6 @@ func file_system_v1_resource_proto_init() {
 			}
 		}
 		file_system_v1_resource_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HostsConfigurationSpec); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_system_v1_resource_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TimeConfigurationSpec); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_system_v1_resource_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HostsConfiguration); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_system_v1_resource_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HostEntry); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_system_v1_resource_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NodeSelector); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_system_v1_resource_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Metadata); i {
 			case 0:
 				return &v.state
@@ -1125,7 +733,7 @@ func file_system_v1_resource_proto_init() {
 				return nil
 			}
 		}
-		file_system_v1_resource_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_system_v1_resource_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ResourceStatus); i {
 			case 0:
 				return &v.state
@@ -1137,7 +745,7 @@ func file_system_v1_resource_proto_init() {
 				return nil
 			}
 		}
-		file_system_v1_resource_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_system_v1_resource_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Resource); i {
 			case 0:
 				return &v.state
@@ -1149,7 +757,7 @@ func file_system_v1_resource_proto_init() {
 				return nil
 			}
 		}
-		file_system_v1_resource_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_system_v1_resource_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListResourceConfigsRequest); i {
 			case 0:
 				return &v.state
@@ -1161,7 +769,7 @@ func file_system_v1_resource_proto_init() {
 				return nil
 			}
 		}
-		file_system_v1_resource_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_system_v1_resource_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListResourceConfigsResponse); i {
 			case 0:
 				return &v.state
@@ -1173,7 +781,7 @@ func file_system_v1_resource_proto_init() {
 				return nil
 			}
 		}
-		file_system_v1_resource_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_system_v1_resource_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetResourceConfigRequest); i {
 			case 0:
 				return &v.state
@@ -1185,7 +793,7 @@ func file_system_v1_resource_proto_init() {
 				return nil
 			}
 		}
-		file_system_v1_resource_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_system_v1_resource_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateResourceConfigRequest); i {
 			case 0:
 				return &v.state
@@ -1204,7 +812,7 @@ func file_system_v1_resource_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_system_v1_resource_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

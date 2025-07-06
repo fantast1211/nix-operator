@@ -8,10 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.xbrother.com/nix-operator/pkg/config"
+	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
+	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/utils"
 
 	"github.com/fsnotify/fsnotify"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type OSInfo struct {
@@ -23,21 +26,16 @@ type OSInfo struct {
 
 type Controller struct {
 	configDir string
-	handlers  map[string]Handler // key 是处理器类型
+	Handlers  map[string]Handler // key 是处理器类型，公开字段供外部访问
 	osInfo    OSInfo
 	logger    *utils.Logger
-}
-
-type ReconcileResult struct {
-	Effective *config.ResourceConfig
-	Status    *config.ResourceStatus
 }
 
 type Handler interface {
 	// Match 检查是否支持该操作系统
 	Match(osInfo OSInfo) bool
 	// Reconcile 处理配置
-	Reconcile(ctx context.Context, config *config.ResourceConfig) (*ReconcileResult, error)
+	Reconcile(ctx context.Context, config *systemv1.ResourceConfig) (*domain.ReconcileResult, error)
 }
 
 var handlerFactories = make(map[string][]Handler)
@@ -57,8 +55,8 @@ func NewController(configDir string, logger *utils.Logger) (*Controller, error) 
 
 	// 为每种类型选择合适的处理器
 	requiredTypes := []string{
-		"hosts",
-		"time",
+		"HostsConfiguration",
+		"TimeConfiguration",
 	}
 	for _, typeName := range requiredTypes {
 		typedHandlers := handlerFactories[typeName]
@@ -89,7 +87,7 @@ func NewController(configDir string, logger *utils.Logger) (*Controller, error) 
 
 	return &Controller{
 		configDir: configDir,
-		handlers:  handlers,
+		Handlers:  handlers,
 		osInfo:    osInfo,
 		logger:    logger,
 	}, nil
@@ -210,7 +208,7 @@ func (c *Controller) reconcile() {
 		c.logger.Debugf("controller", "Processing config file: %s (kind: %s)", path, cfg.Kind)
 
 		// 查找对应的处理器
-		handler, exists := c.handlers[cfg.Kind]
+		handler, exists := c.Handlers[cfg.Kind]
 		if !exists {
 			c.logger.Warnf("controller", "No handler found for kind: %s", cfg.Kind)
 			return nil
@@ -235,16 +233,40 @@ func (c *Controller) reconcile() {
 	}
 }
 
-func loadConfigFile(path string) (*config.ResourceConfig, error) {
+func loadConfigFile(path string) (*systemv1.ResourceConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg config.ResourceConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	var tempConfig struct {
+		APIVersion string                 `json:"apiVersion"`
+		Kind       string                 `json:"kind"`
+		Metadata   *systemv1.Metadata     `json:"metadata"`
+		Spec       map[string]interface{} `json:"spec"`
+	}
+
+	if err := json.Unmarshal(data, &tempConfig); err != nil {
 		return nil, err
 	}
 
-	return &cfg, nil
+	cfg := &systemv1.ResourceConfig{
+		ApiVersion: tempConfig.APIVersion,
+		Kind:       tempConfig.Kind,
+		Metadata:   tempConfig.Metadata,
+	}
+
+	// 封装为 structpb.Struct，保持为弱类型，延迟处理
+	if tempConfig.Spec != nil {
+		specStruct, err := structpb.NewStruct(tempConfig.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert spec to structpb.Struct: %w", err)
+		}
+		cfg.Spec, err = anypb.New(specStruct)
+		if err != nil {
+			return nil, fmt.Errorf("failed to wrap spec struct as Any: %w", err)
+		}
+	}
+
+	return cfg, nil
 }

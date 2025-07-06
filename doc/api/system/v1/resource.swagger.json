@@ -108,8 +108,8 @@
             "schema": {
               "type": "object",
               "properties": {
-                "resource": {
-                  "$ref": "#/definitions/v1Resource"
+                "config": {
+                  "$ref": "#/definitions/v1ResourceConfig"
                 }
               }
             }

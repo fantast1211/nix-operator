@@ -1,0 +1,36 @@
+{
+    "apiVersion": "sysconfig.operator/v1",
+    "kind": "HostsConfiguration",
+    "metadata": {
+        "name": "hosts-config2"
+    },
+    "spec": {
+        "nodeSelector": {
+            "machineId": "22222"
+        },
+        "hostname": "example-host-2",
+        "hosts": [
+            {
+                "ip": "192.168.1.10",
+                "hostnames": [
+                    "server1",
+                    "server1.local"
+                ]
+            },
+            {
+                "ip": "192.168.1.11",
+                "hostnames": [
+                    "server2",
+                    "server2.local"
+                ]
+            },
+            {
+                "ip": "192.168.1.13",
+                "hostnames": [
+                    "server4",
+                    "server4.local"
+                ]
+            }
+        ]
+    }
+}

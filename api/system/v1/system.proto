@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package xtopus.api.system.v1;
+
+option go_package = "go.xbrother.com/nix-operator/api/system/v1";
+
+import "google/api/annotations.proto";
+
+// Hosts配置相关定义
+
+// Hosts配置项
+message HostsConfigurationSpec {
+  // 节点选择器
+  NodeSelector node_selector = 1;
+  
+  // 主机名
+  string hostname = 2;
+  
+  // hosts条目列表
+  repeated HostEntry hosts = 3;
+}
+
+// 节点选择器
+message NodeSelector {
+  // 机器ID匹配
+  string machine_id = 1 [json_name="machineId"];
+  
+  // IP地址匹配
+  string ip = 2 [json_name="ip"];
+}
+
+// Hosts条目
+message HostEntry {
+  // IP地址
+  string ip = 1;
+  
+  // 主机名列表
+  repeated string hostnames = 2;
+}

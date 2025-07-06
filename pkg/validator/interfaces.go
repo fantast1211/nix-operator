@@ -1,13 +1,13 @@
 package validator
 
-import "go.xbrother.com/nix-operator/pkg/interfaces"
+import (
+	"google.golang.org/protobuf/types/known/anypb"
+)
 
-// ValidatorRegistry 校验器注册表
-type ValidatorRegistry interface {
-	// RegisterValidator 注册校验器
-	RegisterValidator(validator interfaces.SpecValidator)
-	// GetValidator 获取校验器
-	GetValidator(kind string) interfaces.SpecValidator
-	// ListValidators 列出所有校验器
-	ListValidators() []interfaces.SpecValidator
+// SpecValidator Spec 校验器接口（插件机制）
+type SpecValidator interface {
+	// Validate 校验 spec 内容
+	Validate(spec *anypb.Any) error
+	// GetKind 获取支持的 kind
+	GetKind() string
 }

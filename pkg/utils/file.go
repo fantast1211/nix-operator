@@ -1,9 +1,14 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // AtomicWriteFile 原子性地写入文件
@@ -49,4 +54,52 @@ func AtomicWriteFile(content []byte, filename string, perm os.FileMode) error {
 	}
 
 	return nil
+}
+
+// isJSONFile 检查文件是否为JSON文件
+func IsJSONFile(info os.FileInfo) bool {
+	if info.IsDir() {
+		return false
+	}
+
+	ext := filepath.Ext(info.Name())
+	return ext == ".json"
+}
+
+func LoadConfigFile(path string) (*systemv1.ResourceConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempConfig struct {
+		APIVersion string                 `json:"apiVersion"`
+		Kind       string                 `json:"kind"`
+		Metadata   *systemv1.Metadata     `json:"metadata"`
+		Spec       map[string]interface{} `json:"spec"`
+	}
+
+	if err := json.Unmarshal(data, &tempConfig); err != nil {
+		return nil, err
+	}
+
+	cfg := &systemv1.ResourceConfig{
+		ApiVersion: tempConfig.APIVersion,
+		Kind:       tempConfig.Kind,
+		Metadata:   tempConfig.Metadata,
+	}
+
+	// 封装为 structpb.Struct，保持为弱类型，延迟处理
+	if tempConfig.Spec != nil {
+		specStruct, err := structpb.NewStruct(tempConfig.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert spec to structpb.Struct: %w", err)
+		}
+		cfg.Spec, err = anypb.New(specStruct)
+		if err != nil {
+			return nil, fmt.Errorf("failed to wrap spec struct as Any: %w", err)
+		}
+	}
+
+	return cfg, nil
 }

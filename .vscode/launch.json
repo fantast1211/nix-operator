@@ -1,0 +1,69 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Operator",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/operator",
+            "args": [
+                "--config-dir=etc/cr.d",
+                "--enable-api=true"
+            ],
+            "env": {
+                "GO_ENV": "development",
+                "LOG_LEVEL": "debug"
+            },
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "showLog": true,
+            "trace": "verbose"
+        },
+        {
+            "name": "Launch Operator (API Disabled)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/operator",
+            "args": [
+                "--config-dir=etc/cr.d",
+                "--enable-api=false"
+            ],
+            "env": {
+                "GO_ENV": "development",
+                "LOG_LEVEL": "debug"
+            },
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Debug Current File",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Attach to Process",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": 0
+        },
+        {
+            "name": "Test Current Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
+}
