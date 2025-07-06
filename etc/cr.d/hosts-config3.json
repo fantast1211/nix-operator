@@ -1,26 +1,26 @@
 {
-  "apiVersion": "system.xbrother.com/v1",
-  "kind": "HostsConfiguration",
-  "metadata": {
-    "name": "hosts-config3",
-    "resourceVersion": "1751802192",
-    "generation": 1,
-    "creationTime": "2025-07-06T19:43:12+08:00",
-    "deletionTime": "",
-    "labels": {},
-    "annotations": {}
+  "apiVersion":  "system.xbrother.com/v1",
+  "kind":  "HostsConfiguration",
+  "metadata":  {
+    "name":  "hosts-config3",
+    "resourceVersion":  "1751824684",
+    "generation":  1,
+    "creationTime":  "2025-07-07T01:58:04+08:00",
+    "deletionTime":  "",
+    "labels":  {},
+    "annotations":  {}
   },
-  "spec": {
-    "@type": "type.googleapis.com/xtopus.api.system.v1.HostsConfigurationSpec",
-    "nodeSelector": {
-      "machineId": "test-machine",
-      "ip": ""
+  "spec":  {
+    "@type":  "type.googleapis.com/xtopus.api.system.v1.HostsConfigurationSpec",
+    "nodeSelector":  {
+      "machineId":  "test-machine",
+      "ip":  ""
     },
-    "hostname": "test-hostname",
-    "hosts": [
+    "hostname":  "test-hostname",
+    "hosts":  [
       {
-        "ip": "192.168.1.100",
-        "hostnames": [
+        "ip":  "192.168.1.102",
+        "hostnames":  [
           "test.example.com"
         ]
       }
