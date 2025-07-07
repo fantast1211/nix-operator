@@ -1,28 +1,28 @@
 {
-    "apiVersion": "sysconfig.operator/v1",
-    "kind": "HostsConfiguration",
-    "metadata": {
-      "name": "hosts-config1"
+  "apiVersion": "sysconfig.operator/v1",
+  "kind": "HostsConfiguration",
+  "metadata": {
+    "name": "hosts-config1"
+  },
+  "spec": {
+    "nodeSelector": {
+      "machineId": "3d9ce2218ab44a449ad06db380db68f0",
+      "ip": "172.29.201.217"
     },
-    "spec": {
-      "nodeSelector": {
-        "machineId": "3d9ce2218ab44a449ad06db380db68f0",
-        "ip": "172.29.201.217"
+    "hostname": "QT-20220606",
+    "hosts": [
+      {
+        "ip": "192.168.1.10",
+        "hostnames": ["server1", "server1.local"]
       },
-      "hostname": "example-host-1",
-      "hosts": [
-        {
-          "ip": "192.168.1.10",
-          "hostnames": ["server1", "server1.local"]
-        },
-        {
-          "ip": "192.168.1.11",
-          "hostnames": ["server2", "server2.local"]
-        },
-        {
-          "ip": "192.168.1.19",
-          "hostnames": ["server3", "server3.local"]
-        }
-      ]
-    }
+      {
+        "ip": "192.168.1.11",
+        "hostnames": ["server2", "server2.local"]
+      },
+      {
+        "ip": "192.168.1.19",
+        "hostnames": ["server3", "server3.local"]
+      }
+    ]
   }
+}

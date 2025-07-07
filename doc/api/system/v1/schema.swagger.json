@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "system/v1/resource.proto",
+    "title": "system/v1/schema.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "SystemConfigService"
+      "name": "SchemaService"
     }
   ],
   "consumes": [
@@ -16,114 +16,10 @@
     "application/json"
   ],
   "paths": {
-    "/v1/resources": {
-      "get": {
-        "summary": "获取所有资源配置",
-        "operationId": "SystemConfigService_ListResourceConfigs",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListResourceConfigsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "kind",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SystemConfigService"
-        ]
-      }
-    },
-    "/v1/resources/{name}": {
-      "get": {
-        "summary": "获取资源配置",
-        "operationId": "SystemConfigService_GetResourceConfig",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Resource"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SystemConfigService"
-        ]
-      },
-      "put": {
-        "summary": "更新资源配置",
-        "operationId": "SystemConfigService_UpdateResourceConfig",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Resource"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "config": {
-                  "$ref": "#/definitions/v1ResourceConfig"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SystemConfigService"
-        ]
-      }
-    },
     "/v1/schemas": {
       "get": {
-        "summary": "获取资源 JSON Schema",
-        "operationId": "SystemConfigService_GetResourceSchemas",
+        "summary": "获取资源Schema信息",
+        "operationId": "SchemaService_GetResourceSchemas",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -141,13 +37,14 @@
         "parameters": [
           {
             "name": "kind",
+            "description": "可选的资源类型过滤，如果为空则返回所有类型",
             "in": "query",
             "required": false,
             "type": "string"
           }
         ],
         "tags": [
-          "SystemConfigService"
+          "SchemaService"
         ]
       }
     }
@@ -189,127 +86,33 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1ResourceSchema"
-          }
-        }
-      }
-    },
-    "v1ListResourceConfigsResponse": {
-      "type": "object",
-      "properties": {
-        "resources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1Resource"
-          }
-        }
-      }
-    },
-    "v1Metadata": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "resourceVersion": {
-          "type": "string"
-        },
-        "generation": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "creationTime": {
-          "type": "string"
-        },
-        "deletionTime": {
-          "type": "string"
-        },
-        "labels": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "annotations": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "v1Resource": {
-      "type": "object",
-      "properties": {
-        "config": {
-          "$ref": "#/definitions/v1ResourceConfig"
-        },
-        "effectiveConfig": {
-          "$ref": "#/definitions/v1ResourceConfig"
-        },
-        "status": {
-          "$ref": "#/definitions/v1ResourceStatus"
-        }
-      }
-    },
-    "v1ResourceConfig": {
-      "type": "object",
-      "properties": {
-        "apiVersion": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "metadata": {
-          "$ref": "#/definitions/v1Metadata"
-        },
-        "spec": {
-          "$ref": "#/definitions/protobufAny"
+          },
+          "title": "Schema列表"
         }
       },
-      "title": "资源配置"
+      "title": "获取资源Schema响应"
     },
     "v1ResourceSchema": {
       "type": "object",
       "properties": {
         "kind": {
-          "type": "string"
+          "type": "string",
+          "title": "资源类型"
         },
         "displayName": {
-          "type": "string"
+          "type": "string",
+          "title": "显示名称"
         },
         "version": {
-          "type": "string"
-        },
-        "typeUrl": {
-          "type": "string"
+          "type": "string",
+          "title": "版本"
         },
         "jsonSchema": {
-          "type": "string"
+          "type": "string",
+          "title": "JSON Schema字符串"
         }
-      }
-    },
-    "v1ResourceStatus": {
-      "type": "object",
-      "properties": {
-        "phase": {
-          "type": "string",
-          "title": "当前阶段"
-        },
-        "reason": {
-          "type": "string",
-          "title": "原因"
-        },
-        "message": {
-          "type": "string",
-          "title": "消息"
-        },
-        "lastReconcileTime": {
-          "type": "string",
-          "format": "date-time",
-          "title": "最后同步时间"
-        }
-      }
+      },
+      "title": "资源Schema信息"
     }
   }
 }

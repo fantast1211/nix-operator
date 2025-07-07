@@ -31,6 +31,13 @@ service SystemConfigService {
       body: "*"
     };
   }
+  
+  // 获取资源 JSON Schema
+  rpc GetResourceSchemas(GetResourceSchemasRequest) returns (GetResourceSchemasResponse) {
+    option (google.api.http) = {
+      get: "/v1/schemas"
+    };
+  }
 }
 
 // 资源配置
@@ -86,4 +93,20 @@ message GetResourceConfigRequest {
 message UpdateResourceConfigRequest {
   string name = 1;
   ResourceConfig config = 2;
+}
+
+message GetResourceSchemasRequest {
+  string kind = 1; // 可选，用于筛选特定类型的 schema
+}
+
+message GetResourceSchemasResponse {
+  repeated ResourceSchema schemas = 1;
+}
+
+message ResourceSchema {
+  string kind = 1;          // 资源类型标识
+  string display_name = 2;  // 用于展示的中文名
+  string version = 3;       // 当前 schema 的版本
+  string type_url = 4;      // Any 类型的 typeUrl
+  string json_schema = 5;   // 嵌入式返回的 JSON Schema
 }

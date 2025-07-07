@@ -3,11 +3,9 @@ package hosts
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"syscall"
 	"text/template"
@@ -15,11 +13,7 @@ import (
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/domain"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
-
+	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
@@ -55,42 +49,6 @@ func getTemplateContent(templateName, defaultContent string) (string, error) {
 	return defaultContent, nil
 }
 
-func UnmarshalSpec[T proto.Message](anySpec *anypb.Any) (T, error) {
-	var zero T
-	if anySpec == nil {
-		return zero, fmt.Errorf("spec is nil")
-	}
-
-	// 创建目标类型的实例
-	msg := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(proto.Message)
-
-	// 直接尝试解包为目标类型
-	if err := anySpec.UnmarshalTo(msg); err != nil {
-		// 如果直接解包失败，尝试通过Struct中转
-		var structSpec structpb.Struct
-		if err2 := anySpec.UnmarshalTo(&structSpec); err2 != nil {
-			return zero, fmt.Errorf("failed to unmarshal Any to target type: %w", err)
-		}
-
-		// 将 structpb.Struct 转换为 JSON，并过滤掉 @type 字段
-		structMap := structSpec.AsMap()
-		// 移除 @type 字段，因为它不属于目标 proto 消息的字段
-		delete(structMap, "@type")
-
-		jsonBytes, err := json.Marshal(structMap)
-		if err != nil {
-			return zero, fmt.Errorf("failed to marshal struct to JSON: %w", err)
-		}
-
-		// 使用 protojson 将 JSON 解析为 proto 消息
-		if err := protojson.Unmarshal(jsonBytes, msg); err != nil {
-			return zero, fmt.Errorf("failed to unmarshal JSON to proto: %w", err)
-		}
-	}
-
-	return msg.(T), nil
-}
-
 func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.ResourceConfig) (*domain.ReconcileResult, error) {
 	// 解析hosts配置
 	var hostsSpec *systemv1.HostsConfigurationSpec
@@ -102,12 +60,12 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.Resourc
 		// 	return nil, fmt.Errorf("failed to unmarshal spec to HostsConfigurationSpec: %w", err)
 		// }
 		var err error
-		hostsSpec, err = UnmarshalSpec[*systemv1.HostsConfigurationSpec](cfg.Spec)
+		hostsSpec, err = utils.UnmarshalSpec[*systemv1.HostsConfigurationSpec](cfg.Spec)
 		if err != nil {
-			return nil, fmt.Errorf("decode spec failed: %w", err)
+			return status.ReconcileError(cfg, "DecodeSpecFailed", fmt.Errorf("decode spec failed: %w", err))
 		}
 	} else {
-		return nil, fmt.Errorf("spec is nil")
+		return status.ReconcileError(cfg, "SpecIsNil", fmt.Errorf("spec is nil"))
 	}
 
 	utils.Debugf("hosts", "Parsed hostsSpec: nodeSelector=%+v, hostname=%s, hosts=%+v",
@@ -118,13 +76,13 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.Resourc
 	if h.hasValidNodeSelector(hostsSpec.NodeSelector) {
 		match, err := utils.MatchNodeSelector(hostsSpec.NodeSelector)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check node selector: %v", err)
+			return status.ReconcileError(cfg, "NodeSelectorCheckFailed", fmt.Errorf("failed to check node selector: %v", err))
 		}
 		if match {
 			// 找到匹配的特定配置，应用并返回有效配置
 			result, err := h.applyConfiguration(ctx, hostsSpec)
 			if err != nil {
-				return nil, err
+				return status.ReconcileError(cfg, "ApplyConfigurationFailed", err)
 			}
 			// 设置有效配置，多机场景下Config = EffectiveConfig，在按节点拆分的场景下，
 			// 由于每个配置文件只包含一个节点的配置， Config 和 EffectiveConfig 实际上是相同的
@@ -138,7 +96,7 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.Resourc
 		// 应用通用配置并返回有效配置
 		result, err := h.applyConfiguration(ctx, hostsSpec)
 		if err != nil {
-			return nil, err
+			return status.ReconcileError(cfg, "ApplyConfigurationFailed", err)
 		}
 		// 设置有效配置，多机场景下Config = EffectiveConfig，在按节点拆分的场景下，
 		// 由于每个配置文件只包含一个节点的配置， Config 和 EffectiveConfig 实际上是相同的
@@ -147,15 +105,7 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.Resourc
 	}
 
 	// 没有找到任何匹配的配置
-	return &domain.ReconcileResult{
-		Status: &systemv1.ResourceStatus{
-			Phase:   "Skipped",
-			Reason:  "NoMatchingConfiguration",
-			Message: "No matching configuration found for this host",
-		},
-		// 即使跳过，也应该返回原始配置作为有效配置
-		Effective: cfg,
-	}, nil
+	return status.ReconcileSkipped(cfg, "NoMatchingConfiguration", "No matching configuration found for this host")
 }
 
 func (h *LinuxHostsHandler) configureHostname(ctx context.Context, hostname string) error {
@@ -268,11 +218,5 @@ func (h *LinuxHostsHandler) applyConfiguration(ctx context.Context, hostsSpec *s
 		}
 	}
 
-	return &domain.ReconcileResult{
-		Status: &systemv1.ResourceStatus{
-			Phase:   "Ready",
-			Reason:  "Configured",
-			Message: "Hosts configuration applied successfully",
-		},
-	}, nil
+	return status.ReconcileReady(nil, "Configured", "Hosts configuration applied successfully")
 }

@@ -28,6 +28,8 @@ type SystemConfigServiceClient interface {
 	GetResourceConfig(ctx context.Context, in *GetResourceConfigRequest, opts ...grpc.CallOption) (*Resource, error)
 	// 更新资源配置
 	UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*Resource, error)
+	// 获取资源 JSON Schema
+	GetResourceSchemas(ctx context.Context, in *GetResourceSchemasRequest, opts ...grpc.CallOption) (*GetResourceSchemasResponse, error)
 }
 
 type systemConfigServiceClient struct {
@@ -65,6 +67,15 @@ func (c *systemConfigServiceClient) UpdateResourceConfig(ctx context.Context, in
 	return out, nil
 }
 
+func (c *systemConfigServiceClient) GetResourceSchemas(ctx context.Context, in *GetResourceSchemasRequest, opts ...grpc.CallOption) (*GetResourceSchemasResponse, error) {
+	out := new(GetResourceSchemasResponse)
+	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/GetResourceSchemas", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemConfigServiceServer is the server API for SystemConfigService service.
 // All implementations must embed UnimplementedSystemConfigServiceServer
 // for forward compatibility
@@ -75,6 +86,8 @@ type SystemConfigServiceServer interface {
 	GetResourceConfig(context.Context, *GetResourceConfigRequest) (*Resource, error)
 	// 更新资源配置
 	UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*Resource, error)
+	// 获取资源 JSON Schema
+	GetResourceSchemas(context.Context, *GetResourceSchemasRequest) (*GetResourceSchemasResponse, error)
 	mustEmbedUnimplementedSystemConfigServiceServer()
 }
 
@@ -90,6 +103,9 @@ func (UnimplementedSystemConfigServiceServer) GetResourceConfig(context.Context,
 }
 func (UnimplementedSystemConfigServiceServer) UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*Resource, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateResourceConfig not implemented")
+}
+func (UnimplementedSystemConfigServiceServer) GetResourceSchemas(context.Context, *GetResourceSchemasRequest) (*GetResourceSchemasResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetResourceSchemas not implemented")
 }
 func (UnimplementedSystemConfigServiceServer) mustEmbedUnimplementedSystemConfigServiceServer() {}
 
@@ -158,6 +174,24 @@ func _SystemConfigService_UpdateResourceConfig_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemConfigService_GetResourceSchemas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResourceSchemasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemConfigServiceServer).GetResourceSchemas(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xtopus.api.system.v1.SystemConfigService/GetResourceSchemas",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemConfigServiceServer).GetResourceSchemas(ctx, req.(*GetResourceSchemasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemConfigService_ServiceDesc is the grpc.ServiceDesc for SystemConfigService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -176,6 +210,10 @@ var SystemConfigService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateResourceConfig",
 			Handler:    _SystemConfigService_UpdateResourceConfig_Handler,
+		},
+		{
+			MethodName: "GetResourceSchemas",
+			Handler:    _SystemConfigService_GetResourceSchemas_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/ResourceSchema",
+    "definitions": {
+        "ResourceSchema": {
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "description": "资源类型标识"
+                },
+                "display_name": {
+                    "type": "string",
+                    "description": "用于展示的中文名"
+                },
+                "version": {
+                    "type": "string",
+                    "description": "当前 schema 的版本"
+                },
+                "type_url": {
+                    "type": "string",
+                    "description": "Any 类型的 typeUrl"
+                },
+                "json_schema": {
+                    "type": "string",
+                    "description": "嵌入式返回的 JSON Schema"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Schema"
+        }
+    }
+}

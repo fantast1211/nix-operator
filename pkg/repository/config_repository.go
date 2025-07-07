@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/domain"
+	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -39,39 +39,18 @@ func (r *configRepository) Reconcile(ctx context.Context, config *systemv1.Resou
 	handler, exists := r.controller.Handlers[config.Kind]
 	if !exists {
 		r.logger.Warnf("repository", "No handler found for kind: %s", config.Kind)
-		return &domain.ReconcileResult{
-			Effective: config,
-			Status: &systemv1.ResourceStatus{
-				Phase:   "Failed",
-				Reason:  "NoHandler",
-				Message: fmt.Sprintf("No handler found for kind: %s", config.Kind),
-			},
-		}, nil
+		return status.ReconcileError(config, status.ReasonNoHandler, fmt.Errorf("No handler found for kind: %s", config.Kind))
 	}
 
 	// 执行调谐
 	controllerResult, err := handler.Reconcile(ctx, config)
 	if err != nil {
 		r.logger.Errorf("repository", "Reconciliation error for %s: %v", config.Metadata.Name, err)
-		return &domain.ReconcileResult{
-			Effective: config,
-			Status: &systemv1.ResourceStatus{
-				Phase:   "Failed",
-				Reason:  "ReconcileError",
-				Message: err.Error(),
-			},
-		}, nil
+		return status.ReconcileError(config, status.ReasonReconcileError, err)
 	}
 
 	// 转换结果
-	result := &domain.ReconcileResult{
-		Effective: config, // 默认使用原始配置
-		Status: &systemv1.ResourceStatus{
-			Phase:   "Unknown",
-			Reason:  "NoStatus",
-			Message: "No status returned from handler",
-		},
-	}
+	result, _ := status.ReconcileUnknown(config, "NoStatus", "No status returned from handler")
 
 	// 如果有有效配置，使用返回的配置
 	if controllerResult.Effective != nil {
@@ -194,12 +173,12 @@ func (r *configRepository) Get(ctx context.Context, name string) (*systemv1.Reso
 		return nil, fmt.Errorf("config not found: %s", name)
 	}
 
-	// 以 JSON 格式打印 rws 的内容
-	if rwsJSON, err := json.MarshalIndent(foundResource, "", "  "); err == nil {
-		r.logger.Debugf("repository", "Created ResourceWithStatus JSON: %s", string(rwsJSON))
-	} else {
-		r.logger.Debugf("repository", "Created ResourceWithStatus: %+v", foundResource)
-	}
+	// // 以 JSON 格式打印 rws 的内容
+	// if rwsJSON, err := json.MarshalIndent(foundResource, "", "  "); err == nil {
+	// 	r.logger.Debugf("repository", "Created ResourceWithStatus JSON: %s", string(rwsJSON))
+	// } else {
+	// 	r.logger.Debugf("repository", "Created ResourceWithStatus: %+v", foundResource)
+	// }
 
 	return foundResource, nil
 }
@@ -218,13 +197,10 @@ func (r *configRepository) processConfigFile(ctx context.Context, cfg *systemv1.
 	// 执行调谐以获取最新状态
 	result, err := r.Reconcile(ctx, cfg)
 	if err != nil {
+		reconcileResult, _ := status.ReconcileError(cfg, status.ReasonReconcileError, fmt.Errorf("Reconciliation error: %v", err))
 		return &systemv1.Resource{
 			Config: cfg,
-			Status: &systemv1.ResourceStatus{
-				Phase:   domain.PhaseError,
-				Reason:  domain.ReasonReconcileError,
-				Message: fmt.Sprintf("Reconciliation error: %v", err),
-			},
+			Status: reconcileResult.Status,
 		}, nil
 	}
 

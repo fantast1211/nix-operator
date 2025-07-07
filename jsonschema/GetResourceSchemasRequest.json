@@ -1,0 +1,17 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/GetResourceSchemasRequest",
+    "definitions": {
+        "GetResourceSchemasRequest": {
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "description": "可选，用于筛选特定类型的 schema"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Get Resource Schemas Request"
+        }
+    }
+}

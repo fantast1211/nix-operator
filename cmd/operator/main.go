@@ -20,6 +20,7 @@ import (
 
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/repository"
+	"go.xbrother.com/nix-operator/pkg/schema"
 	"go.xbrother.com/nix-operator/pkg/service"
 	"go.xbrother.com/nix-operator/pkg/utils"
 	"go.xbrother.com/nix-operator/pkg/validator"
@@ -36,7 +37,7 @@ const (
 )
 
 // 启动gRPC服务器
-func StartGRPCServer(validators map[string]validator.SpecValidator, logger *utils.Logger, resourceService service.ResourceService) (*grpc.Server, net.Listener, error) {
+func StartGRPCServer(validators map[string]validator.SpecValidator, logger *utils.Logger, resourceService service.ResourceService, schemaProvider schema.Provider) (*grpc.Server, net.Listener, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to listen: %v", err)
@@ -45,7 +46,7 @@ func StartGRPCServer(validators map[string]validator.SpecValidator, logger *util
 	grpcServer := grpc.NewServer()
 
 	// 注册HardwareConfigService
-	v1.RegisterSystemConfigServiceServer(grpcServer, webcontroller.NewSystemServiceServer(validators, logger, resourceService))
+	v1.RegisterSystemConfigServiceServer(grpcServer, webcontroller.NewSystemServiceServer(validators, logger, resourceService, schemaProvider))
 
 	go func() {
 		log.Printf("Starting gRPC server on port %d...", grpcPort)
@@ -125,8 +126,11 @@ func initializeApplication(configDir string, logger *utils.Logger, ctx context.C
 	// 初始化 Service 层
 	resourceService := service.NewResourceService(configRepo, logger)
 
+	// 初始化 Schema Provider
+	schemaProvider := schema.NewProvider()
+
 	// 启动gRPC服务器
-	grpcServer, _, err := StartGRPCServer(validators, logger, resourceService)
+	grpcServer, _, err := StartGRPCServer(validators, logger, resourceService, schemaProvider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start gRPC server: %v", err)
 	}

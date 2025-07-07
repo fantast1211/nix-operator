@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/TimeConfigurationSpec",
+    "definitions": {
+        "TimeConfigurationSpec": {
+            "properties": {
+                "timezone": {
+                    "type": "string",
+                    "description": "时区设置"
+                },
+                "ntp": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.NtpConfig",
+                    "additionalProperties": true,
+                    "description": "NTP配置"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "时间配置相关定义",
+            "description": "时间配置相关定义  时间配置项"
+        },
+        "xtopus.api.system.v1.NtpConfig": {
+            "properties": {
+                "enable": {
+                    "type": "boolean",
+                    "description": "是否启用NTP"
+                },
+                "servers": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "description": "NTP服务器列表"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ntp Config",
+            "description": "NTP配置"
+        }
+    }
+}

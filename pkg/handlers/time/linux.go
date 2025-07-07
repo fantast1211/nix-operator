@@ -9,17 +9,13 @@ import (
 	"strings"
 	"text/template"
 
+	"path/filepath"
+
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/domain"
+	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
-	"reflect"
-	"encoding/json"
-	"google.golang.org/protobuf/encoding/protojson"
-	"path/filepath"
 )
 
 //go:embed chrony.conf.tpl
@@ -51,42 +47,6 @@ func getTemplateContent(templateName, defaultContent string) (string, error) {
 	return defaultContent, nil
 }
 
-func UnmarshalSpec[T proto.Message](anySpec *anypb.Any) (T, error) {
-	var zero T
-	if anySpec == nil {
-		return zero, fmt.Errorf("spec is nil")
-	}
-
-	// 创建目标类型的实例
-	msg := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(proto.Message)
-
-	// 直接尝试解包为目标类型
-	if err := anySpec.UnmarshalTo(msg); err != nil {
-		// 如果直接解包失败，尝试通过Struct中转
-		var structSpec structpb.Struct
-		if err2 := anySpec.UnmarshalTo(&structSpec); err2 != nil {
-			return zero, fmt.Errorf("failed to unmarshal Any to target type: %w", err)
-		}
-
-		// 将 structpb.Struct 转换为 JSON，并过滤掉 @type 字段
-		structMap := structSpec.AsMap()
-		// 移除 @type 字段，因为它不属于目标 proto 消息的字段
-		delete(structMap, "@type")
-
-		jsonBytes, err := json.Marshal(structMap)
-		if err != nil {
-			return zero, fmt.Errorf("failed to marshal struct to JSON: %w", err)
-		}
-
-		// 使用 protojson 将 JSON 解析为 proto 消息
-		if err := protojson.Unmarshal(jsonBytes, msg); err != nil {
-			return zero, fmt.Errorf("failed to unmarshal JSON to proto: %w", err)
-		}
-	}
-
-	return msg.(T), nil
-}
-
 func (h *LinuxTimeHandler) Reconcile(ctx context.Context, cfg *systemv1.ResourceConfig) (*domain.ReconcileResult, error) {
 	// 解析时间配置
 	var timeSpec *systemv1.TimeConfigurationSpec
@@ -94,111 +54,104 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, cfg *systemv1.Resource
 	// 从 anypb.Any 中解析 TimeConfigurationSpec
 	if cfg.Spec != nil {
 		var err error
-		timeSpec, err = UnmarshalSpec[*systemv1.TimeConfigurationSpec](cfg.Spec)
+		timeSpec, err = utils.UnmarshalSpec[*systemv1.TimeConfigurationSpec](cfg.Spec)
 		if err != nil {
-			return nil, fmt.Errorf("decode spec failed: %w", err)
+			return status.ReconcileError(cfg, "DecodeSpecFailed", fmt.Errorf("decode spec failed: %w", err))
 		}
 	} else {
-		return nil, fmt.Errorf("spec is nil")
+		return status.ReconcileError(cfg, "SpecIsNil", fmt.Errorf("spec is nil"))
 	}
 
+	// 安全地打印 NTP 配置
+	ntpEnable := false
+	var ntpServers []string
+	if timeSpec.Ntp != nil {
+		ntpEnable = timeSpec.Ntp.Enable
+		ntpServers = timeSpec.Ntp.Servers
+	}
 	utils.Debugf("time", "Parsed timeSpec: timezone=%s, ntp.enable=%v, ntp.servers=%v",
-		timeSpec.Timezone, timeSpec.Ntp.Enable, timeSpec.Ntp.Servers)
+		timeSpec.Timezone, ntpEnable, ntpServers)
 
 	// 设置时区
 	if timeSpec.Timezone != "" {
 		if err := h.setTimezone(ctx, timeSpec.Timezone); err != nil {
-			return nil, fmt.Errorf("failed to set timezone: %v", err)
+			return status.ReconcileError(cfg, "SetTimezoneFailed", fmt.Errorf("failed to set timezone: %v", err))
 		}
 	}
 
 	// 配置NTP
-	if !timeSpec.Ntp.Enable {
-		return &domain.ReconcileResult{
-			Status: &systemv1.ResourceStatus{
-				Phase:   "Ready",
-				Reason:  "NTPDisabled",
-				Message: "NTP is disabled, only timezone was configured",
-			},
-			Effective: cfg,
-		}, nil
+	if timeSpec.Ntp == nil || !timeSpec.Ntp.Enable {
+		return status.ReconcileReady(cfg, "NTPDisabled", "NTP is disabled, only timezone was configured")
+	}
+
+	// 检查 chronyd 是否存在
+	if _, err := exec.LookPath("chronyd"); err != nil {
+		return status.ReconcileError(cfg, "ChronydNotInstalled", fmt.Errorf("chronyd not found in system, please install chrony before applying NTP configuration"))
+	}
+
+	// 检查 chronyc 是否存在
+	if _, err := exec.LookPath("chronyc"); err != nil {
+		return status.ReconcileError(cfg, "ChronycNotInstalled", fmt.Errorf("chronyc command not found, cannot reload chrony configuration"))
 	}
 
 	// 准备模板数据
+	// 重用前面已经声明的 ntpServers 变量
 	templateData := struct {
 		Servers []string
 	}{
-		Servers: timeSpec.Ntp.Servers,
+		Servers: ntpServers,
 	}
 
-	// 获取chrony模板
+	// 获取 chrony 模板内容
 	templateContent, err := getTemplateContent("chrony.conf.tpl", chronyConfigTemplate)
 	if err != nil {
-		return nil, err
+		return status.ReconcileError(cfg, "GetTemplateContentFailed", err)
 	}
 
 	// 解析模板
 	tmpl, err := template.New("chrony").Parse(templateContent)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse template: %v", err)
+		return status.ReconcileError(cfg, "ParseTemplateFailed", fmt.Errorf("failed to parse template: %v", err))
 	}
 
 	// 渲染配置
 	var content strings.Builder
 	if err := tmpl.Execute(&content, templateData); err != nil {
-		return nil, fmt.Errorf("failed to execute template: %v", err)
+		return status.ReconcileError(cfg, "ExecuteTemplateFailed", fmt.Errorf("failed to execute template: %v", err))
 	}
-
 	desiredContent := content.String()
 
-	// 读取现有配置
+	// 检查现有配置是否一致
 	currentContent, err := os.ReadFile("/etc/chrony/chrony.conf")
-	if err == nil {
-		// 配置文件存在，比较内容
-		if string(currentContent) == desiredContent {
-			return &domain.ReconcileResult{
-				Status: &systemv1.ResourceStatus{
-					Phase:   "Ready",
-					Reason:  "NoChange",
-					Message: "Configuration is up to date",
-				},
-				Effective: cfg,
-			}, nil // 配置相同，无需更新
-		}
+	if err == nil && string(currentContent) == desiredContent {
+		return status.ReconcileNoChange(cfg, "Configuration is up to date")
 	}
-	// 如果文件不存在或读取失败，继续写入新配置
 
-	// 确保目录存在
-	os.MkdirAll("/etc/chrony", 0755)
+	// 写入新配置
+	if err := os.MkdirAll("/etc/chrony", 0755); err != nil {
+		return status.ReconcileError(cfg, "CreateConfigDirFailed", fmt.Errorf("failed to create config directory: %v", err))
+	}
 
-	// 使用工具函数原子性写入文件
 	if err := utils.AtomicWriteFile([]byte(desiredContent), "/etc/chrony/chrony.conf", 0644); err != nil {
-		return nil, fmt.Errorf("failed to write chrony.conf: %v", err)
+		return status.ReconcileError(cfg, "WriteConfigFileFailed", fmt.Errorf("failed to write chrony.conf: %v", err))
 	}
 
-	// 重新加载配置
-	// 检查 chronyc 命令是否存在
-	_, err = exec.LookPath("chronyc")
-	if err != nil {
-		// chronyc 命令不存在，记录警告但不返回错误
-		utils.Warnf("time", "chronyc command not found, skipping reload: %v", err)
+	// 重新加载 chrony 配置
+	// 优先尝试重启 chronyd 服务
+	if _, err := exec.LookPath("systemctl"); err == nil {
+		restartCmd := exec.CommandContext(ctx, "systemctl", "restart", "chronyd")
+		if output, err := restartCmd.CombinedOutput(); err != nil {
+			return status.ReconcileError(cfg, "RestartChronydFailed", fmt.Errorf("failed to restart chronyd: %v, output: %s", err, output))
+		}
 	} else {
-		// 执行 chronyc reload sources 命令
-		cmd := exec.CommandContext(ctx, "chronyc", "reload", "sources")
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return nil, fmt.Errorf("failed to reload chronyd config: %v, output: %s", err, output)
+		// 如果 systemctl 不可用（如非 root 或 alpine 容器），尝试使用 chronyc fallback
+		reloadCmd := exec.CommandContext(ctx, "chronyc", "reload", "sources")
+		if output, err := reloadCmd.CombinedOutput(); err != nil {
+			return status.ReconcileError(cfg, "ReloadChronydConfigFailed", fmt.Errorf("failed to reload chronyd config via chronyc: %v, output: %s", err, output))
 		}
 	}
 
-	return &domain.ReconcileResult{
-		Status: &systemv1.ResourceStatus{
-			Phase:   "Ready",
-			Reason:  "Configured",
-			Message: "Time configuration applied successfully",
-		},
-		Effective: cfg,
-	}, nil
+	return status.ReconcileReady(cfg, "Configured", "Time configuration applied successfully")
 }
 
 func (h *LinuxTimeHandler) setTimezone(ctx context.Context, timezone string) error {
@@ -207,29 +160,29 @@ func (h *LinuxTimeHandler) setTimezone(ctx context.Context, timezone string) err
 	if err != nil {
 		// timedatectl 命令不存在，尝试使用符号链接方式设置时区
 		utils.Warnf("time", "timedatectl command not found, trying alternative method: %v", err)
-		
+
 		// 检查时区文件是否存在
 		zoneInfoPath := fmt.Sprintf("/usr/share/zoneinfo/%s", timezone)
 		if _, err := os.Stat(zoneInfoPath); os.IsNotExist(err) {
 			return fmt.Errorf("timezone file not found: %s", zoneInfoPath)
 		}
-		
+
 		// 删除现有的符号链接
 		os.Remove("/etc/localtime")
-		
+
 		// 创建新的符号链接
 		if err := os.Symlink(zoneInfoPath, "/etc/localtime"); err != nil {
 			return fmt.Errorf("failed to create symlink for timezone: %v", err)
 		}
-		
+
 		// 写入时区信息到 /etc/timezone 文件
-		if err := os.WriteFile("/etc/timezone", []byte(timezone + "\n"), 0644); err != nil {
+		if err := utils.AtomicWriteFile([]byte(timezone+"\n"), "/etc/timezone", 0644); err != nil {
 			return fmt.Errorf("failed to write timezone file: %v", err)
 		}
-		
+
 		return nil
 	}
-	
+
 	// 使用 timedatectl 设置时区
 	cmd := exec.CommandContext(ctx, "timedatectl", "set-timezone", timezone)
 	output, err := cmd.CombinedOutput()
