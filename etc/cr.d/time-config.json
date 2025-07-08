@@ -1,21 +1,21 @@
 {
-  "apiVersion":  "sysconfig.operator/v1",
-  "kind":  "TimeConfiguration",
-  "metadata":  {
-    "name":  "time-config",
-    "resourceVersion":  "1751911415",
-    "generation":  1,
-    "creationTime":  "2025-07-08T02:03:35+08:00",
-    "deletionTime":  "",
-    "labels":  {},
-    "annotations":  {}
+  "apiVersion": "sysconfig.operator/v1",
+  "kind": "TimeConfiguration",
+  "metadata": {
+    "name": "time-config",
+    "resourceVersion": "1751942803",
+    "generation": 1,
+    "creationTime": "2025-07-08T10:46:43+08:00",
+    "deletionTime": "",
+    "labels": {},
+    "annotations": {}
   },
-  "spec":  {
-    "@type":  "type.googleapis.com/xtopus.api.system.v1.TimeConfigurationSpec",
-    "timezone":  "Asia/Shanghai",
-    "ntp":  {
-      "enable":  true,
-      "servers":  [
+  "spec": {
+    "@type": "type.googleapis.com/xtopus.api.system.v1.TimeConfigurationSpec",
+    "timezone": "Asia/Shanghai",
+    "ntp": {
+      "enable": true,
+      "servers": [
         "ntp1.aliyun.com",
         "ntp3.aliyun.com"
       ]
