@@ -121,10 +121,10 @@ func initializeApplication(configDir string, logger *utils.Logger, ctx context.C
 	validators := initializeValidators()
 
 	// 初始化 Repository 层
-	configRepo := repository.NewConfigRepository(configDir, logger, controller)
+	configRepo := repository.NewConfigRepository(configDir, logger)
 
 	// 初始化 Service 层
-	resourceService := service.NewResourceService(configRepo, logger)
+	resourceService := service.NewResourceService(configRepo, controller, logger)
 
 	// 初始化 Schema Provider
 	schemaProvider := schema.NewProvider()

@@ -1,10 +1,17 @@
 {
-  "apiVersion": "sysconfig.operator/v1",
+  "apiVersion": "system.xbrother.com/v1",
   "kind": "HostsConfiguration",
   "metadata": {
-    "name": "hosts-config1"
+    "name": "hosts-config1",
+    "resourceVersion": "1752057511",
+    "generation": 1,
+    "creationTime": "2025-07-09T18:38:31+08:00",
+    "deletionTime": "",
+    "labels": {},
+    "annotations": {}
   },
   "spec": {
+    "@type": "type.googleapis.com/xtopus.api.system.v1.HostsConfigurationSpec",
     "nodeSelector": {
       "machineId": "3d9ce2218ab44a449ad06db380db68f0",
       "ip": "172.29.201.217"
@@ -13,15 +20,24 @@
     "hosts": [
       {
         "ip": "192.168.1.10",
-        "hostnames": ["server1", "server1.local"]
+        "hostnames": [
+          "server1",
+          "server1.local"
+        ]
       },
       {
         "ip": "192.168.1.11",
-        "hostnames": ["server2", "server2.local"]
+        "hostnames": [
+          "server2",
+          "server2.local"
+        ]
       },
       {
-        "ip": "192.168.1.19",
-        "hostnames": ["server3", "server3.local"]
+        "ip": "192.168.1.25",
+        "hostnames": [
+          "server3",
+          "server3.local"
+        ]
       }
     ]
   }

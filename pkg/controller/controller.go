@@ -35,7 +35,7 @@ type Handler interface {
 	// Match 检查是否支持该操作系统
 	Match(osInfo OSInfo) bool
 	// Reconcile 处理配置
-	Reconcile(ctx context.Context, config *systemv1.ResourceConfig) (*domain.ReconcileResult, error)
+	Reconcile(ctx context.Context, config []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error)
 }
 
 var handlerFactories = make(map[string][]Handler)
@@ -179,57 +179,49 @@ func (c *Controller) Run() error {
 	select {}
 }
 
+// GetHandler 获取指定kind的处理器
+func (c *Controller) GetHandler(kind string) Handler {
+	return c.Handlers[kind]
+}
+
 func (c *Controller) reconcile() {
 	ctx := context.Background()
+	grouped := make(map[string][]*systemv1.ResourceConfig)
 
-	// 扫描配置目录中的所有配置文件
-	err := filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// 跳过目录和非YAML/JSON文件
-		if info.IsDir() {
+	// 先聚合所有配置文件
+	filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || filepath.Ext(path) != ".json" {
 			return nil
 		}
 
-		ext := filepath.Ext(path)
-		if ext != ".json" {
-			return nil
-		}
-
-		// 加载并处理配置文件
 		cfg, err := loadConfigFile(path)
 		if err != nil {
-			c.logger.Errorf("controller", "Error loading config file %s: %v", path, err)
+			c.logger.Errorf("controller", "Failed to load config %s: %v", path, err)
 			return nil
 		}
-
-		c.logger.Debugf("controller", "Processing config file: %s (kind: %s)", path, cfg.Kind)
-
-		// 查找对应的处理器
-		handler, exists := c.Handlers[cfg.Kind]
-		if !exists {
-			c.logger.Warnf("controller", "No handler found for kind: %s", cfg.Kind)
-			return nil
-		}
-
-		// 执行调谐
-		result, err := handler.Reconcile(ctx, cfg)
-		if err != nil {
-			c.logger.Errorf("controller", "Reconciliation error for %s: %v", path, err)
-			return nil
-		}
-
-		if result != nil && result.Status != nil {
-			c.logger.Infof("controller", "Reconciliation completed for %s: %s", path, result.Status.Phase)
-		}
-
+		grouped[cfg.Kind] = append(grouped[cfg.Kind], cfg)
 		return nil
 	})
 
-	if err != nil {
-		c.logger.Errorf("controller", "Error walking config directory: %v", err)
+	// 每种类型只调一次
+	for kind, configs := range grouped {
+		handler := c.Handlers[kind]
+		if handler == nil {
+			c.logger.Warnf("controller", "No handler for kind: %s", kind)
+			continue
+		}
+
+		c.logger.Infof("controller", "Reconciling %d %s configs", len(configs), kind)
+		results, err := handler.Reconcile(ctx, configs)
+		if err != nil {
+			c.logger.Errorf("controller", "Reconciliation error for kind %s: %v", kind, err)
+		} else if len(results) > 0 {
+			for _, result := range results {
+				if result != nil && result.Status != nil {
+					c.logger.Infof("controller", "Reconciliation result: %s -> %s", kind, result.Status.Phase)
+				}
+			}
+		}
 	}
 }
 
@@ -269,4 +261,37 @@ func loadConfigFile(path string) (*systemv1.ResourceConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+// BatchReconcile 针对某个 kind 类型聚合所有配置并调谐
+func (c *Controller) BatchReconcile(ctx context.Context, kind string) ([]*domain.ReconcileResult, error) {
+	grouped := make([]*systemv1.ResourceConfig, 0)
+
+	// 聚合指定 kind 的配置文件
+	filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || filepath.Ext(path) != ".json" {
+			return nil
+		}
+
+		cfg, err := loadConfigFile(path)
+		if err != nil {
+			c.logger.Errorf("controller", "Failed to load config %s: %v", path, err)
+			return nil
+		}
+		if cfg.Kind == kind {
+			grouped = append(grouped, cfg)
+		}
+		return nil
+	})
+
+	if len(grouped) == 0 {
+		return nil, fmt.Errorf("no configs found for kind: %s", kind)
+	}
+
+	handler, ok := c.Handlers[kind]
+	if !ok {
+		return nil, fmt.Errorf("no handler registered for kind: %s", kind)
+	}
+
+	return handler.Reconcile(ctx, grouped)
 }

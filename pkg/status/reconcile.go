@@ -12,11 +12,16 @@ const (
 	PhaseUnknown = "Unknown"
 	PhaseSkipped = "Skipped"
 
-	ReasonNoHandler       = "NoHandler"
-	ReasonReconcileError  = "ReconcileError"
-	ReasonNoChange        = "NoChange"
-	ReasonSkippedByConfig = "SkippedByConfig"
-	ReasonInitial         = "Initial"
+	ReasonNoHandler          = "NoHandler"
+	ReasonReconcileError     = "ReconcileError"
+	ReasonNoChange           = "NoChange"
+	ReasonSkippedByConfig    = "SkippedByConfig"
+	ReasonInitial            = "Initial"
+	ReasonSpecError          = "SpecError"
+	ReasonNodeSelectorError  = "NodeSelectorError"
+	ReasonMatched            = "Matched"
+	ReasonNotMatched         = "NotMatched"
+	ReasonFallback           = "Fallback"
 )
 
 // ReconcileError 返回调谐失败

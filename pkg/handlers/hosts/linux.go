@@ -49,63 +49,114 @@ func getTemplateContent(templateName, defaultContent string) (string, error) {
 	return defaultContent, nil
 }
 
-func (h *LinuxHostsHandler) Reconcile(ctx context.Context, cfg *systemv1.ResourceConfig) (*domain.ReconcileResult, error) {
-	// 解析hosts配置
-	var hostsSpec *systemv1.HostsConfigurationSpec
+func (h *LinuxHostsHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
+	var results []*domain.ReconcileResult
+	var matchedConfig *systemv1.ResourceConfig
+	var fallbackConfig *systemv1.ResourceConfig
+	configStatusMap := make(map[string]*domain.ReconcileResult)
 
-	// 从 anypb.Any 中解析 HostsConfigurationSpec
-	if cfg.Spec != nil {
-		// 尝试将 cfg.Spec 解码为目标结构体
-		// if err := cfg.Spec.UnmarshalTo(&hostsSpec); err != nil {
-		// 	return nil, fmt.Errorf("failed to unmarshal spec to HostsConfigurationSpec: %w", err)
-		// }
-		var err error
-		hostsSpec, err = utils.UnmarshalSpec[*systemv1.HostsConfigurationSpec](cfg.Spec)
+	// 遍历所有配置，查找匹配的配置和fallback配置
+	for _, config := range configs {
+		// 解析配置规格
+		hostsSpec, err := utils.UnmarshalSpec[*systemv1.HostsConfigurationSpec](config.Spec)
 		if err != nil {
-			return status.ReconcileError(cfg, "DecodeSpecFailed", fmt.Errorf("decode spec failed: %w", err))
+			result, _ := status.ReconcileError(config, status.ReasonSpecError, fmt.Errorf("failed to unmarshal spec: %v", err))
+			configStatusMap[config.Metadata.Name] = result
+			continue
+		}
+
+		// 检查nodeSelector匹配
+		if hostsSpec.NodeSelector != nil && h.hasValidNodeSelector(hostsSpec.NodeSelector) {
+			// 有有效的nodeSelector，检查是否匹配
+			matched, err := utils.MatchNodeSelector(hostsSpec.NodeSelector)
+			if err != nil {
+				result, _ := status.ReconcileError(config, status.ReasonNodeSelectorError, fmt.Errorf("failed to match nodeSelector: %v", err))
+				configStatusMap[config.Metadata.Name] = result
+				continue
+			}
+			if matched {
+				matchedConfig = config
+				// 暂时不设置状态，等待应用后再设置
+			} else {
+				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "Configuration did not match nodeSelector")
+				configStatusMap[config.Metadata.Name] = result
+			}
+		} else {
+			// 没有有效的nodeSelector，作为fallback配置
+			if fallbackConfig == nil {
+				fallbackConfig = config
+				// 暂时不设置状态，等待应用后再设置
+			} else {
+				// 如果已经有fallback配置，则跳过这个
+				result, _ := status.ReconcileSkipped(config, status.ReasonFallback, "Another fallback configuration already exists")
+				configStatusMap[config.Metadata.Name] = result
+			}
+		}
+	}
+
+	// 确定要应用的配置
+	var configToApply *systemv1.ResourceConfig
+	if matchedConfig != nil {
+		configToApply = matchedConfig
+	} else if fallbackConfig != nil {
+		configToApply = fallbackConfig
+	}
+
+	// 如果有配置要应用，则应用它
+	if configToApply != nil {
+		hostsSpec, err := utils.UnmarshalSpec[*systemv1.HostsConfigurationSpec](configToApply.Spec)
+		if err != nil {
+			result, _ := status.ReconcileError(configToApply, status.ReasonSpecError, fmt.Errorf("failed to unmarshal effective config spec: %v", err))
+			configStatusMap[configToApply.Metadata.Name] = result
+		} else {
+			// 应用配置
+			applyResult, err := h.applyConfiguration(ctx, configToApply, hostsSpec)
+			if err != nil {
+				result, _ := status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to apply configuration: %v", err))
+				configStatusMap[configToApply.Metadata.Name] = result
+			} else {
+				// 应用成功
+				configStatusMap[configToApply.Metadata.Name] = applyResult
+			}
+		}
+		
+		// 为其他未应用的配置设置跳过状态
+		for _, config := range configs {
+			if _, exists := configStatusMap[config.Metadata.Name]; !exists {
+				if config == configToApply {
+					// 这种情况不应该发生，但为了安全起见
+					continue
+				}
+				var reason, message string
+				if config == fallbackConfig {
+					reason = status.ReasonFallback
+					message = "Configuration used as fallback but not applied due to matched configuration"
+				} else {
+					reason = status.ReasonNotMatched
+					message = "Configuration not applied"
+				}
+				result, _ := status.ReconcileSkipped(config, reason, message)
+				configStatusMap[config.Metadata.Name] = result
+			}
 		}
 	} else {
-		return status.ReconcileError(cfg, "SpecIsNil", fmt.Errorf("spec is nil"))
-	}
-
-	utils.Debugf("hosts", "Parsed hostsSpec: nodeSelector=%+v, hostname=%s, hosts=%+v",
-		hostsSpec.NodeSelector, hostsSpec.Hostname, hostsSpec.Hosts)
-
-	// 第一阶段：优先匹配有 nodeSelector 的配置项
-	// 检查是否有有效的 nodeSelector
-	if h.hasValidNodeSelector(hostsSpec.NodeSelector) {
-		match, err := utils.MatchNodeSelector(hostsSpec.NodeSelector)
-		if err != nil {
-			return status.ReconcileError(cfg, "NodeSelectorCheckFailed", fmt.Errorf("failed to check node selector: %v", err))
-		}
-		if match {
-			// 找到匹配的特定配置，应用并返回有效配置
-			result, err := h.applyConfiguration(ctx, hostsSpec)
-			if err != nil {
-				return status.ReconcileError(cfg, "ApplyConfigurationFailed", err)
+		// 没有配置可以应用，所有配置都标记为跳过
+		for _, config := range configs {
+			if _, exists := configStatusMap[config.Metadata.Name]; !exists {
+				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "No applicable configuration found")
+				configStatusMap[config.Metadata.Name] = result
 			}
-			// 设置有效配置，多机场景下Config = EffectiveConfig，在按节点拆分的场景下，
-			// 由于每个配置文件只包含一个节点的配置， Config 和 EffectiveConfig 实际上是相同的
-			result.Effective = cfg
-			return result, nil
 		}
 	}
 
-	// 第二阶段：如果没有匹配的特定配置，使用通用配置
-	if !h.hasValidNodeSelector(hostsSpec.NodeSelector) {
-		// 应用通用配置并返回有效配置
-		result, err := h.applyConfiguration(ctx, hostsSpec)
-		if err != nil {
-			return status.ReconcileError(cfg, "ApplyConfigurationFailed", err)
+	// 按照原始配置顺序构建结果
+	for _, config := range configs {
+		if result, exists := configStatusMap[config.Metadata.Name]; exists {
+			results = append(results, result)
 		}
-		// 设置有效配置，多机场景下Config = EffectiveConfig，在按节点拆分的场景下，
-		// 由于每个配置文件只包含一个节点的配置， Config 和 EffectiveConfig 实际上是相同的
-		result.Effective = cfg
-		return result, nil
 	}
 
-	// 没有找到任何匹配的配置
-	return status.ReconcileSkipped(cfg, "NoMatchingConfiguration", "No matching configuration found for this host")
+	return results, nil
 }
 
 func (h *LinuxHostsHandler) configureHostname(ctx context.Context, hostname string) error {
@@ -203,7 +254,7 @@ func (h *LinuxHostsHandler) hasValidNodeSelector(selector *systemv1.NodeSelector
 }
 
 // applyConfiguration 应用配置项
-func (h *LinuxHostsHandler) applyConfiguration(ctx context.Context, hostsSpec *systemv1.HostsConfigurationSpec) (*domain.ReconcileResult, error) {
+func (h *LinuxHostsHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, hostsSpec *systemv1.HostsConfigurationSpec) (*domain.ReconcileResult, error) {
 	// 处理hostname配置
 	if hostsSpec.Hostname != "" {
 		if err := h.configureHostname(ctx, hostsSpec.Hostname); err != nil {
@@ -218,5 +269,5 @@ func (h *LinuxHostsHandler) applyConfiguration(ctx context.Context, hostsSpec *s
 		}
 	}
 
-	return status.ReconcileReady(nil, "Configured", "Hosts configuration applied successfully")
+	return status.ReconcileReady(configToApply, "Configured", "Hosts configuration applied successfully")
 }
