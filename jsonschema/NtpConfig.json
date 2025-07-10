@@ -6,20 +6,20 @@
             "properties": {
                 "enable": {
                     "type": "boolean",
-                    "description": "是否启用NTP"
+                    "description": "是否启用 NTP"
                 },
                 "servers": {
                     "items": {
                         "type": "string"
                     },
                     "type": "array",
-                    "description": "NTP服务器列表"
+                    "description": "NTP 服务器列表"
                 }
             },
             "additionalProperties": true,
             "type": "object",
             "title": "Ntp Config",
-            "description": "NTP配置"
+            "description": "NTP 配置"
         }
     }
 }

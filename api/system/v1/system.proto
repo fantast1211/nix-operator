@@ -5,20 +5,7 @@ package xtopus.api.system.v1;
 option go_package = "go.xbrother.com/nix-operator/api/system/v1";
 
 import "google/api/annotations.proto";
-
-// Hosts配置相关定义
-
-// Hosts配置项
-message HostsConfigurationSpec {
-  // 节点选择器
-  NodeSelector node_selector = 1;
-  
-  // 主机名
-  string hostname = 2;
-  
-  // hosts条目列表
-  repeated HostEntry hosts = 3;
-}
+import "validate/validate.proto";
 
 // 节点选择器
 message NodeSelector {
@@ -29,31 +16,111 @@ message NodeSelector {
   string ip = 2 [json_name="ip"];
 }
 
-// Hosts条目
+
+
+// 网络相关配置定义
+
+// 网络接口配置项
+message NetworkConfigurationSpec {
+  // 节点选择器（用于定位目标节点）
+  NodeSelector node_selector = 1;
+
+  // 接口名称（如 eth0, enp0s3）
+  string name = 2;
+
+  // IPv4 地址
+  string ipv4_address = 3 [
+    json_name = "ipAddress",
+    (validate.rules).string = {
+      pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$"
+    }
+  ];
+
+  // IPv6 地址
+  string ipv6_address = 4 [
+    json_name = "ipv6Address",
+    (validate.rules).string = {
+      pattern: "^[0-9a-fA-F:]{2,39}$"
+    }
+  ];
+
+  // IPv4 网关
+  string ipv4_gateway = 5 [
+    json_name = "gateway",
+    (validate.rules).string = {
+      pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$"
+    }
+  ];
+
+  // IPv6 网关
+  string ipv6_gateway = 6 [
+    json_name = "ipv6Gateway",
+    (validate.rules).string = {
+      pattern: "^[0-9a-fA-F:]{2,39}$"
+    }
+  ];
+
+  // MTU 设置（最大传输单元）
+  int32 mtu = 7 [
+    (validate.rules).int32 = {
+      gte: 576,
+      lte: 9000
+    }
+  ];
+
+  // DNS 服务器列表
+  repeated string nameservers = 9 [
+    (validate.rules).repeated = {
+      items: {
+        string: {
+          pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$"
+        }
+      }
+    }
+  ];
+}
+
+
+// Hosts 配置相关定义
+
+// Hosts 配置项
+message HostsConfigurationSpec {
+  // 节点选择器
+  NodeSelector node_selector = 1;
+
+  // 主机名
+  string hostname = 2;
+
+  // hosts 条目列表
+  repeated HostEntry hosts = 3;
+}
+
+// Hosts 条目
 message HostEntry {
-  // IP地址
+  // IP 地址
   string ip = 1;
-  
+
   // 主机名列表
   repeated string hostnames = 2;
 }
+
 
 // 时间配置相关定义
 
 // 时间配置项
 message TimeConfigurationSpec {
-  // 时区设置
+  // 时区设置（如 Asia/Shanghai）
   string timezone = 1;
-  
-  // NTP配置
+
+  // NTP 配置
   NtpConfig ntp = 2;
 }
 
-// NTP配置
+// NTP 配置
 message NtpConfig {
-  // 是否启用NTP
+  // 是否启用 NTP
   bool enable = 1;
-  
-  // NTP服务器列表
+
+  // NTP 服务器列表
   repeated string servers = 2;
 }

@@ -18,19 +18,19 @@
                         "$ref": "#/definitions/xtopus.api.system.v1.HostEntry"
                     },
                     "type": "array",
-                    "description": "hosts条目列表"
+                    "description": "hosts 条目列表"
                 }
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "Hosts配置相关定义",
-            "description": "Hosts配置相关定义  Hosts配置项"
+            "title": "Hosts 配置相关定义",
+            "description": "Hosts 配置相关定义  Hosts 配置项"
         },
         "xtopus.api.system.v1.HostEntry": {
             "properties": {
                 "ip": {
                     "type": "string",
-                    "description": "IP地址"
+                    "description": "IP 地址"
                 },
                 "hostnames": {
                     "items": {
@@ -43,7 +43,7 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Host Entry",
-            "description": "Hosts条目"
+            "description": "Hosts 条目"
         },
         "xtopus.api.system.v1.NodeSelector": {
             "properties": {

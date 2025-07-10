@@ -13,7 +13,6 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
-	v1 "go.xbrother.com/nix-operator/api/system/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -28,12 +27,13 @@ import (
 
 	// 注册所有处理器
 	_ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
+	_ "go.xbrother.com/nix-operator/pkg/handlers/network"
 	_ "go.xbrother.com/nix-operator/pkg/handlers/time"
 )
 
 const (
-	grpcPort = 9090
-	httpPort = 8080
+	grpcPort = 19456
+	httpPort = 18456
 )
 
 // 启动gRPC服务器
@@ -46,7 +46,7 @@ func StartGRPCServer(validators map[string]validator.SpecValidator, logger *util
 	grpcServer := grpc.NewServer()
 
 	// 注册HardwareConfigService
-	v1.RegisterSystemConfigServiceServer(grpcServer, webcontroller.NewSystemServiceServer(validators, logger, resourceService, schemaProvider))
+	systemv1.RegisterSystemConfigServiceServer(grpcServer, webcontroller.NewSystemServiceServer(validators, logger, resourceService, schemaProvider))
 
 	go func() {
 		log.Printf("Starting gRPC server on port %d...", grpcPort)
@@ -79,7 +79,7 @@ func StartHTTPServer(ctx context.Context) error {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	// 注册SystemService的HTTP处理程序
-	if err := v1.RegisterSystemConfigServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf("localhost:%d", grpcPort), opts); err != nil {
+	if err := systemv1.RegisterSystemConfigServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf("localhost:%d", grpcPort), opts); err != nil {
 		return fmt.Errorf("failed to register system service gateway: %v", err)
 	}
 
@@ -159,6 +159,12 @@ func initializeValidators() map[string]validator.SpecValidator {
 	validators["TimeConfiguration"] = validator.NewProtoValidator(
 		"TimeConfiguration",
 		&systemv1.TimeConfigurationSpec{},
+	)
+
+	// 添加 NetworkConfiguration 校验器
+	validators["NetworkConfiguration"] = validator.NewProtoValidator(
+		"NetworkConfiguration",
+		&systemv1.NetworkConfigurationSpec{},
 	)
 
 	return validators

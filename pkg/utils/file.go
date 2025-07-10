@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // AtomicWriteFile 原子性地写入文件
@@ -72,33 +72,31 @@ func LoadConfigFile(path string) (*systemv1.ResourceConfig, error) {
 		return nil, err
 	}
 
+	// 先用临时结构体存储除 spec 外字段
 	var tempConfig struct {
-		APIVersion string                 `json:"apiVersion"`
-		Kind       string                 `json:"kind"`
-		Metadata   *systemv1.Metadata     `json:"metadata"`
-		Spec       map[string]interface{} `json:"spec"`
+		APIVersion string             `json:"apiVersion"`
+		Kind       string             `json:"kind"`
+		Metadata   *systemv1.Metadata `json:"metadata"`
+		Spec       json.RawMessage    `json:"spec"` // 原始JSON，不解析
 	}
 
 	if err := json.Unmarshal(data, &tempConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
+	}
+
+	// 解析 spec 为 protobuf Any
+	anySpec := &anypb.Any{}
+	if len(tempConfig.Spec) > 0 {
+		if err := protojson.Unmarshal(tempConfig.Spec, anySpec); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal spec as protobuf.Any: %w", err)
+		}
 	}
 
 	cfg := &systemv1.ResourceConfig{
 		ApiVersion: tempConfig.APIVersion,
 		Kind:       tempConfig.Kind,
 		Metadata:   tempConfig.Metadata,
-	}
-
-	// 封装为 structpb.Struct，保持为弱类型，延迟处理
-	if tempConfig.Spec != nil {
-		specStruct, err := structpb.NewStruct(tempConfig.Spec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert spec to structpb.Struct: %w", err)
-		}
-		cfg.Spec, err = anypb.New(specStruct)
-		if err != nil {
-			return nil, fmt.Errorf("failed to wrap spec struct as Any: %w", err)
-		}
+		Spec:       anySpec,
 	}
 
 	return cfg, nil

@@ -57,6 +57,7 @@ func NewController(configDir string, logger *utils.Logger) (*Controller, error) 
 	requiredTypes := []string{
 		"HostsConfiguration",
 		"TimeConfiguration",
+		"NetworkConfiguration",
 	}
 	for _, typeName := range requiredTypes {
 		typedHandlers := handlerFactories[typeName]
@@ -218,7 +219,13 @@ func (c *Controller) reconcile() {
 		} else if len(results) > 0 {
 			for _, result := range results {
 				if result != nil && result.Status != nil {
-					c.logger.Infof("controller", "Reconciliation result: %s -> %s", kind, result.Status.Phase)
+					// 添加错误详情输出
+					if result.Status.Phase == "Error" && result.Status.Message != "" {
+						c.logger.Errorf("controller", "Reconciliation result: %s -> %s (Reason: %s, Message: %s)",
+							kind, result.Status.Phase, result.Status.Reason, result.Status.Message)
+					} else {
+						c.logger.Infof("controller", "Reconciliation result: %s -> %s", kind, result.Status.Phase)
+					}
 				}
 			}
 		}

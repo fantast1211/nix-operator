@@ -6,7 +6,7 @@
             "properties": {
                 "ip": {
                     "type": "string",
-                    "description": "IP地址"
+                    "description": "IP 地址"
                 },
                 "hostnames": {
                     "items": {
@@ -19,7 +19,7 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Host Entry",
-            "description": "Hosts条目"
+            "description": "Hosts 条目"
         }
     }
 }

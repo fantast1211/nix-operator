@@ -1,0 +1,22 @@
+{
+  "apiVersion": "system/v1",
+  "kind": "NetworkConfiguration",
+  "metadata": {
+    "name": "testeth0-config"
+  },
+  "spec": {
+    "@type":  "type.googleapis.com/xtopus.api.system.v1.NetworkConfigurationSpec",    
+    "nodeSelector": {
+      "machineId": "",
+      "ip": ""
+    },
+    "name": "eth99",
+    "ipAddress": "192.168.1.100/24",
+    "gateway": "192.168.1.1",
+    "mtu": 1500,
+    "nameservers": [
+      "8.8.8.8",
+      "8.8.4.4"
+    ]
+  }
+}

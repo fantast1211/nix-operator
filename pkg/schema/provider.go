@@ -80,5 +80,15 @@ func initSchemas() map[string]ResourceSchemaInfo {
 		}
 	}
 
+	// 读取 NetworkConfigurationSpec schema
+	if networkSchema, err := schemaFiles.ReadFile("NetworkConfigurationSpec.json"); err == nil {
+		schemas["NetworkConfiguration"] = ResourceSchemaInfo{
+			Kind:        "NetworkConfiguration",
+			DisplayName: "网络配置",
+			Version:     "v1",
+			JSONSchema:  string(networkSchema),
+		}
+	}
+
 	return schemas
 }

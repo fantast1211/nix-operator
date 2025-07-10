@@ -129,7 +129,7 @@ func (s *resourceService) buildResourceWithStatus(ctx context.Context, config *s
 	// 执行调谐获取最新状态
 	results, err := handler.Reconcile(ctx, []*systemv1.ResourceConfig{config})
 	if err != nil {
-		reconcileResult, _ := status.ReconcileError(config, status.ReasonReconcileError, fmt.Errorf("Reconciliation error: %v", err))
+		reconcileResult, _ := status.ReconcileError(config, status.ReasonReconcileError, fmt.Errorf("reconciliation error: %v", err))
 		return &systemv1.Resource{
 			Config: config,
 			Status: reconcileResult.Status,
@@ -150,7 +150,7 @@ func (s *resourceService) buildResourceWithStatus(ctx context.Context, config *s
 		result = results[0]
 	}
 	if result == nil {
-		reconcileResult, _ := status.ReconcileError(config, status.ReasonReconcileError, fmt.Errorf("No reconcile result found"))
+		reconcileResult, _ := status.ReconcileError(config, status.ReasonReconcileError, fmt.Errorf("no reconcile result found"))
 		return &systemv1.Resource{
 			Config: config,
 			Status: reconcileResult.Status,
