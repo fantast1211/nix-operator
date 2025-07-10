@@ -34,14 +34,17 @@
     "machineId": "机器ID（可选）",
     "ip": "IP地址（可选）"
   },
-  "name": "网络接口名称（必需）",
-  "ipv4Address": "IPv4地址/CIDR（可选）",
-  "ipv6Address": "IPv6地址/前缀长度（可选）",
-  "ipv4Gateway": "IPv4网关（可选）",
-  "ipv6Gateway": "IPv6网关（可选）",
-  "mtu": "MTU大小（可选，默认1500）",
-  "macAddress": "MAC地址（可选）",
-  "nameservers": ["DNS服务器列表（可选）"]
+  "interfaces": [
+    {
+      "name": "网络接口名称（必需）",
+      "ipv4Address": "IPv4地址/CIDR（可选）",
+      "ipv6Address": "IPv6地址/前缀长度（可选）",
+      "ipv4Gateway": "IPv4网关（可选）",
+      "ipv6Gateway": "IPv6网关（可选）",
+      "mtu": "MTU大小（可选，默认1500）",
+      "nameservers": ["DNS服务器列表（可选）"]
+    }
+  ]
 }
 ```
 
@@ -50,18 +53,18 @@
 - **nodeSelector**: 节点选择器，用于指定配置应用的目标节点
   - `machineId`: 机器ID匹配
   - `ip`: IP地址匹配
-- **name**: 网络接口名称（如 eth0, enp0s3）
-- **ipv4Address**: IPv4地址，CIDR格式（如 192.168.1.100/24）
-- **ipv6Address**: IPv6地址，带前缀长度（如 2001:db8::1/64）
-- **ipv4Gateway**: IPv4网关地址
-- **ipv6Gateway**: IPv6网关地址
-- **mtu**: 最大传输单元，范围 68-9000
-- **macAddress**: MAC地址，格式 XX:XX:XX:XX:XX:XX
-- **nameservers**: DNS服务器地址列表
+- **interfaces**: 网络接口配置数组，支持配置多个网络接口
+  - **name**: 网络接口名称（如 eth0, enp0s3）
+  - **ipv4Address**: IPv4地址，CIDR格式（如 192.168.1.100/24）
+  - **ipv6Address**: IPv6地址，带前缀长度（如 2001:db8::1/64）
+  - **ipv4Gateway**: IPv4网关地址
+  - **ipv6Gateway**: IPv6网关地址
+  - **mtu**: 最大传输单元，范围 576-9000
+  - **nameservers**: DNS服务器地址列表
 
 ## 配置示例
 
-### 基本静态IP配置
+### 单接口静态IP配置
 
 ```json
 {
@@ -72,12 +75,53 @@
     "namespace": "default"
   },
   "spec": {
-    "name": "eth0",
-    "ipv4Address": "192.168.1.100/24",
-    "ipv4Gateway": "192.168.1.1",
-    "nameservers": [
-      "8.8.8.8",
-      "8.8.4.4"
+    "interfaces": [
+      {
+        "name": "eth0",
+        "ipv4Address": "192.168.1.100/24",
+        "ipv4Gateway": "192.168.1.1",
+        "nameservers": [
+          "8.8.8.8",
+          "8.8.4.4"
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 多接口配置
+
+```json
+{
+  "apiVersion": "system/v1",
+  "kind": "NetworkConfiguration",
+  "metadata": {
+    "name": "multi-interface-config",
+    "namespace": "default"
+  },
+  "spec": {
+    "interfaces": [
+      {
+        "name": "eth0",
+        "ipv4Address": "192.168.1.100/24",
+        "ipv4Gateway": "192.168.1.1",
+        "mtu": 1500,
+        "nameservers": [
+          "8.8.8.8",
+          "8.8.4.4"
+        ]
+      },
+      {
+        "name": "eth1",
+        "ipv4Address": "10.0.1.100/24",
+        "ipv4Gateway": "10.0.1.1",
+        "mtu": 9000,
+        "nameservers": [
+          "10.0.1.1",
+          "1.1.1.1"
+        ]
+      }
     ]
   }
 }
@@ -90,20 +134,24 @@
   "apiVersion": "system/v1",
   "kind": "NetworkConfiguration",
   "metadata": {
-    "name": "server-eth0",
+    "name": "server-network",
     "namespace": "default"
   },
   "spec": {
     "nodeSelector": {
       "machineId": "a1b2c3d4e5f6"
     },
-    "name": "eth0",
-    "ipv4Address": "10.0.1.10/24",
-    "ipv4Gateway": "10.0.1.1",
-    "mtu": 9000,
-    "nameservers": [
-      "10.0.1.1",
-      "8.8.8.8"
+    "interfaces": [
+      {
+        "name": "eth0",
+        "ipv4Address": "10.0.1.10/24",
+        "ipv4Gateway": "10.0.1.1",
+        "mtu": 9000,
+        "nameservers": [
+          "10.0.1.1",
+          "8.8.8.8"
+        ]
+      }
     ]
   }
 }
@@ -116,18 +164,22 @@
   "apiVersion": "system/v1",
   "kind": "NetworkConfiguration",
   "metadata": {
-    "name": "eth0-ipv6",
+    "name": "ipv6-config",
     "namespace": "default"
   },
   "spec": {
-    "name": "eth0",
-    "ipv4Address": "192.168.1.100/24",
-    "ipv6Address": "2001:db8::100/64",
-    "ipv4Gateway": "192.168.1.1",
-    "ipv6Gateway": "2001:db8::1",
-    "nameservers": [
-      "8.8.8.8",
-      "2001:4860:4860::8888"
+    "interfaces": [
+      {
+        "name": "eth0",
+        "ipv4Address": "192.168.1.100/24",
+        "ipv6Address": "2001:db8::100/64",
+        "ipv4Gateway": "192.168.1.1",
+        "ipv6Gateway": "2001:db8::1",
+        "nameservers": [
+          "8.8.8.8",
+          "2001:4860:4860::8888"
+        ]
+      }
     ]
   }
 }

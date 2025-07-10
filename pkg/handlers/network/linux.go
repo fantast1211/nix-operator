@@ -169,26 +169,29 @@ func getTemplateContent(templateName, defaultContent string) (string, error) {
 
 // applyConfiguration 应用网络配置
 func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*domain.ReconcileResult, error) {
-	// 转换为内部接口结构
-	iface := Interface{
-		Name:        networkSpec.Name,
-		IPv4Address: networkSpec.Ipv4Address,
-		IPv6Address: networkSpec.Ipv6Address,
-		IPv4Gateway: networkSpec.Ipv4Gateway,
-		IPv6Gateway: networkSpec.Ipv6Gateway,
-		MTU:         int(networkSpec.Mtu),
-		Nameservers: networkSpec.Nameservers,
-	}
-
 	// 检测并选择合适的网络管理器
 	manager, err := h.detectNetworkManager(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect network manager: %v", err)
 	}
 
-	// 配置网络接口
-	if err := manager.Configure(ctx, iface); err != nil {
-		return nil, fmt.Errorf("failed to configure network interface: %v", err)
+	// 遍历并配置所有网络接口
+	for _, interfaceSpec := range networkSpec.Interfaces {
+		// 转换为内部接口结构
+		iface := Interface{
+			Name:        interfaceSpec.Name,
+			IPv4Address: interfaceSpec.Ipv4Address,
+			IPv6Address: interfaceSpec.Ipv6Address,
+			IPv4Gateway: interfaceSpec.Ipv4Gateway,
+			IPv6Gateway: interfaceSpec.Ipv6Gateway,
+			MTU:         int(interfaceSpec.Mtu),
+			Nameservers: interfaceSpec.Nameservers,
+		}
+
+		// 配置网络接口
+		if err := manager.Configure(ctx, iface); err != nil {
+			return nil, fmt.Errorf("failed to configure network interface %s: %v", interfaceSpec.Name, err)
+		}
 	}
 
 	// 重新加载网络配置

@@ -6,12 +6,12 @@
             "properties": {
                 "timezone": {
                     "type": "string",
-                    "description": "时区设置"
+                    "description": "时区设置（如 Asia/Shanghai）"
                 },
                 "ntp": {
                     "$ref": "#/definitions/xtopus.api.system.v1.NtpConfig",
                     "additionalProperties": true,
-                    "description": "NTP配置"
+                    "description": "NTP 配置"
                 }
             },
             "additionalProperties": true,
@@ -23,20 +23,20 @@
             "properties": {
                 "enable": {
                     "type": "boolean",
-                    "description": "是否启用NTP"
+                    "description": "是否启用 NTP"
                 },
                 "servers": {
                     "items": {
                         "type": "string"
                     },
                     "type": "array",
-                    "description": "NTP服务器列表"
+                    "description": "NTP 服务器列表"
                 }
             },
             "additionalProperties": true,
             "type": "object",
             "title": "Ntp Config",
-            "description": "NTP配置"
+            "description": "NTP 配置"
         }
     }
 }
