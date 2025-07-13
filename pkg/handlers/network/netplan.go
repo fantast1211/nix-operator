@@ -48,6 +48,11 @@ func (np *Netplan) IsInstall(ctx context.Context) bool {
 }
 
 func (np *Netplan) Configure(ctx context.Context, iface Interface) error {
+	// 验证接口名称不能为空
+	if iface.Name == "" {
+		return fmt.Errorf("interface name cannot be empty")
+	}
+
 	// 构建netplan接口配置
 	netplanIface := NetplanInterface{
 		MTU: iface.MTU,

@@ -26,14 +26,16 @@ type Interface struct {
 // 外部模板目录，用于高优先级覆盖
 const externalTemplateDir = "/etc/nix-operator/templates"
 
-func init() {
-	controller.RegisterHandler("NetworkConfiguration", &LinuxNetworkHandler{})
+type LinuxNetworkHandler struct {
+	osInfo controller.OSInfo
 }
 
-type LinuxNetworkHandler struct{}
-
 func (h *LinuxNetworkHandler) Match(osInfo controller.OSInfo) bool {
-	return osInfo.KernelName == "Linux"
+	if osInfo.KernelName == "Linux" {
+		h.osInfo = osInfo
+		return true
+	}
+	return false
 }
 
 func (h *LinuxNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
@@ -204,18 +206,19 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 
 // detectNetworkManager 检测系统中可用的网络管理器
 func (h *LinuxNetworkHandler) detectNetworkManager(ctx context.Context) (INetworkManager, error) {
-	// 按优先级检测网络管理器
+	// 按优先级检测网络管理器：NetworkManager > Netplan > ifupdown
 	managers := []INetworkManager{
-		// &Ifupdown{}, // ifupdown 广泛支持，优先级最高
-		&Netplan{},        // Netplan 次之
-		&NetworkManager{}, // 优先级最低
+		&NetworkManager{}, // NetworkManager 优先级最高，现代Linux发行版首选
+		// &Netplan{},        // Netplan 次之，Ubuntu 18.04+默认
+		&Ifupdown{}, // ifupdown 兜底，传统Debian/Ubuntu系统
 	}
 
 	for _, manager := range managers {
 		if manager.IsInstall(ctx) {
+			utils.Info("network", fmt.Sprintf("Selected network manager: %T on %s %s", manager, h.osInfo.ID, h.osInfo.VersionID))
 			return manager, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no supported network manager found")
+	return nil, fmt.Errorf("no supported network manager found on %s %s", h.osInfo.ID, h.osInfo.VersionID)
 }

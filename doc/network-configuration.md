@@ -37,9 +37,9 @@
   "interfaces": [
     {
       "name": "网络接口名称（必需）",
-      "ipv4Address": "IPv4地址/CIDR（可选）",
+      "ipAddress": "IPv4地址/CIDR（可选）",
       "ipv6Address": "IPv6地址/前缀长度（可选）",
-      "ipv4Gateway": "IPv4网关（可选）",
+      "gateway": "IPv4网关（可选）",
       "ipv6Gateway": "IPv6网关（可选）",
       "mtu": "MTU大小（可选，默认1500）",
       "nameservers": ["DNS服务器列表（可选）"]
@@ -55,9 +55,9 @@
   - `ip`: IP地址匹配
 - **interfaces**: 网络接口配置数组，支持配置多个网络接口
   - **name**: 网络接口名称（如 eth0, enp0s3）
-  - **ipv4Address**: IPv4地址，CIDR格式（如 192.168.1.100/24）
+  - **ipAddress**: IPv4地址，CIDR格式（如 192.168.1.100/24）
   - **ipv6Address**: IPv6地址，带前缀长度（如 2001:db8::1/64）
-  - **ipv4Gateway**: IPv4网关地址
+  - **gateway**: IPv4网关地址
   - **ipv6Gateway**: IPv6网关地址
   - **mtu**: 最大传输单元，范围 576-9000
   - **nameservers**: DNS服务器地址列表
@@ -78,8 +78,8 @@
     "interfaces": [
       {
         "name": "eth0",
-        "ipv4Address": "192.168.1.100/24",
-        "ipv4Gateway": "192.168.1.1",
+        "ipAddress": "192.168.1.100/24",
+        "gateway": "192.168.1.1",
         "nameservers": [
           "8.8.8.8",
           "8.8.4.4"
@@ -104,8 +104,8 @@
     "interfaces": [
       {
         "name": "eth0",
-        "ipv4Address": "192.168.1.100/24",
-        "ipv4Gateway": "192.168.1.1",
+        "ipAddress": "192.168.1.100/24",
+        "gateway": "192.168.1.1",
         "mtu": 1500,
         "nameservers": [
           "8.8.8.8",
@@ -114,8 +114,8 @@
       },
       {
         "name": "eth1",
-        "ipv4Address": "10.0.1.100/24",
-        "ipv4Gateway": "10.0.1.1",
+        "ipAddress": "10.0.1.100/24",
+        "gateway": "10.0.1.1",
         "mtu": 9000,
         "nameservers": [
           "10.0.1.1",
@@ -144,8 +144,8 @@
     "interfaces": [
       {
         "name": "eth0",
-        "ipv4Address": "10.0.1.10/24",
-        "ipv4Gateway": "10.0.1.1",
+        "ipAddress": "10.0.1.10/24",
+        "gateway": "10.0.1.1",
         "mtu": 9000,
         "nameservers": [
           "10.0.1.1",
@@ -171,9 +171,9 @@
     "interfaces": [
       {
         "name": "eth0",
-        "ipv4Address": "192.168.1.100/24",
+        "ipAddress": "192.168.1.100/24",
         "ipv6Address": "2001:db8::100/64",
-        "ipv4Gateway": "192.168.1.1",
+        "gateway": "192.168.1.1",
         "ipv6Gateway": "2001:db8::1",
         "nameservers": [
           "8.8.8.8",

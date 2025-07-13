@@ -16,8 +16,14 @@ import (
 // filename: 目标文件路径
 // perm: 文件权限
 func AtomicWriteFile(content []byte, filename string, perm os.FileMode) error {
+	// 确保目标目录存在
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %v", dir, err)
+	}
+
 	// 创建临时文件
-	swap, err := os.CreateTemp(filepath.Dir(filename), filepath.Base(filename)+".tmp.*")
+	swap, err := os.CreateTemp(dir, filepath.Base(filename)+".tmp.*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %v", err)
 	}

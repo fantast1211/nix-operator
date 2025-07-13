@@ -4,6 +4,9 @@ package xtopus.api.system.v1;
 
 option go_package = "go.xbrother.com/nix-operator/api/system/v1";
 
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+
 // 节点选择器
 message NodeSelector {
   // 机器ID匹配
@@ -17,29 +20,6 @@ message NodeSelector {
 
 // 网络相关配置定义
 
-// 网络接口配置项
-message NetworkInterfaceSpec {
-  // 接口名称（如 eth0, enp0s3）
-  string name = 1;
-
-  // IPv4 地址
-  string ipv4_address = 2 [json_name = "ipAddress"];
-
-  // IPv6 地址
-  string ipv6_address = 3 [json_name = "ipv6Address"];
-
-  // IPv4 网关
-  string ipv4_gateway = 4 [json_name = "gateway"];
-
-  // IPv6 网关
-  string ipv6_gateway = 5 [json_name = "ipv6Gateway"];
-
-  // MTU 设置（最大传输单元）
-  int32 mtu = 6;
-
-  // DNS 服务器列表
-  repeated string nameservers = 7;
-}
 
 // 多接口网络配置项
 message NetworkConfigurationSpec {
@@ -48,6 +28,64 @@ message NetworkConfigurationSpec {
 
   // 网络接口列表
   repeated NetworkInterfaceSpec interfaces = 2;
+}
+
+// 网络接口配置项
+message NetworkInterfaceSpec {
+
+  // 接口名称（如 eth0, enp0s3）
+  string name = 1;
+
+  // IPv4 地址
+  string ipv4_address = 2 [
+    json_name = "ipAddress",
+    (validate.rules).string = {
+      pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$"
+    }
+  ];
+
+  // IPv6 地址
+  string ipv6_address = 3 [
+    json_name = "ipv6Address",
+    (validate.rules).string = {
+      pattern: "^[0-9a-fA-F:]{2,39}$"
+    }
+  ];
+
+  // IPv4 网关
+  string ipv4_gateway = 4 [
+    json_name = "gateway",
+    (validate.rules).string = {
+      pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$"
+    }
+  ];
+
+  // IPv6 网关
+  string ipv6_gateway = 5 [
+    json_name = "ipv6Gateway",
+    (validate.rules).string = {
+      pattern: "^[0-9a-fA-F:]{2,39}$"
+    }
+  ];
+
+  // MTU 设置（最大传输单元）
+  int32 mtu = 6 [
+    (validate.rules).int32 = {
+      gte: 576,
+      lte: 9000
+    }
+  ];
+
+  // DNS 服务器列表
+  repeated string nameservers = 7 [
+    (validate.rules).repeated = {
+      items: {
+        string: {
+          pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$"
+        }
+      }
+    }
+  ];
 }
 
 

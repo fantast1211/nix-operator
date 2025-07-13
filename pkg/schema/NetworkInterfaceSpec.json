@@ -9,18 +9,22 @@
                     "description": "接口名称（如 eth0, enp0s3）"
                 },
                 "ipv4_address": {
+                    "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$",
                     "type": "string",
                     "description": "IPv4 地址"
                 },
                 "ipv6_address": {
+                    "pattern": "^[0-9a-fA-F:]{2,39}$",
                     "type": "string",
                     "description": "IPv6 地址"
                 },
                 "ipv4_gateway": {
+                    "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$",
                     "type": "string",
                     "description": "IPv4 网关"
                 },
                 "ipv6_gateway": {
+                    "pattern": "^[0-9a-fA-F:]{2,39}$",
                     "type": "string",
                     "description": "IPv6 网关"
                 },
@@ -38,8 +42,8 @@
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "网络相关配置定义",
-            "description": "网络相关配置定义  网络接口配置项"
+            "title": "Network Interface Spec",
+            "description": "网络接口配置项"
         }
     }
 }
