@@ -1,4 +1,4 @@
-package network
+package linux
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"time"
 
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -47,7 +48,7 @@ func (np *Netplan) IsInstall(ctx context.Context) bool {
 	return cmd.Run() == nil
 }
 
-func (np *Netplan) Configure(ctx context.Context, iface Interface) error {
+func (np *Netplan) Configure(ctx context.Context, iface types.Interface) error {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")

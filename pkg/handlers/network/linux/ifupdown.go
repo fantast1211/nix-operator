@@ -1,4 +1,4 @@
-package network
+package linux
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
@@ -72,14 +74,14 @@ func (ifd *Ifupdown) IsInstall(ctx context.Context) bool {
 	return true
 }
 
-func (ifd *Ifupdown) Configure(ctx context.Context, iface Interface) error {
+func (ifd *Ifupdown) Configure(ctx context.Context, iface types.Interface) error {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")
 	}
 
 	// 获取模板内容
-	templateContent, err := getTemplateContent("ifupdown.tpl", ifupdownTemplate)
+	templateContent, err := common.GetTemplateContent("ifupdown.tpl", ifupdownTemplate)
 	if err != nil {
 		return err
 	}
@@ -92,9 +94,9 @@ func (ifd *Ifupdown) Configure(ctx context.Context, iface Interface) error {
 
 	// 准备模板数据
 	data := struct {
-		Interfaces map[string]Interface
+		Interfaces map[string]types.Interface
 	}{
-		Interfaces: map[string]Interface{
+		Interfaces: map[string]types.Interface{
 			iface.Name: iface,
 		},
 	}

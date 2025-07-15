@@ -1,4 +1,4 @@
-package network
+package centos
 
 import (
 	"testing"

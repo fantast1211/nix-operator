@@ -1,30 +1,16 @@
-package network
+package linux
 
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/domain"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
-
-type Interface struct {
-	Name        string   `json:"name" yaml:"name,omitempty"`
-	IPv4Address string   `json:"ipAddress,omitempty" yaml:"addresses,omitempty"`  // IPv4 地址
-	IPv6Address string   `json:"ipv6Address,omitempty" yaml:"-"`                  // IPv6 地址
-	IPv4Gateway string   `json:"gateway,omitempty" yaml:"gateway4,omitempty"`     // IPv4 网关
-	IPv6Gateway string   `json:"ipv6Gateway,omitempty" yaml:"gateway6,omitempty"` // IPv6 网关
-	MTU         int      `json:"mtu,omitempty" yaml:"mtu,omitempty"`
-	Nameservers []string `json:"nameservers,omitempty" yaml:"-"`
-}
-
-// 外部模板目录，用于高优先级覆盖
-const externalTemplateDir = "/etc/nix-operator/templates"
 
 type LinuxNetworkHandler struct {
 	osInfo controller.OSInfo
@@ -156,19 +142,6 @@ func (h *LinuxNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelect
 	return selector.MachineId != "" || selector.Ip != ""
 }
 
-// getTemplateContent 获取模板内容，优先使用外部模板
-func getTemplateContent(templateName, defaultContent string) (string, error) {
-	externalPath := filepath.Join(externalTemplateDir, templateName)
-	if _, err := os.Stat(externalPath); err == nil {
-		content, err := os.ReadFile(externalPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read external template %s: %v", externalPath, err)
-		}
-		return string(content), nil
-	}
-	return defaultContent, nil
-}
-
 // applyConfiguration 应用网络配置
 func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*domain.ReconcileResult, error) {
 	// 检测并选择合适的网络管理器
@@ -180,7 +153,7 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 	// 遍历并配置所有网络接口
 	for _, interfaceSpec := range networkSpec.Interfaces {
 		// 转换为内部接口结构
-		iface := Interface{
+		iface := types.Interface{
 			Name:        interfaceSpec.Name,
 			IPv4Address: interfaceSpec.Ipv4Address,
 			IPv6Address: interfaceSpec.Ipv6Address,
@@ -205,9 +178,9 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 }
 
 // detectNetworkManager 检测系统中可用的网络管理器
-func (h *LinuxNetworkHandler) detectNetworkManager(ctx context.Context) (INetworkManager, error) {
+func (h *LinuxNetworkHandler) detectNetworkManager(ctx context.Context) (types.INetworkManager, error) {
 	// 按优先级检测网络管理器：NetworkManager > Netplan > ifupdown
-	managers := []INetworkManager{
+	managers := []types.INetworkManager{
 		&NetworkManager{}, // NetworkManager 优先级最高，现代Linux发行版首选
 		// &Netplan{},        // Netplan 次之，Ubuntu 18.04+默认
 		&Ifupdown{}, // ifupdown 兜底，传统Debian/Ubuntu系统

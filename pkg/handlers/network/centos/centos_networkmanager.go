@@ -1,4 +1,4 @@
-package network
+package centos
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"go.xbrother.com/nix-operator/pkg/controller"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
@@ -62,14 +64,14 @@ func (cnm *CentOSNetworkManager) IsInstall(ctx context.Context) bool {
 	return true
 }
 
-func (cnm *CentOSNetworkManager) Configure(ctx context.Context, iface Interface) error {
+func (cnm *CentOSNetworkManager) Configure(ctx context.Context, iface types.Interface) error {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")
 	}
 
 	// 获取模板内容
-	templateContent, err := getTemplateContent("centos_nmconnection.tpl", centosNmConnectionTemplate)
+	templateContent, err := common.GetTemplateContent("centos_nmconnection.tpl", centosNmConnectionTemplate)
 	if err != nil {
 		return err
 	}

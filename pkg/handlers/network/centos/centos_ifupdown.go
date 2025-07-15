@@ -1,4 +1,4 @@
-package network
+package centos
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"go.xbrother.com/nix-operator/pkg/controller"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
@@ -27,7 +29,7 @@ var centosIfcfgTemplate string
 
 // CentOSIfcfgData 用于模板渲染的数据结构
 type CentOSIfcfgData struct {
-	Interface
+	types.Interface
 	IPv4IP      string // 分离出的 IPv4 地址
 	IPv4Netmask string // 分离出的子网掩码
 	IPv6IP      string // 分离出的 IPv6 地址
@@ -96,7 +98,7 @@ func (cif *CentOSIfupdown) IsInstall(ctx context.Context) bool {
 	return true
 }
 
-func (cif *CentOSIfupdown) Configure(ctx context.Context, iface Interface) error {
+func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface) error {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")
@@ -141,7 +143,7 @@ func (cif *CentOSIfupdown) Configure(ctx context.Context, iface Interface) error
 	}
 
 	// 获取模板内容
-	templateContent, err := getTemplateContent("centos_ifcfg.tpl", centosIfcfgTemplate)
+	templateContent, err := common.GetTemplateContent("centos_ifcfg.tpl", centosIfcfgTemplate)
 	if err != nil {
 		return err
 	}

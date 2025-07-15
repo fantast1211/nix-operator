@@ -1,4 +1,4 @@
-package network
+package linux
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"text/template"
 	"time"
 
+	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
@@ -31,14 +33,14 @@ func (nm *NetworkManager) IsInstall(ctx context.Context) bool {
 	return strings.TrimSpace(string(output)) == "active"
 }
 
-func (nm *NetworkManager) Configure(ctx context.Context, iface Interface) error {
+func (nm *NetworkManager) Configure(ctx context.Context, iface types.Interface) error {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")
 	}
 
 	// 获取模板内容
-	templateContent, err := getTemplateContent("nmconnection.tpl", nmConnectionTemplate)
+	templateContent, err := common.GetTemplateContent("nmconnection.tpl", nmConnectionTemplate)
 	if err != nil {
 		return err
 	}

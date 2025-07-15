@@ -1,4 +1,4 @@
-package network
+package centos
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/domain"
+	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
@@ -15,7 +16,7 @@ import (
 // CentOSNetworkHandler CentOS 7.2-7.9 专用网络处理器
 type CentOSNetworkHandler struct {
 	osInfo   controller.OSInfo
-	managers []INetworkManager
+	managers []types.INetworkManager
 }
 
 // NewCentOSNetworkHandler 创建 CentOS 网络处理器实例
@@ -51,7 +52,7 @@ func (h *CentOSNetworkHandler) initializeManagers() {
 	// CentOS 7.2-7.9 网络管理器优先级：
 	// 1. CentOS专用NetworkManager（如果可用）
 	// 2. CentOS专用传统网络脚本（ifcfg-*）
-	h.managers = []INetworkManager{
+	h.managers = []types.INetworkManager{
 		NewCentOSNetworkManager(&h.osInfo), // CentOS专用NetworkManager优先
 		NewCentOSIfupdown(&h.osInfo),       // CentOS专用传统网络脚本作为备选
 	}
@@ -169,7 +170,7 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 		}
 
 		// 转换为内部接口结构
-		iface := Interface{
+		iface := types.Interface{
 			Name:        interfaceSpec.Name,
 			IPv4Address: interfaceSpec.Ipv4Address,
 			IPv6Address: interfaceSpec.Ipv6Address,
@@ -289,7 +290,7 @@ func (h *CentOSNetworkHandler) isValidCentOSInterfaceName(name string) bool {
 }
 
 // detectNetworkManager 检测并选择合适的网络管理器
-func (h *CentOSNetworkHandler) detectNetworkManager(ctx context.Context) (INetworkManager, error) {
+func (h *CentOSNetworkHandler) detectNetworkManager(ctx context.Context) (types.INetworkManager, error) {
 	// 按优先级检测网络管理器
 	for _, manager := range h.managers {
 		if manager.IsInstall(ctx) {
