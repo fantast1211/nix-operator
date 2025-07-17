@@ -1,3 +1,15 @@
+{{- if and .BondingSlave .BondingSlave.Enabled}}
+[connection]
+id=nix-operator-{{.Name}}
+type=ethernet
+interface-name={{.Name}}
+autoconnect=true
+autoconnect-priority=100
+master={{.BondingSlave.Master}}
+slave-type=bond
+
+[ethernet]
+{{- else}}
 [connection]
 id=nix-operator-{{.Name}}
 type=ethernet
@@ -36,4 +48,5 @@ method=auto
 {{- if .MTU}}
 [802-3-ethernet]
 mtu={{.MTU}}
+{{- end}}
 {{- end}}

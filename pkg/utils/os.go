@@ -52,7 +52,7 @@ func MatchNodeSelector(selector *systemv1.NodeSelector) (bool, error) {
 // 读取机器ID的函数
 func readMachineID() (string, error) {
 	// 从/etc/machine-id读取
-	data, err := os.ReadFile("/etc/machine-id")
+	data, err := os.ReadFile("/etc/xrocket.machine.id")
 	if err != nil {
 		return "", fmt.Errorf("failed to read machine ID: %v", err)
 	}

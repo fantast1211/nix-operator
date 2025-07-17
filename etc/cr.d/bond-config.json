@@ -1,0 +1,28 @@
+  {
+    "apiVersion": "sysconfig.operator/v1",
+    "kind": "BondConfiguration",
+    "metadata": {
+      "name": "bond0",
+      "resourceVersion": "1",
+      "generation": 1,
+      "creationTime": "2025-07-15T16:30:00+08:00",
+      "deletionTime": "",
+      "labels": {},
+      "annotations": {}
+    },
+    "spec": {
+      "@type": "type.googleapis.com/xtopus.api.system.v1.BondConfigurationSpec",
+      "name": "bond0",
+      "mode": 1,
+      "miimon": 100,
+      "network": {
+        "ip": "192.168.99.100/24",
+        "gateway": "192.168.99.1",
+        "dnsServers": [],
+        "mtu": 1500
+      },
+      "options": {
+        "extraOptions": {}
+      }
+    }
+  }

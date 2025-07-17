@@ -150,6 +150,9 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 		return nil, fmt.Errorf("failed to detect network manager: %v", err)
 	}
 
+	// 跟踪是否有任何配置变更
+	hasChanges := false
+
 	// 遍历并配置所有网络接口
 	for _, interfaceSpec := range networkSpec.Interfaces {
 		// 转换为内部接口结构
@@ -163,18 +166,27 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 			Nameservers: interfaceSpec.Nameservers,
 		}
 
-		// 配置网络接口
-		if err := manager.Configure(ctx, iface); err != nil {
+		// 使用ConfigureWithCheck检查配置是否有变更
+		changed, err := manager.ConfigureWithCheck(ctx, iface)
+		if err != nil {
 			return nil, fmt.Errorf("failed to configure network interface %s: %v", interfaceSpec.Name, err)
+		}
+		if changed {
+			hasChanges = true
 		}
 	}
 
-	// 重新加载网络配置
-	if err := manager.ReloadIfy(ctx); err != nil {
-		return nil, fmt.Errorf("failed to reload network configuration: %v", err)
+	// 只有在有配置变更时才重新加载网络配置
+	if hasChanges {
+		utils.Info("network", "Network configuration changed, reloading network services")
+		if err := manager.ReloadIfy(ctx); err != nil {
+			return nil, fmt.Errorf("failed to reload network configuration: %v", err)
+		}
+		return status.ReconcileReady(configToApply, "Configured", "Network configuration applied and reloaded successfully")
+	} else {
+		utils.Info("network", "Network configuration unchanged, skipping network service reload")
+		return status.ReconcileReady(configToApply, "Configured", "Network configuration verified, no changes needed")
 	}
-
-	return status.ReconcileReady(configToApply, "Configured", "Network configuration applied successfully")
 }
 
 // detectNetworkManager 检测系统中可用的网络管理器

@@ -1,9 +1,11 @@
 package centos
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"text/template"
@@ -65,37 +67,54 @@ func (cnm *CentOSNetworkManager) IsInstall(ctx context.Context) bool {
 }
 
 func (cnm *CentOSNetworkManager) Configure(ctx context.Context, iface types.Interface) error {
+	_, err := cnm.ConfigureWithCheck(ctx, iface)
+	return err
+}
+
+func (cnm *CentOSNetworkManager) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
-		return fmt.Errorf("interface name cannot be empty")
+		return false, fmt.Errorf("interface name cannot be empty")
 	}
 
 	// 获取模板内容
 	templateContent, err := common.GetTemplateContent("centos_nmconnection.tpl", centosNmConnectionTemplate)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// 解析模板
 	tmpl, err := template.New("centos_nmconnection").Parse(templateContent)
 	if err != nil {
-		return fmt.Errorf("failed to parse CentOS NetworkManager template: %v", err)
+		return false, fmt.Errorf("failed to parse CentOS NetworkManager template: %v", err)
 	}
 
 	// 渲染模板
 	var content strings.Builder
 	if err := tmpl.Execute(&content, iface); err != nil {
-		return fmt.Errorf("failed to execute CentOS NetworkManager template: %v", err)
+		return false, fmt.Errorf("failed to execute CentOS NetworkManager template: %v", err)
+	}
+
+	newConfigData := []byte(content.String())
+
+	// 检查配置文件是否存在以及内容是否相同
+	configPath := fmt.Sprintf("/etc/NetworkManager/system-connections/nix-operator-%s.nmconnection", iface.Name)
+	existingData, err := os.ReadFile(configPath)
+	if err == nil {
+		// 文件存在，比较内容
+		if bytes.Equal(existingData, newConfigData) {
+			utils.Debugf("network", "CentOS NetworkManager config for interface %s unchanged, skipping write", iface.Name)
+			return false, nil // 配置未变更
+		}
 	}
 
 	// 写入连接配置文件
-	configPath := fmt.Sprintf("/etc/NetworkManager/system-connections/nix-operator-%s.nmconnection", iface.Name)
-	if err := utils.AtomicWriteFile([]byte(content.String()), configPath, 0600); err != nil {
-		return fmt.Errorf("failed to write CentOS NetworkManager config: %v", err)
+	if err := utils.AtomicWriteFile(newConfigData, configPath, 0600); err != nil {
+		return false, fmt.Errorf("failed to write CentOS NetworkManager config: %v", err)
 	}
 
 	utils.Infof("network", "CentOS NetworkManager configuration written for interface %s", iface.Name)
-	return nil
+	return true, nil // 配置已变更
 }
 
 func (cnm *CentOSNetworkManager) ReloadIfy(ctx context.Context) error {

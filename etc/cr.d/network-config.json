@@ -1,35 +1,48 @@
 {
-  "apiVersion": "system/v1",
-  "kind": "NetworkConfiguration",
-  "metadata": {
-    "name": "multi-interface-config"
+  "apiVersion":  "sysconfig.operator/v1",
+  "kind":  "NetworkConfiguration",
+  "metadata":  {
+    "name":  "network-config",
+    "resourceVersion":  "1752567946",
+    "generation":  1,
+    "creationTime":  "2025-07-15T16:25:46+08:00",
+    "deletionTime":  "",
+    "labels":  {},
+    "annotations":  {}
   },
-  "spec": {
-    "@type":  "type.googleapis.com/xtopus.api.system.v1.NetworkConfigurationSpec",    
-    "nodeSelector": {
-      "machineId": "",
-      "ip": ""
+  "spec":  {
+    "@type":  "type.googleapis.com/xtopus.api.system.v1.NetworkConfigurationSpec",
+    "nodeSelector":  {
+      "machineId":  "f73d3081950241aa90f73dc54ebc57e0",
+      "ip":  ""
     },
-    "interfaces": [
+    "interfaces":  [
       {
-        "name": "eth0",
-        "ipAddress": "192.168.1.100/24",
-        "gateway": "192.168.1.1",
-        "mtu": 1500,
-        "nameservers": [
-          "8.8.8.8",
-          "8.8.4.4"
-        ]
+        "name":  "eno16780032",
+        "ipAddress":  "192.168.33.35/24",
+        "ipv6Address":  "fd00::5679/64",
+        "gateway":  "192.168.33.1",
+        "ipv6Gateway":  "fd00::1111",
+        "mtu":  1500,
+        "nameservers":  [
+          "192.168.4.31"
+        ],
+        "bondingSlave":  null
       },
       {
-        "name": "eth1",
-        "ipAddress": "10.0.1.100/24",
-        "gateway": "10.0.1.1",
-        "mtu": 1500,
-        "nameservers": [
-          "10.0.1.1",
-          "1.1.1.1"
-        ]
+        "name":  "ens224",
+        "ipAddress":  "192.168.33.130/24",
+        "ipv6Address":  "",
+        "gateway":  "192.168.33.1",
+        "ipv6Gateway":  "",
+        "mtu":  1500,
+        "nameservers":  [
+          "192.168.4.31"
+        ],
+        "bondingSlave":  {
+          "enabled":  true,
+          "master":  "bond1"
+        }
       }
     ]
   }

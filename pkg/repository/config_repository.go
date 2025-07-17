@@ -123,6 +123,14 @@ func (r *configRepository) SaveConfig(ctx context.Context, config *systemv1.Reso
 		config.Metadata.CreationTime = time.Now().Format(time.RFC3339)
 	}
 
+	// 初始化Annotations map（防止为nil）
+	if config.Metadata.Annotations == nil {
+		config.Metadata.Annotations = make(map[string]string)
+	}
+
+	// 设置或更新 syncTriggerRandom 字段, 遇到了Syncthing不同步的问题，只能暂时这样解决
+	config.Metadata.Annotations["syncTriggerRandom"] = utils.RandomString()
+
 	// 使用 protojson 序列化配置，保持与 API 响应一致的格式
 	marshaler := protojson.MarshalOptions{
 		EmitUnpopulated: true,

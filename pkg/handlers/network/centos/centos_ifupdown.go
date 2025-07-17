@@ -1,6 +1,7 @@
 package centos
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -99,14 +100,27 @@ func (cif *CentOSIfupdown) IsInstall(ctx context.Context) bool {
 }
 
 func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface) error {
+	_, err := cif.ConfigureWithCheck(ctx, iface)
+	return err
+}
+
+func (cif *CentOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
-		return fmt.Errorf("interface name cannot be empty")
+		return false, fmt.Errorf("interface name cannot be empty")
 	}
 
 	// 准备模板数据，解析 CIDR 格式的地址
 	templateData := CentOSIfcfgData{
 		Interface: iface,
+	}
+
+	// 调试日志：输出bond配置信息
+	if iface.BondingSlave != nil {
+		utils.Infof("network", "Bond configuration detected for interface %s: enabled=%v, master=%s",
+			iface.Name, iface.BondingSlave.Enabled, iface.BondingSlave.Master)
+	} else {
+		utils.Infof("network", "No bond configuration for interface %s", iface.Name)
 	}
 
 	// 解析 IPv4 地址和子网掩码
@@ -115,7 +129,7 @@ func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface)
 			// CIDR 格式：192.168.1.100/24
 			ip, ipNet, err := net.ParseCIDR(iface.IPv4Address)
 			if err != nil {
-				return fmt.Errorf("failed to parse IPv4 CIDR %s: %v", iface.IPv4Address, err)
+				return false, fmt.Errorf("failed to parse IPv4 CIDR %s: %v", iface.IPv4Address, err)
 			}
 			templateData.IPv4IP = ip.String()
 			templateData.IPv4Netmask = cif.cidrToNetmask(ipNet)
@@ -131,7 +145,7 @@ func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface)
 			// CIDR 格式：2001:db8::1/64
 			ip, ipNet, err := net.ParseCIDR(iface.IPv6Address)
 			if err != nil {
-				return fmt.Errorf("failed to parse IPv6 CIDR %s: %v", iface.IPv6Address, err)
+				return false, fmt.Errorf("failed to parse IPv6 CIDR %s: %v", iface.IPv6Address, err)
 			}
 			templateData.IPv6IP = ip.String()
 			prefixLen, _ := ipNet.Mask.Size()
@@ -145,30 +159,42 @@ func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface)
 	// 获取模板内容
 	templateContent, err := common.GetTemplateContent("centos_ifcfg.tpl", centosIfcfgTemplate)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// 解析模板
 	tmpl, err := template.New("centos_ifcfg").Parse(templateContent)
 	if err != nil {
-		return fmt.Errorf("failed to parse CentOS ifcfg template: %v", err)
+		return false, fmt.Errorf("failed to parse CentOS ifcfg template: %v", err)
 	}
 
 	// 渲染模板
 	var content strings.Builder
 	if err := tmpl.Execute(&content, templateData); err != nil {
-		return fmt.Errorf("failed to execute CentOS ifcfg template: %v", err)
+		return false, fmt.Errorf("failed to execute CentOS ifcfg template: %v", err)
+	}
+
+	newConfigData := []byte(content.String())
+
+	// 检查配置文件是否存在以及内容是否相同
+	configPath := fmt.Sprintf("/etc/sysconfig/network-scripts/ifcfg-%s", iface.Name)
+	existingData, err := os.ReadFile(configPath)
+	if err == nil {
+		// 文件存在，比较内容
+		if bytes.Equal(existingData, newConfigData) {
+			utils.Debugf("network", "CentOS ifcfg config for interface %s unchanged, skipping write", iface.Name)
+			return false, nil // 配置未变更
+		}
 	}
 
 	// 确保目标目录存在
-	configPath := fmt.Sprintf("/etc/sysconfig/network-scripts/ifcfg-%s", iface.Name)
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
+		return false, fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
 	}
 
 	// 写入配置文件
-	if err := utils.AtomicWriteFile([]byte(content.String()), configPath, 0644); err != nil {
-		return fmt.Errorf("failed to write CentOS ifcfg config: %v", err)
+	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
+		return false, fmt.Errorf("failed to write CentOS ifcfg config: %v", err)
 	}
 
 	// 如果配置了DNS，更新 /etc/resolv.conf
@@ -179,7 +205,7 @@ func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface)
 	}
 
 	utils.Infof("network", "CentOS ifcfg configuration written for interface %s", iface.Name)
-	return nil
+	return true, nil // 配置已变更
 }
 
 func (cif *CentOSIfupdown) ReloadIfy(ctx context.Context) error {
@@ -194,7 +220,7 @@ func (cif *CentOSIfupdown) ReloadIfy(ctx context.Context) error {
 	}{
 		{"systemctl restart network", []string{"systemctl", "restart", "network"}},
 		{"service network restart", []string{"service", "network", "restart"}},
-		{"systemctl restart NetworkManager", []string{"systemctl", "restart", "NetworkManager"}},
+		// {"systemctl restart NetworkManager", []string{"systemctl", "restart", "NetworkManager"}},
 	}
 
 	for _, method := range reloadMethods {

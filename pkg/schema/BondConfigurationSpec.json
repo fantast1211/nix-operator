@@ -1,0 +1,103 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/BondConfigurationSpec",
+    "definitions": {
+        "BondConfigurationSpec": {
+            "properties": {
+                "node_selector": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "additionalProperties": true,
+                    "description": "节点选择器"
+                },
+                "name": {
+                    "pattern": "^[a-zA-Z0-9\\-_.]+$",
+                    "type": "string",
+                    "description": "Bond 接口名称（如 bond0）"
+                },
+                "mode": {
+                    "type": "integer",
+                    "description": "绑定模式，0~7，对应 bonding 模式（建议为1，用户端无感知，其他数字请具体查询bonding模式）"
+                },
+                "miimon": {
+                    "type": "integer",
+                    "description": "链路监测间隔（单位：毫秒）"
+                },
+                "network": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.BondNetworkConfig",
+                    "additionalProperties": true,
+                    "description": "网络配置（IP、网关、DNS、MTU）"
+                },
+                "options": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.BondOptions",
+                    "additionalProperties": true,
+                    "description": "可选参数（如 downdelay、updelay）"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bond Configuration Spec",
+            "description": "Bond 主设备配置项"
+        },
+        "xtopus.api.system.v1.BondNetworkConfig": {
+            "properties": {
+                "ip": {
+                    "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])(\\/([1-9]|[1-2][0-9]|3[0-2]))?$",
+                    "type": "string",
+                    "description": "IP 地址（支持 CIDR 格式，如 192.168.99.100/24）"
+                },
+                "gateway": {
+                    "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$",
+                    "type": "string",
+                    "description": "IPv4 网关地址"
+                },
+                "dns_servers": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "maxItems": 3,
+                    "type": "array",
+                    "description": "DNS 服务器列表"
+                },
+                "mtu": {
+                    "type": "integer",
+                    "description": "MTU 设置（最大传输单元）"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bond配置相关定义",
+            "description": "Bond配置相关定义  Bond 接口网络配置"
+        },
+        "xtopus.api.system.v1.BondOptions": {
+            "properties": {
+                "extra_options": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object",
+                    "description": "其他可扩展选项（预留）"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bond Options",
+            "description": "Bond 高级选项（可选字段）"
+        },
+        "xtopus.api.system.v1.NodeSelector": {
+            "properties": {
+                "machine_id": {
+                    "type": "string",
+                    "description": "机器ID匹配"
+                },
+                "ip": {
+                    "type": "string",
+                    "description": "IP地址匹配"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Node Selector",
+            "description": "节点选择器"
+        }
+    }
+}

@@ -90,5 +90,15 @@ func initSchemas() map[string]ResourceSchemaInfo {
 		}
 	}
 
+	// 读取 BondConfigurationSpec schema
+	if networkSchema, err := schemaFiles.ReadFile("BondConfigurationSpec.json"); err == nil {
+		schemas["NetworkConfiguration"] = ResourceSchemaInfo{
+			Kind:        "BondConfiguration",
+			DisplayName: "Bond配置",
+			Version:     "v1",
+			JSONSchema:  string(networkSchema),
+		}
+	}
+
 	return schemas
 }

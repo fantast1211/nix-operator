@@ -2,19 +2,17 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/utils"
 
 	"github.com/fsnotify/fsnotify"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type OSInfo struct {
@@ -55,6 +53,7 @@ func NewController(configDir string, logger *utils.Logger) (*Controller, error) 
 
 	// 为每种类型选择合适的处理器
 	requiredTypes := []string{
+		"BondConfiguration",
 		"HostsConfiguration",
 		"TimeConfiguration",
 		"NetworkConfiguration",
@@ -141,6 +140,7 @@ func (c *Controller) Run() error {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					c.logger.Debugf("controller", "Config file changed: %s", event.Name)
+					time.Sleep(100 * time.Millisecond) // 等待写入完成
 					c.reconcile()
 				}
 			case err := <-watcher.Errors:
@@ -195,7 +195,7 @@ func (c *Controller) reconcile() {
 			return nil
 		}
 
-		cfg, err := loadConfigFile(path)
+		cfg, err := utils.LoadConfigFile(path)
 		if err != nil {
 			c.logger.Errorf("controller", "Failed to load config %s: %v", path, err)
 			return nil
@@ -219,7 +219,6 @@ func (c *Controller) reconcile() {
 		} else if len(results) > 0 {
 			for _, result := range results {
 				if result != nil && result.Status != nil {
-					// 添加错误详情输出
 					if result.Status.Phase == "Error" && result.Status.Message != "" {
 						c.logger.Errorf("controller", "Reconciliation result: %s -> %s (Reason: %s, Message: %s)",
 							kind, result.Status.Phase, result.Status.Reason, result.Status.Message)
@@ -232,73 +231,73 @@ func (c *Controller) reconcile() {
 	}
 }
 
-func loadConfigFile(path string) (*systemv1.ResourceConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+// func loadConfigFile(path string) (*systemv1.ResourceConfig, error) {
+// 	data, err := os.ReadFile(path)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	var tempConfig struct {
-		APIVersion string                 `json:"apiVersion"`
-		Kind       string                 `json:"kind"`
-		Metadata   *systemv1.Metadata     `json:"metadata"`
-		Spec       map[string]interface{} `json:"spec"`
-	}
+// 	var tempConfig struct {
+// 		APIVersion string                 `json:"apiVersion"`
+// 		Kind       string                 `json:"kind"`
+// 		Metadata   *systemv1.Metadata     `json:"metadata"`
+// 		Spec       map[string]interface{} `json:"spec"`
+// 	}
 
-	if err := json.Unmarshal(data, &tempConfig); err != nil {
-		return nil, err
-	}
+// 	if err := json.Unmarshal(data, &tempConfig); err != nil {
+// 		return nil, err
+// 	}
 
-	cfg := &systemv1.ResourceConfig{
-		ApiVersion: tempConfig.APIVersion,
-		Kind:       tempConfig.Kind,
-		Metadata:   tempConfig.Metadata,
-	}
+// 	cfg := &systemv1.ResourceConfig{
+// 		ApiVersion: tempConfig.APIVersion,
+// 		Kind:       tempConfig.Kind,
+// 		Metadata:   tempConfig.Metadata,
+// 	}
 
-	// 封装为 structpb.Struct，保持为弱类型，延迟处理
-	if tempConfig.Spec != nil {
-		specStruct, err := structpb.NewStruct(tempConfig.Spec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert spec to structpb.Struct: %w", err)
-		}
-		cfg.Spec, err = anypb.New(specStruct)
-		if err != nil {
-			return nil, fmt.Errorf("failed to wrap spec struct as Any: %w", err)
-		}
-	}
+// 	// 封装为 structpb.Struct，保持为弱类型，延迟处理
+// 	if tempConfig.Spec != nil {
+// 		specStruct, err := structpb.NewStruct(tempConfig.Spec)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("failed to convert spec to structpb.Struct: %w", err)
+// 		}
+// 		cfg.Spec, err = anypb.New(specStruct)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("failed to wrap spec struct as Any: %w", err)
+// 		}
+// 	}
 
-	return cfg, nil
-}
+// 	return cfg, nil
+// }
 
-// BatchReconcile 针对某个 kind 类型聚合所有配置并调谐
-func (c *Controller) BatchReconcile(ctx context.Context, kind string) ([]*domain.ReconcileResult, error) {
-	grouped := make([]*systemv1.ResourceConfig, 0)
+// // BatchReconcile 针对某个 kind 类型聚合所有配置并调谐
+// func (c *Controller) BatchReconcile(ctx context.Context, kind string) ([]*domain.ReconcileResult, error) {
+// 	grouped := make([]*systemv1.ResourceConfig, 0)
 
-	// 聚合指定 kind 的配置文件
-	filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || filepath.Ext(path) != ".json" {
-			return nil
-		}
+// 	// 聚合指定 kind 的配置文件
+// 	filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
+// 		if err != nil || info.IsDir() || filepath.Ext(path) != ".json" {
+// 			return nil
+// 		}
 
-		cfg, err := loadConfigFile(path)
-		if err != nil {
-			c.logger.Errorf("controller", "Failed to load config %s: %v", path, err)
-			return nil
-		}
-		if cfg.Kind == kind {
-			grouped = append(grouped, cfg)
-		}
-		return nil
-	})
+// 		cfg, err := utils.LoadConfigFile(path)
+// 		if err != nil {
+// 			c.logger.Errorf("controller", "Failed to load config %s: %v", path, err)
+// 			return nil
+// 		}
+// 		if cfg.Kind == kind {
+// 			grouped = append(grouped, cfg)
+// 		}
+// 		return nil
+// 	})
 
-	if len(grouped) == 0 {
-		return nil, fmt.Errorf("no configs found for kind: %s", kind)
-	}
+// 	if len(grouped) == 0 {
+// 		return nil, fmt.Errorf("no configs found for kind: %s", kind)
+// 	}
 
-	handler, ok := c.Handlers[kind]
-	if !ok {
-		return nil, fmt.Errorf("no handler registered for kind: %s", kind)
-	}
+// 	handler, ok := c.Handlers[kind]
+// 	if !ok {
+// 		return nil, fmt.Errorf("no handler registered for kind: %s", kind)
+// 	}
 
-	return handler.Reconcile(ctx, grouped)
-}
+// 	return handler.Reconcile(ctx, grouped)
+// }

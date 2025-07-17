@@ -6,7 +6,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // LogLevel 定义日志级别
@@ -43,8 +47,9 @@ type Logger struct {
 	serviceName string
 	infoLogger  *log.Logger
 	errorLogger *log.Logger
-	infoFile    *os.File
-	errorFile   *os.File
+	infoWriter  *lumberjack.Logger
+	errorWriter *lumberjack.Logger
+	minLevel    LogLevel
 }
 
 // NewLogger 创建新的日志记录器
@@ -55,24 +60,34 @@ func NewLogger(serviceName string) (*Logger, error) {
 		return nil, fmt.Errorf("failed to create log directory: %v", err)
 	}
 
-	// 打开普通日志文件
-	infoLogPath := filepath.Join(logDir, "xtopus.log")
-	infoFile, err := os.OpenFile(infoLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open info log file: %v", err)
+	// 从环境变量获取日志级别，默认为INFO
+	minLevel := DEBUG
+	if levelStr := os.Getenv("LOG_LEVEL"); levelStr != "" {
+		if level, err := parseLogLevel(levelStr); err == nil {
+			minLevel = level
+		}
 	}
 
-	// 打开错误日志文件
-	errorLogPath := filepath.Join(logDir, "xtopus_error.log")
-	errorFile, err := os.OpenFile(errorLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		infoFile.Close()
-		return nil, fmt.Errorf("failed to open error log file: %v", err)
+	// 创建带轮转的日志写入器
+	infoWriter := &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, "xtopus.log"),
+		MaxSize:    getEnvInt("LOG_MAX_SIZE", 1), // MB
+		MaxBackups: getEnvInt("LOG_MAX_BACKUPS", 5),
+		MaxAge:     getEnvInt("LOG_MAX_AGE", 30), // days
+		Compress:   getEnvBool("LOG_COMPRESS", false),
+	}
+
+	errorWriter := &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, "xtopus_error.log"),
+		MaxSize:    getEnvInt("LOG_MAX_SIZE", 10), // MB
+		MaxBackups: getEnvInt("LOG_MAX_BACKUPS", 5),
+		MaxAge:     getEnvInt("LOG_MAX_AGE", 30), // days
+		Compress:   getEnvBool("LOG_COMPRESS", false),
 	}
 
 	// 创建多重写入器，同时写入文件和控制台
-	infoMultiWriter := io.MultiWriter(infoFile, os.Stdout)
-	errorMultiWriter := io.MultiWriter(errorFile, os.Stderr)
+	infoMultiWriter := io.MultiWriter(infoWriter, os.Stdout)
+	errorMultiWriter := io.MultiWriter(errorWriter, os.Stderr)
 
 	// 创建日志记录器
 	infoLogger := log.New(infoMultiWriter, "", 0)
@@ -82,8 +97,9 @@ func NewLogger(serviceName string) (*Logger, error) {
 		serviceName: serviceName,
 		infoLogger:  infoLogger,
 		errorLogger: errorLogger,
-		infoFile:    infoFile,
-		errorFile:   errorFile,
+		infoWriter:  infoWriter,
+		errorWriter: errorWriter,
+		minLevel:    minLevel,
 	}, nil
 }
 
@@ -98,6 +114,9 @@ func (l *Logger) formatMessage(level LogLevel, module, message string) string {
 
 // Debug 记录调试日志
 func (l *Logger) Debug(module, message string) {
+	if DEBUG < l.minLevel {
+		return
+	}
 	formatted := l.formatMessage(DEBUG, module, message)
 	l.infoLogger.Println(formatted)
 }
@@ -110,6 +129,9 @@ func (l *Logger) Debugf(module, format string, args ...interface{}) {
 
 // Info 记录信息日志
 func (l *Logger) Info(module, message string) {
+	if INFO < l.minLevel {
+		return
+	}
 	formatted := l.formatMessage(INFO, module, message)
 	l.infoLogger.Println(formatted)
 }
@@ -122,6 +144,9 @@ func (l *Logger) Infof(module, format string, args ...interface{}) {
 
 // Warn 记录警告日志
 func (l *Logger) Warn(module, message string) {
+	if WARN < l.minLevel {
+		return
+	}
 	formatted := l.formatMessage(WARN, module, message)
 	l.infoLogger.Println(formatted)
 }
@@ -134,6 +159,9 @@ func (l *Logger) Warnf(module, format string, args ...interface{}) {
 
 // Error 记录错误日志
 func (l *Logger) Error(module, message string) {
+	if ERROR < l.minLevel {
+		return
+	}
 	formatted := l.formatMessage(ERROR, module, message)
 	l.errorLogger.Println(formatted)
 }
@@ -160,13 +188,13 @@ func (l *Logger) Fatalf(module, format string, args ...interface{}) {
 // Close 关闭日志文件
 func (l *Logger) Close() error {
 	var err error
-	if l.infoFile != nil {
-		if closeErr := l.infoFile.Close(); closeErr != nil {
+	if l.infoWriter != nil {
+		if closeErr := l.infoWriter.Close(); closeErr != nil {
 			err = closeErr
 		}
 	}
-	if l.errorFile != nil {
-		if closeErr := l.errorFile.Close(); closeErr != nil {
+	if l.errorWriter != nil {
+		if closeErr := l.errorWriter.Close(); closeErr != nil {
 			err = closeErr
 		}
 	}
@@ -253,4 +281,42 @@ func CloseLogger() error {
 		return GlobalLogger.Close()
 	}
 	return nil
+}
+
+// parseLogLevel 解析日志级别字符串
+func parseLogLevel(level string) (LogLevel, error) {
+	switch strings.ToUpper(level) {
+	case "DEBUG":
+		return DEBUG, nil
+	case "INFO":
+		return INFO, nil
+	case "WARN", "WARNING":
+		return WARN, nil
+	case "ERROR":
+		return ERROR, nil
+	case "FATAL":
+		return FATAL, nil
+	default:
+		return INFO, fmt.Errorf("invalid log level: %s", level)
+	}
+}
+
+// getEnvInt 从环境变量获取整数值，如果不存在或无效则返回默认值
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
+// getEnvBool 从环境变量获取布尔值，如果不存在或无效则返回默认值
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
+		}
+	}
+	return defaultValue
 }

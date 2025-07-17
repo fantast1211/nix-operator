@@ -22,6 +22,22 @@
             "title": "网络相关配置定义",
             "description": "网络相关配置定义  多接口网络配置项"
         },
+        "xtopus.api.system.v1.BondingSlaveConfig": {
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "启用 bond 从属模式"
+                },
+                "master": {
+                    "type": "string",
+                    "description": "所属 bond 接口名（如 bond0）"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bonding Slave Config",
+            "description": "网卡作为 bond 从属配置"
+        },
         "xtopus.api.system.v1.NetworkInterfaceSpec": {
             "properties": {
                 "name": {
@@ -58,6 +74,11 @@
                     },
                     "type": "array",
                     "description": "DNS 服务器列表"
+                },
+                "bonding_slave": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.BondingSlaveConfig",
+                    "additionalProperties": true,
+                    "description": "网卡作为 bond 从属配置"
                 }
             },
             "additionalProperties": true,

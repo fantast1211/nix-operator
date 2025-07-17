@@ -27,8 +27,10 @@ import (
 
 	// 注册所有处理器
 	_ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
-	_ "go.xbrother.com/nix-operator/pkg/handlers/network"
 	_ "go.xbrother.com/nix-operator/pkg/handlers/time"
+
+	_ "go.xbrother.com/nix-operator/pkg/handlers/bond"
+	_ "go.xbrother.com/nix-operator/pkg/handlers/network"
 )
 
 const (
@@ -165,6 +167,12 @@ func initializeValidators() map[string]validator.SpecValidator {
 	validators["NetworkConfiguration"] = validator.NewProtoValidator(
 		"NetworkConfiguration",
 		&systemv1.NetworkConfigurationSpec{},
+	)
+
+	// 添加 BondConfiguration 校验器
+	validators["BondConfiguration"] = validator.NewProtoValidator(
+		"BondConfiguration",
+		&systemv1.BondConfigurationSpec{},
 	)
 
 	return validators

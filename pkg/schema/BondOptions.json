@@ -1,0 +1,21 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/BondOptions",
+    "definitions": {
+        "BondOptions": {
+            "properties": {
+                "extra_options": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "type": "object",
+                    "description": "其他可扩展选项（预留）"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bond Options",
+            "description": "Bond 高级选项（可选字段）"
+        }
+    }
+}

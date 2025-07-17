@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -75,21 +76,26 @@ func (ifd *Ifupdown) IsInstall(ctx context.Context) bool {
 }
 
 func (ifd *Ifupdown) Configure(ctx context.Context, iface types.Interface) error {
+	_, err := ifd.ConfigureWithCheck(ctx, iface)
+	return err
+}
+
+func (ifd *Ifupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
 	// 验证接口名称不能为空
 	if iface.Name == "" {
-		return fmt.Errorf("interface name cannot be empty")
+		return false, fmt.Errorf("interface name cannot be empty")
 	}
 
 	// 获取模板内容
 	templateContent, err := common.GetTemplateContent("ifupdown.tpl", ifupdownTemplate)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// 解析模板
 	tmpl, err := template.New("ifupdown").Parse(templateContent)
 	if err != nil {
-		return fmt.Errorf("failed to parse ifupdown template: %v", err)
+		return false, fmt.Errorf("failed to parse ifupdown template: %v", err)
 	}
 
 	// 准备模板数据
@@ -104,21 +110,34 @@ func (ifd *Ifupdown) Configure(ctx context.Context, iface types.Interface) error
 	// 渲染模板
 	var content strings.Builder
 	if err := tmpl.Execute(&content, data); err != nil {
-		return fmt.Errorf("failed to execute ifupdown template: %v", err)
+		return false, fmt.Errorf("failed to execute ifupdown template: %v", err)
+	}
+
+	newConfigData := []byte(content.String())
+
+	// 检查配置文件是否存在以及内容是否相同
+	configPath := "/etc/network/interfaces"
+	existingData, err := os.ReadFile(configPath)
+	if err == nil {
+		// 文件存在，比较内容
+		if bytes.Equal(existingData, newConfigData) {
+			utils.Debugf("network", "Ifupdown config unchanged, skipping write")
+			return false, nil // 配置未变更
+		}
 	}
 
 	// 确保目标目录存在
-	configPath := "/etc/network/interfaces"
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
+		return false, fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
 	}
 
 	// 写入配置文件
-	if err := utils.AtomicWriteFile([]byte(content.String()), configPath, 0644); err != nil {
-		return fmt.Errorf("failed to write ifupdown config: %v", err)
+	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
+		return false, fmt.Errorf("failed to write ifupdown config: %v", err)
 	}
 
-	return nil
+	utils.Infof("network", "Ifupdown config updated")
+	return true, nil // 配置已变更
 }
 
 func (ifd *Ifupdown) ReloadIfy(ctx context.Context) error {

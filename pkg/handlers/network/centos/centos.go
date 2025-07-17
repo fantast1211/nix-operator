@@ -162,6 +162,9 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 		return nil, fmt.Errorf("failed to detect CentOS network manager: %v", err)
 	}
 
+	// 跟踪是否有任何配置变更
+	hasChanges := false
+
 	// 遍历并配置所有网络接口
 	for _, interfaceSpec := range networkSpec.Interfaces {
 		// 验证接口配置
@@ -180,21 +183,43 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 			Nameservers: interfaceSpec.Nameservers,
 		}
 
-		// 配置网络接口
-		if err := manager.Configure(ctx, iface); err != nil {
+		// 转换BondingSlave配置
+		if interfaceSpec.BondingSlave != nil {
+			utils.Infof("network", "Converting bond config for interface %s: enabled=%v, master=%s",
+				interfaceSpec.Name, interfaceSpec.BondingSlave.Enabled, interfaceSpec.BondingSlave.Master)
+			iface.BondingSlave = &types.BondingSlaveConfig{
+				Enabled: interfaceSpec.BondingSlave.Enabled,
+				Master:  interfaceSpec.BondingSlave.Master,
+			}
+		} else {
+			utils.Infof("network", "No bond config found for interface %s", interfaceSpec.Name)
+		}
+
+		// 使用ConfigureWithCheck检查配置是否有变更
+		changed, err := manager.ConfigureWithCheck(ctx, iface)
+		if err != nil {
 			return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to configure interface %s: %v", interfaceSpec.Name, err))
+		}
+		if changed {
+			hasChanges = true
 		}
 
 		utils.Infof("network", "CentOS interface %s configured successfully", interfaceSpec.Name)
 	}
 
-	// 重新加载网络配置
-	if err := manager.ReloadIfy(ctx); err != nil {
-		return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to reload network configuration: %v", err))
+	// 只有在有配置变更时才重新加载网络配置
+	if hasChanges {
+		utils.Info("network", "CentOS network configuration changed, reloading network services")
+		if err := manager.ReloadIfy(ctx); err != nil {
+			return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to reload network configuration: %v", err))
+		}
+		utils.Infof("network", "CentOS network configuration applied and reloaded successfully")
+		return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS network configuration applied and reloaded successfully")
+	} else {
+		utils.Info("network", "CentOS network configuration unchanged, skipping network service reload")
+		utils.Infof("network", "CentOS network configuration verified, no changes needed")
+		return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS network configuration verified, no changes needed")
 	}
-
-	utils.Infof("network", "CentOS network configuration applied successfully")
-	return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS network configuration applied successfully")
 }
 
 // validateCentOSInterface 验证CentOS网络接口配置
@@ -357,7 +382,7 @@ func (h *CentOSNetworkHandler) isCentOS7Supported(versionID string) bool {
 		return true
 	}
 
-	// 支持的CentOS 7版本范围：7.2 到 7.9
+	// 支持的CentOS 7版本范围：7.1 到 7.9
 	// 也支持带有构建号的版本，如 7.5.1804
 	if strings.HasPrefix(versionID, "7.") {
 		// 提取主版本号
@@ -369,7 +394,7 @@ func (h *CentOSNetworkHandler) isCentOS7Supported(versionID string) bool {
 				minorVersion = parts[1]
 			}
 			// 检查是否在支持的范围内 (7.2 到 7.9)
-			if minorVersion >= "2" && minorVersion <= "9" {
+			if minorVersion >= "1" && minorVersion <= "9" {
 				return true
 			}
 		}

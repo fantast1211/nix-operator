@@ -49,7 +49,7 @@ func getTemplateContent(templateName, defaultContent string) (string, error) {
 
 func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
 	var results []*domain.ReconcileResult
-	
+
 	// time类型配置只会存在一个，因为这个配置可以各节点一致
 	if len(configs) == 0 {
 		result, _ := status.ReconcileError(nil, "NoTimeConfig", fmt.Errorf("no time configuration found"))
@@ -61,7 +61,7 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.Re
 	if len(configs) > 1 {
 		utils.Warnf("time", "Multiple time configurations found (%d), using the first one: %s", len(configs), cfg.Metadata.Name)
 		// 为其他配置设置跳过状态
-		for i := 1; i < len(configs); i ++ {
+		for i := 1; i < len(configs); i++ {
 			result, _ := status.ReconcileSkipped(configs[i], status.ReasonSkippedByConfig, "Multiple time configurations found, only the first one is applied")
 			results = append(results, result)
 		}
