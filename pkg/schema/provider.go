@@ -2,6 +2,11 @@ package schema
 
 import (
 	"embed"
+	"encoding/json"
+	"fmt"
+	"io/fs"
+	"path/filepath"
+	"strings"
 )
 
 //go:embed *.json
@@ -13,6 +18,14 @@ type ResourceSchemaInfo struct {
 	DisplayName string
 	Version     string
 	JSONSchema  string
+}
+
+// SchemaMetadata 用于解析JSON schema中的元数据
+type SchemaMetadata struct {
+	Definitions map[string]struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	} `json:"definitions"`
 }
 
 // Provider 提供 JSON Schema 服务
@@ -60,45 +73,67 @@ func (p *schemaProvider) GetAllSchemas() ([]ResourceSchemaInfo, error) {
 func initSchemas() map[string]ResourceSchemaInfo {
 	schemas := make(map[string]ResourceSchemaInfo)
 
-	// 读取 HostsConfigurationSpec schema
-	if hostsSchema, err := schemaFiles.ReadFile("HostsConfigurationSpec.json"); err == nil {
-		schemas["HostsConfiguration"] = ResourceSchemaInfo{
-			Kind:        "HostsConfiguration",
-			DisplayName: "主机配置",
-			Version:     "v1",
-			JSONSchema:  string(hostsSchema),
+	// 动态加载所有以 Spec.json 结尾的文件
+	err := fs.WalkDir(schemaFiles, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-	}
 
-	// 读取 TimeConfigurationSpec schema
-	if timeSchema, err := schemaFiles.ReadFile("TimeConfigurationSpec.json"); err == nil {
-		schemas["TimeConfiguration"] = ResourceSchemaInfo{
-			Kind:        "TimeConfiguration",
-			DisplayName: "时间配置",
-			Version:     "v1",
-			JSONSchema:  string(timeSchema),
-		}
-	}
+		// 只处理以 Spec.json 结尾的文件
+		if !d.IsDir() && strings.HasSuffix(path, "Spec.json") {
+			// 从文件名提取 Kind（去掉 Spec.json 后缀）
+			fileName := filepath.Base(path)
+			kind := strings.TrimSuffix(fileName, "Spec.json")
 
-	// 读取 NetworkConfigurationSpec schema
-	if networkSchema, err := schemaFiles.ReadFile("NetworkConfigurationSpec.json"); err == nil {
-		schemas["NetworkConfiguration"] = ResourceSchemaInfo{
-			Kind:        "NetworkConfiguration",
-			DisplayName: "网络配置",
-			Version:     "v1",
-			JSONSchema:  string(networkSchema),
-		}
-	}
+			// 读取文件内容
+			if schemaContent, readErr := schemaFiles.ReadFile(path); readErr == nil {
+				// 从JSON中提取显示名称
+				displayName := extractDisplayNameFromJSON(schemaContent, kind)
 
-	// 读取 BondConfigurationSpec schema
-	if networkSchema, err := schemaFiles.ReadFile("BondConfigurationSpec.json"); err == nil {
-		schemas["NetworkConfiguration"] = ResourceSchemaInfo{
-			Kind:        "BondConfiguration",
-			DisplayName: "Bond配置",
-			Version:     "v1",
-			JSONSchema:  string(networkSchema),
+				schemas[kind] = ResourceSchemaInfo{
+					Kind:        kind,
+					DisplayName: displayName,
+					Version:     "v1",
+					JSONSchema:  string(schemaContent),
+				}
+			}
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		fmt.Printf("Error loading schemas: %v\n", err)
 	}
 
 	return schemas
+}
+
+// extractDisplayNameFromJSON 从JSON schema中提取显示名称
+func extractDisplayNameFromJSON(schemaContent []byte, kind string) string {
+	var metadata SchemaMetadata
+	if err := json.Unmarshal(schemaContent, &metadata); err != nil {
+		// 如果解析失败，返回默认名称
+		return kind + "配置"
+	}
+
+	// 查找对应的定义
+	for defName, def := range metadata.Definitions {
+		// 匹配定义名称（通常是 KindSpec 格式）
+		if strings.Contains(defName, kind) {
+			if def.Title != "" {
+				return def.Title
+			}
+			if def.Description != "" {
+				// 如果没有title，使用description的第一部分
+				parts := strings.Split(def.Description, " ")
+				if len(parts) > 0 {
+					return parts[0]
+				}
+			}
+		}
+	}
+
+	// 如果都没找到，返回默认名称
+	return kind + "配置"
 }
