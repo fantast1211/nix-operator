@@ -1,25 +1,25 @@
 {
-  "apiVersion": "sysconfig.operator/v1",
-  "kind": "TimeConfiguration",
-  "metadata": {
-    "name": "time-config",
-    "resourceVersion": "1753079821",
-    "generation": 2,
-    "creationTime": "2025-07-21T14:37:01+08:00",
-    "deletionTime": "",
-    "labels": {},
-    "annotations": {
-      "syncTriggerRandom": "V9cxucQBxa7ukXCwwQafMT"
+  "apiVersion":  "sysconfig.operator/v1",
+  "kind":  "TimeConfiguration",
+  "metadata":  {
+    "name":  "time-config",
+    "resourceVersion":  "1753081120",
+    "generation":  5,
+    "creationTime":  "2025-07-21T14:58:40+08:00",
+    "deletionTime":  "",
+    "labels":  {},
+    "annotations":  {
+      "syncTriggerRandom":  "wSqetxJ2mYatknpmCIifaT4lgdVp3"
     }
   },
-  "spec": {
-    "@type": "type.googleapis.com/xtopus.api.system.v1.TimeConfigurationSpec",
-    "timezone": "Asia/Shanghai",
-    "ntp": {
-      "enable": true,
-      "servers": [
+  "spec":  {
+    "@type":  "type.googleapis.com/xtopus.api.system.v1.TimeConfigurationSpec",
+    "timezone":  "Asia/Shanghai",
+    "ntp":  {
+      "enable":  true,
+      "servers":  [
         "ntp1.aliyun.com",
-        "ntp2.aliyun.com"
+        "ntp3.aliyun.com"
       ]
     }
   }

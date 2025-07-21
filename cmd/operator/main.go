@@ -47,7 +47,7 @@ func StartGRPCServer(validators map[string]validator.SpecValidator, logger *util
 
 	grpcServer := grpc.NewServer()
 
-	// 注册HardwareConfigService
+	// 注册ConfigService
 	systemv1.RegisterSystemConfigServiceServer(grpcServer, webcontroller.NewSystemServiceServer(validators, logger, resourceService, schemaProvider))
 
 	go func() {
