@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+
 func UnmarshalSpec[T proto.Message](anySpec *anypb.Any) (T, error) {
 	var zero T
 	if anySpec == nil {

@@ -118,10 +118,9 @@
                     "type": "string",
                     "description": "消息"
                 },
-                "last_reconcile_time": {
-                    "type": "string",
-                    "description": "最后同步时间",
-                    "format": "date-time"
+                "observed_generation": {
+                    "type": "integer",
+                    "description": "上次成功调谐的配置generation"
                 }
             },
             "additionalProperties": true,

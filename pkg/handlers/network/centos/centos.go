@@ -382,7 +382,7 @@ func (h *CentOSNetworkHandler) isCentOS7Supported(versionID string) bool {
 		return true
 	}
 
-	// 支持的CentOS 7版本范围：7.1 到 7.9
+	// 支持的CentOS 7版本范围：7.0 到 7.9
 	// 也支持带有构建号的版本，如 7.5.1804
 	if strings.HasPrefix(versionID, "7.") {
 		// 提取主版本号
@@ -393,8 +393,8 @@ func (h *CentOSNetworkHandler) isCentOS7Supported(versionID string) bool {
 			if len(parts) > 2 {
 				minorVersion = parts[1]
 			}
-			// 检查是否在支持的范围内 (7.2 到 7.9)
-			if minorVersion >= "1" && minorVersion <= "9" {
+			// 检查是否在支持的范围内 (7.0 到 7.9)
+			if minorVersion >= "0" && minorVersion <= "9" {
 				return true
 			}
 		}

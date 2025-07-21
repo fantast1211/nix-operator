@@ -50,13 +50,13 @@ func TestCentOSNetworkHandler_Match(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "CentOS 7.1 should not match",
+			name: "CentOS 7.1 should match",
 			osInfo: controller.OSInfo{
 				ID:         "centos",
 				KernelName: "Linux",
 				VersionID:  "7.1",
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "Ubuntu should not match",
@@ -105,7 +105,8 @@ func TestCentOSNetworkHandler_isCentOS7Supported(t *testing.T) {
 		{"7.8", "7.8", true},
 		{"7.9", "7.9", true},
 		{"7.5.1804", "7.5.1804", true},
-		{"7.1", "7.1", false},
+		{"7.0", "7.0", true},
+		{"7.1", "7.1", true},
 		{"8.0", "8.0", false},
 		{"6.10", "6.10", false},
 		{"empty", "", false},
