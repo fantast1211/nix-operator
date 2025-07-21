@@ -5,25 +5,22 @@ import (
 	"fmt"
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
-	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/repository"
-	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
 // resourceService 资源服务实现
 type resourceService struct {
 	configRepo repository.ConfigRepository
-	controller *controller.Controller
+	statusRepo repository.StatusRepository
 	logger     *utils.Logger
 }
 
 // NewResourceService 创建资源服务实例
-func NewResourceService(configRepo repository.ConfigRepository, controller *controller.Controller, logger *utils.Logger) ResourceService {
+func NewResourceService(configRepo repository.ConfigRepository, statusRepo repository.StatusRepository, logger *utils.Logger) ResourceService {
 	return &resourceService{
 		configRepo: configRepo,
-		controller: controller,
+		statusRepo: statusRepo,
 		logger:     logger,
 	}
 }
@@ -38,22 +35,36 @@ func (s *resourceService) ListResources(ctx context.Context, kind string) ([]*sy
 		return nil, fmt.Errorf("failed to list configs: %w", err)
 	}
 
-	// 为每个配置执行调谐并构建资源
+	// 从状态仓库获取该类型的所有状态
+	statuses, err := s.statusRepo.ListStatuses(ctx, kind)
+	if err != nil {
+		s.logger.Warnf("service", "Failed to list statuses for kind %s: %v", kind, err)
+		statuses = make(map[string]*systemv1.ResourceStatus) // 使用空状态映射
+	}
+
+	// 构建资源列表
 	resources := make([]*systemv1.Resource, 0, len(configs))
 	for _, config := range configs {
-		resource, err := s.buildResourceWithStatus(ctx, config)
-		if err != nil {
-			s.logger.Warnf("service", "Failed to build resource for config %s: %v", config.Metadata.Name, err)
-			// 创建一个错误状态的资源
-			resource = &systemv1.Resource{
-				Config: config,
-				Status: &systemv1.ResourceStatus{
-					Phase:   "Failed",
-					Reason:  "ReconcileError",
-					Message: err.Error(),
-				},
+		resource := &systemv1.Resource{
+			Config: config,
+		}
+
+		// 从缓存中获取状态
+		if status, exists := statuses[config.Metadata.Name]; exists {
+			resource.Status = status
+			// 当调谐成功时，设置 effectiveConfig 为 config 的值
+			if status.Phase == "Ready" || status.Reason == "AppliedSuccessfully" {
+				resource.EffectiveConfig = config
+			}
+		} else {
+			// 如果没有缓存状态，设置为未知状态
+			resource.Status = &systemv1.ResourceStatus{
+				Phase:   "Unknown",
+				Reason:  "Initial",
+				Message: "Status not yet available, reconciliation may be in progress",
 			}
 		}
+
 		resources = append(resources, resource)
 	}
 
@@ -71,18 +82,26 @@ func (s *resourceService) GetResource(ctx context.Context, name string) (*system
 		return nil, fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// 构建带状态的资源
-	resource, err := s.buildResourceWithStatus(ctx, config)
+	// 构建资源
+	resource := &systemv1.Resource{
+		Config: config,
+	}
+
+	// 从状态仓库获取状态
+	resourceStatus, err := s.statusRepo.GetStatus(ctx, name)
 	if err != nil {
-		s.logger.Warnf("service", "Failed to build resource for config %s: %v", config.Metadata.Name, err)
-		// 返回一个错误状态的资源
-		resource = &systemv1.Resource{
-			Config: config,
-			Status: &systemv1.ResourceStatus{
-				Phase:   "Failed",
-				Reason:  "ReconcileError",
-				Message: err.Error(),
-			},
+		s.logger.Debugf("service", "No cached status found for resource %s: %v", name, err)
+		// 如果没有缓存状态，设置为未知状态
+		resource.Status = &systemv1.ResourceStatus{
+			Phase:   "Unknown",
+			Reason:  "Initial",
+			Message: "Status not yet available, reconciliation may be in progress",
+		}
+	} else {
+		resource.Status = resourceStatus
+		// 当调谐成功时，设置 effectiveConfig 为 config 的值
+		if resourceStatus.Phase == "Ready" || resourceStatus.Reason == "AppliedSuccessfully" {
+			resource.EffectiveConfig = config
 		}
 	}
 
@@ -99,68 +118,29 @@ func (s *resourceService) UpdateResource(ctx context.Context, resourceConfig *sy
 		return nil, fmt.Errorf("failed to save config: %w", err)
 	}
 
-	// 构建带状态的资源
-	resource, err := s.buildResourceWithStatus(ctx, resourceConfig)
+	// 构建资源
+	resource := &systemv1.Resource{
+		Config: resourceConfig,
+	}
+
+	// 从状态仓库获取当前状态
+	resourceStatus, err := s.statusRepo.GetStatus(ctx, resourceConfig.Metadata.Name)
 	if err != nil {
-		s.logger.Warnf("service", "Failed to build resource for config %s: %v", resourceConfig.Metadata.Name, err)
-		// 返回一个错误状态的资源
-		resource = &systemv1.Resource{
-			Config: resourceConfig,
-			Status: &systemv1.ResourceStatus{
-				Phase:   "Failed",
-				Reason:  "ReconcileError",
-				Message: err.Error(),
-			},
+		s.logger.Debugf("service", "No cached status found for resource %s: %v", resourceConfig.Metadata.Name, err)
+		// 配置已更新，但reconciliation尚未完成
+		resource.Status = &systemv1.ResourceStatus{
+			Phase:   "Unknown",
+			Reason:  "ConfigurationUpdated",
+			Message: "Configuration updated, reconciliation will be triggered automatically",
+		}
+	} else {
+		resource.Status = resourceStatus
+		// 当调谐成功时，设置 effectiveConfig 为 config 的值
+		if resourceStatus.Phase == "Ready" || resourceStatus.Reason == "AppliedSuccessfully" {
+			resource.EffectiveConfig = resourceConfig
 		}
 	}
 
-	s.logger.Infof("service", "Updated resource: %s, status: %s", resourceConfig.Metadata.Name, resource.Status.Phase)
+	s.logger.Infof("service", "Updated resource: %s, current status: %s", resourceConfig.Metadata.Name, resource.Status.Phase)
 	return resource, nil
-}
-
-// buildResourceWithStatus 构建带状态的资源
-func (s *resourceService) buildResourceWithStatus(ctx context.Context, config *systemv1.ResourceConfig) (*systemv1.Resource, error) {
-	// 获取对应kind的handler
-	handler := s.controller.GetHandler(config.Kind)
-	if handler == nil {
-		return nil, fmt.Errorf("no handler found for kind: %s", config.Kind)
-	}
-
-	// 执行调谐获取最新状态
-	results, err := handler.Reconcile(ctx, []*systemv1.ResourceConfig{config})
-	if err != nil {
-		reconcileResult, _ := status.ReconcileError(config, status.ReasonReconcileError, fmt.Errorf("reconciliation error: %v", err))
-		return &systemv1.Resource{
-			Config: config,
-			Status: reconcileResult.Status,
-		}, nil
-	}
-
-	// 找到对应配置的结果
-	var result *domain.ReconcileResult
-	for _, r := range results {
-		if r != nil && r.Effective != nil && r.Effective.Metadata != nil && r.Effective.Metadata.Name == config.Metadata.Name {
-			result = r
-			break
-		}
-	}
-
-	// 如果没有找到对应的结果，使用第一个结果或创建默认结果
-	if result == nil && len(results) > 0 {
-		result = results[0]
-	}
-	if result == nil {
-		reconcileResult, _ := status.ReconcileError(config, status.ReasonReconcileError, fmt.Errorf("no reconcile result found"))
-		return &systemv1.Resource{
-			Config: config,
-			Status: reconcileResult.Status,
-		}, nil
-	}
-
-	// 返回资源状态
-	return &systemv1.Resource{
-		Config:          config,
-		EffectiveConfig: result.Effective,
-		Status:          result.Status,
-	}, nil
 }

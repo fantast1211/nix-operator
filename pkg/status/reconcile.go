@@ -12,16 +12,20 @@ const (
 	PhaseUnknown = "Unknown"
 	PhaseSkipped = "Skipped"
 
-	ReasonNoHandler          = "NoHandler"
-	ReasonReconcileError     = "ReconcileError"
-	ReasonNoChange           = "NoChange"
-	ReasonSkippedByConfig    = "SkippedByConfig"
-	ReasonInitial            = "Initial"
-	ReasonSpecError          = "SpecError"
-	ReasonNodeSelectorError  = "NodeSelectorError"
-	ReasonMatched            = "Matched"
-	ReasonNotMatched         = "NotMatched"
-	ReasonFallback           = "Fallback"
+	ReasonNoHandler             = "NoHandler"
+	ReasonReconcileError        = "ReconcileError"
+	ReasonAppliedSuccessfully   = "AppliedSuccessfully"   // 原ReasonNoChange，表示配置已成功应用
+	ReasonConfigurationUpdated  = "ConfigurationUpdated"  // 配置有变化并成功应用
+	ReasonSkippedByConfig       = "SkippedByConfig"
+	ReasonInitial               = "Initial"
+	ReasonSpecError             = "SpecError"
+	ReasonNodeSelectorError     = "NodeSelectorError"
+	ReasonMatched               = "Matched"
+	ReasonNotMatched            = "NotMatched"
+	ReasonFallback              = "Fallback"
+
+	// 向后兼容的别名
+	ReasonNoChange = ReasonAppliedSuccessfully
 )
 
 // ReconcileError 返回调谐失败
@@ -48,12 +52,36 @@ func ReconcileReady(cfg *systemv1.ResourceConfig, reason, message string) (*doma
 	}, nil
 }
 
-// ReconcileNoChange 返回配置无变化
+// ReconcileNoChange 返回配置无变化（向后兼容）
 func ReconcileNoChange(cfg *systemv1.ResourceConfig, message string) (*domain.ReconcileResult, error) {
 	return &domain.ReconcileResult{
 		Status: &systemv1.ResourceStatus{
 			Phase:   PhaseReady,
-			Reason:  ReasonNoChange,
+			Reason:  ReasonAppliedSuccessfully,
+			Message: message,
+		},
+		Effective: cfg,
+	}, nil
+}
+
+// ReconcileAppliedSuccessfully 返回配置已成功应用（推荐使用）
+func ReconcileAppliedSuccessfully(cfg *systemv1.ResourceConfig, message string) (*domain.ReconcileResult, error) {
+	return &domain.ReconcileResult{
+		Status: &systemv1.ResourceStatus{
+			Phase:   PhaseReady,
+			Reason:  ReasonAppliedSuccessfully,
+			Message: message,
+		},
+		Effective: cfg,
+	}, nil
+}
+
+// ReconcileConfigurationUpdated 返回配置有变化并成功应用
+func ReconcileConfigurationUpdated(cfg *systemv1.ResourceConfig, message string) (*domain.ReconcileResult, error) {
+	return &domain.ReconcileResult{
+		Status: &systemv1.ResourceStatus{
+			Phase:   PhaseReady,
+			Reason:  ReasonConfigurationUpdated,
 			Message: message,
 		},
 		Effective: cfg,

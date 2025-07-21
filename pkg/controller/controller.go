@@ -10,6 +10,7 @@ import (
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/domain"
+	"go.xbrother.com/nix-operator/pkg/repository"
 	"go.xbrother.com/nix-operator/pkg/utils"
 
 	"github.com/fsnotify/fsnotify"
@@ -23,10 +24,11 @@ type OSInfo struct {
 }
 
 type Controller struct {
-	configDir string
-	Handlers  map[string]Handler // key 是处理器类型，公开字段供外部访问
-	osInfo    OSInfo
-	logger    *utils.Logger
+	configDir  string
+	Handlers   map[string]Handler // key 是处理器类型，公开字段供外部访问
+	osInfo     OSInfo
+	statusRepo repository.StatusRepository
+	logger     *utils.Logger
 }
 
 type Handler interface {
@@ -43,7 +45,7 @@ func RegisterHandler(typeName string, handler Handler) {
 	handlerFactories[typeName] = append(handlerFactories[typeName], handler)
 }
 
-func NewController(configDir string, logger *utils.Logger) (*Controller, error) {
+func NewController(configDir string, statusRepo repository.StatusRepository, logger *utils.Logger) (*Controller, error) {
 	osInfo, err := getOSInfo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OS info: %v", err)
@@ -86,10 +88,11 @@ func NewController(configDir string, logger *utils.Logger) (*Controller, error) 
 		osInfo.ID, osInfo.VersionID, osInfo.KernelVer)
 
 	return &Controller{
-		configDir: configDir,
-		Handlers:  handlers,
-		osInfo:    osInfo,
-		logger:    logger,
+		configDir:  configDir,
+		Handlers:   handlers,
+		osInfo:     osInfo,
+		statusRepo: statusRepo,
+		logger:     logger,
 	}, nil
 }
 
@@ -216,14 +219,35 @@ func (c *Controller) reconcile() {
 		results, err := handler.Reconcile(ctx, configs)
 		if err != nil {
 			c.logger.Errorf("controller", "Reconciliation error for kind %s: %v", kind, err)
+			// 为所有配置设置错误状态
+			for _, config := range configs {
+				errorStatus := &systemv1.ResourceStatus{
+					Phase:   "Error",
+					Reason:  "ReconcileError",
+					Message: fmt.Sprintf("Reconciliation failed: %v", err),
+				}
+				if statusErr := c.statusRepo.SetStatusWithKind(ctx, config.Metadata.Name, kind, errorStatus); statusErr != nil {
+					c.logger.Errorf("controller", "Failed to update error status for %s: %v", config.Metadata.Name, statusErr)
+				}
+			}
 		} else if len(results) > 0 {
+			// 更新状态缓存
 			for _, result := range results {
-				if result != nil && result.Status != nil {
-					if result.Status.Phase == "Error" && result.Status.Message != "" {
-						c.logger.Errorf("controller", "Reconciliation result: %s -> %s (Reason: %s, Message: %s)",
-							kind, result.Status.Phase, result.Status.Reason, result.Status.Message)
+				if result != nil && result.Status != nil && result.Effective != nil && result.Effective.Metadata != nil {
+					resourceName := result.Effective.Metadata.Name
+					if statusErr := c.statusRepo.SetStatusWithKind(ctx, resourceName, kind, result.Status); statusErr != nil {
+						c.logger.Errorf("controller", "Failed to update status for %s: %v", resourceName, statusErr)
 					} else {
-						c.logger.Infof("controller", "Reconciliation result: %s -> %s", kind, result.Status.Phase)
+						c.logger.Debugf("controller", "Updated status cache for %s: %s (%s)", resourceName, result.Status.Phase, result.Status.Reason)
+					}
+
+					// 记录日志
+					if result.Status.Phase == "Error" && result.Status.Message != "" {
+						c.logger.Errorf("controller", "Reconciliation result: %s/%s -> %s (Reason: %s, Message: %s)",
+							kind, resourceName, result.Status.Phase, result.Status.Reason, result.Status.Message)
+					} else {
+						c.logger.Infof("controller", "Reconciliation result: %s/%s -> %s (%s)",
+							kind, resourceName, result.Status.Phase, result.Status.Reason)
 					}
 				}
 			}

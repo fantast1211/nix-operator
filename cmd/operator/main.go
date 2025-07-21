@@ -117,7 +117,7 @@ type Application struct {
 }
 
 // initializeApplication 初始化三层架构应用
-func initializeApplication(configDir string, logger *utils.Logger, ctx context.Context, controller *controller.Controller) (*grpc.Server, error) {
+func initializeApplication(configDir string, logger *utils.Logger, ctx context.Context, statusRepo repository.StatusRepository) (*grpc.Server, error) {
 
 	// 初始化校验器映射
 	validators := initializeValidators()
@@ -126,7 +126,7 @@ func initializeApplication(configDir string, logger *utils.Logger, ctx context.C
 	configRepo := repository.NewConfigRepository(configDir, logger)
 
 	// 初始化 Service 层
-	resourceService := service.NewResourceService(configRepo, controller, logger)
+	resourceService := service.NewResourceService(configRepo, statusRepo, logger)
 
 	// 初始化 Schema Provider
 	schemaProvider := schema.NewProvider()
@@ -196,8 +196,11 @@ func main() {
 
 	logger.Info("main", "Initializing xtopus operator with three-tier architecture...")
 
+	// 初始化 StatusRepository
+	statusRepo := repository.NewMemoryStatusRepository(logger)
+
 	// 启动传统的文件监控控制器（保持现有功能）
-	controller, err := controller.NewController(*configDir, logger)
+	controller, err := controller.NewController(*configDir, statusRepo, logger)
 	if err != nil {
 		logger.Fatal("main", "Failed to create controller: "+err.Error())
 	}
@@ -212,7 +215,7 @@ func main() {
 	var grpcServer *grpc.Server
 	if *enableAPI {
 		// 初始化三层架构
-		grpcServer, err = initializeApplication(*configDir, logger, ctx, controller)
+		grpcServer, err = initializeApplication(*configDir, logger, ctx, statusRepo)
 		if err != nil {
 			logger.Fatal("main", "Failed to initialize application: "+err.Error())
 		}
