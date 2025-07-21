@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path/filepath"
+
 	"strings"
 	"syscall"
 	"text/template"
@@ -23,8 +23,6 @@ var hostsTemplate string
 //go:embed hostname.tpl
 var hostnameTemplate string
 
-// 外部模板目录，用于高优先级覆盖
-const externalTemplateDir = "/etc/nix-operator/templates"
 
 func init() {
 	controller.RegisterHandler("HostsConfiguration", &LinuxHostsHandler{})
@@ -36,18 +34,7 @@ func (h *LinuxHostsHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
 }
 
-// 获取模板内容，优先使用外部模板
-func getTemplateContent(templateName, defaultContent string) (string, error) {
-	externalPath := filepath.Join(externalTemplateDir, templateName)
-	if _, err := os.Stat(externalPath); err == nil {
-		content, err := os.ReadFile(externalPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read external template %s: %v", externalPath, err)
-		}
-		return string(content), nil
-	}
-	return defaultContent, nil
-}
+
 
 func (h *LinuxHostsHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
 	utils.Infof("hosts", "Starting hosts configuration reconciliation with %d configs", len(configs))
@@ -182,7 +169,7 @@ func (h *LinuxHostsHandler) Reconcile(ctx context.Context, configs []*systemv1.R
 func (h *LinuxHostsHandler) configureHostname(ctx context.Context, hostname string) error {
 	utils.Infof("hosts", "Configuring hostname: %s", hostname)
 	// 获取hostname模板
-	templateContent, err := getTemplateContent("hostname.tpl", hostnameTemplate)
+	templateContent, err := utils.GetTemplateContent("hostname.tpl", hostnameTemplate)
 	if err != nil {
 		utils.Errorf("hosts", "Failed to get hostname template: %v", err)
 		return err
@@ -244,7 +231,7 @@ func (h *LinuxHostsHandler) setHostname(ctx context.Context, hostname string) er
 func (h *LinuxHostsHandler) configureHosts(ctx context.Context, hosts []*systemv1.HostEntry) error {
 	utils.Infof("hosts", "Configuring hosts file with %d entries", len(hosts))
 	// 获取hosts模板
-	templateContent, err := getTemplateContent("hosts.tpl", hostsTemplate)
+	templateContent, err := utils.GetTemplateContent("hosts.tpl", hostsTemplate)
 	if err != nil {
 		utils.Errorf("hosts", "Failed to get hosts template: %v", err)
 		return err

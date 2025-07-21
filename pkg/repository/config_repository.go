@@ -116,10 +116,21 @@ func (r *configRepository) GetConfig(ctx context.Context, name string) (*systemv
 func (r *configRepository) SaveConfig(ctx context.Context, config *systemv1.ResourceConfig) error {
 	r.logger.Debugf("repository", "Saving config: %s", config.Metadata.Name)
 
+	// 获取现有配置以保留元数据
+	existingConfig, err := r.GetConfig(ctx, config.Metadata.Name)
+	var currentGeneration int32 = 0
+	var creationTime string
+	if err == nil && existingConfig != nil && existingConfig.Metadata != nil {
+		currentGeneration = existingConfig.Metadata.Generation
+		creationTime = existingConfig.Metadata.CreationTime
+	}
+
 	// 更新元数据
 	config.Metadata.ResourceVersion = fmt.Sprintf("%d", time.Now().Unix())
-	config.Metadata.Generation++
-	if config.Metadata.CreationTime == "" {
+	config.Metadata.Generation = currentGeneration + 1 // 基于现有值自增
+	if creationTime != "" {
+		config.Metadata.CreationTime = creationTime // 保留原创建时间
+	} else if config.Metadata.CreationTime == "" {
 		config.Metadata.CreationTime = time.Now().Format(time.RFC3339)
 	}
 

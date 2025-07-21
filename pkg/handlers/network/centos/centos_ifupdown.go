@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
 	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
@@ -157,7 +156,7 @@ func (cif *CentOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.I
 	}
 
 	// 获取模板内容
-	templateContent, err := common.GetTemplateContent("centos_ifcfg.tpl", centosIfcfgTemplate)
+	templateContent, err := utils.GetTemplateContent("centos_ifcfg.tpl", centosIfcfgTemplate)
 	if err != nil {
 		return false, err
 	}

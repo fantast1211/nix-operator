@@ -11,7 +11,6 @@ import (
 	"text/template"
 	"time"
 
-	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
 	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
@@ -47,7 +46,7 @@ func (nm *NetworkManager) ConfigureWithCheck(ctx context.Context, iface types.In
 	}
 
 	// 获取模板内容
-	templateContent, err := common.GetTemplateContent("nmconnection.tpl", nmConnectionTemplate)
+	templateContent, err := utils.GetTemplateContent("nmconnection.tpl", nmConnectionTemplate)
 	if err != nil {
 		return false, err
 	}

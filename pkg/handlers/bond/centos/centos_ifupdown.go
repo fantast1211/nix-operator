@@ -127,8 +127,14 @@ func (cbif *CentOSBondIfupdown) ConfigureWithCheck(ctx context.Context, bondConf
 		}
 	}
 
+	// 获取模板内容，优先使用外部模板
+	templateContent, err := utils.GetTemplateContent("centos_bond_ifcfg.tpl", centosBondIfcfgTemplate)
+	if err != nil {
+		return false, fmt.Errorf("failed to get CentOS bond ifcfg template: %v", err)
+	}
+
 	// 解析模板
-	tmpl, err := template.New("centos_bond_ifcfg").Parse(centosBondIfcfgTemplate)
+	tmpl, err := template.New("centos_bond_ifcfg").Parse(templateContent)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse CentOS bond ifcfg template: %v", err)
 	}

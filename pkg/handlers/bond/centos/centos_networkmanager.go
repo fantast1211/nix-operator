@@ -76,8 +76,14 @@ func (cbnm *CentOSBondNetworkManager) ConfigureWithCheck(ctx context.Context, bo
 		return false, fmt.Errorf("bond name cannot be empty")
 	}
 
+	// 获取模板内容，优先使用外部模板
+	templateContent, err := utils.GetTemplateContent("centos_bond_nmconnection.tpl", centosBondNmConnectionTemplate)
+	if err != nil {
+		return false, fmt.Errorf("failed to get CentOS Bond NetworkManager template: %v", err)
+	}
+
 	// 解析模板
-	tmpl, err := template.New("centos_bond_nmconnection").Parse(centosBondNmConnectionTemplate)
+	tmpl, err := template.New("centos_bond_nmconnection").Parse(templateContent)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse CentOS Bond NetworkManager template: %v", err)
 	}

@@ -12,7 +12,6 @@ import (
 	"text/template"
 	"time"
 
-	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
 	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
@@ -87,7 +86,7 @@ func (ifd *Ifupdown) ConfigureWithCheck(ctx context.Context, iface types.Interfa
 	}
 
 	// 获取模板内容
-	templateContent, err := common.GetTemplateContent("ifupdown.tpl", ifupdownTemplate)
+	templateContent, err := utils.GetTemplateContent("ifupdown.tpl", ifupdownTemplate)
 	if err != nil {
 		return false, err
 	}

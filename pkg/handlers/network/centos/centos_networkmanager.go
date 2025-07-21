@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/handlers/network/common"
 	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
@@ -78,7 +77,7 @@ func (cnm *CentOSNetworkManager) ConfigureWithCheck(ctx context.Context, iface t
 	}
 
 	// 获取模板内容
-	templateContent, err := common.GetTemplateContent("centos_nmconnection.tpl", centosNmConnectionTemplate)
+	templateContent, err := utils.GetTemplateContent("centos_nmconnection.tpl", centosNmConnectionTemplate)
 	if err != nil {
 		return false, err
 	}

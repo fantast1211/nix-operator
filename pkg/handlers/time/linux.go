@@ -9,8 +9,6 @@ import (
 	"strings"
 	"text/template"
 
-	"path/filepath"
-
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
 	"go.xbrother.com/nix-operator/pkg/domain"
@@ -21,9 +19,6 @@ import (
 //go:embed chrony.conf.tpl
 var chronyConfigTemplate string
 
-// 外部模板目录，用于高优先级覆盖
-const externalTemplateDir = "/etc/nix-operator/templates"
-
 func init() {
 	controller.RegisterHandler("TimeConfiguration", &LinuxTimeHandler{})
 }
@@ -32,19 +27,6 @@ type LinuxTimeHandler struct{}
 
 func (h *LinuxTimeHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
-}
-
-// 获取模板内容，优先使用外部模板
-func getTemplateContent(templateName, defaultContent string) (string, error) {
-	externalPath := filepath.Join(externalTemplateDir, templateName)
-	if _, err := os.Stat(externalPath); err == nil {
-		content, err := os.ReadFile(externalPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read external template %s: %v", externalPath, err)
-		}
-		return string(content), nil
-	}
-	return defaultContent, nil
 }
 
 func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
@@ -69,6 +51,8 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.Re
 
 	// 解析时间配置
 	var timeSpec *systemv1.TimeConfigurationSpec
+	utils.Debugf("time", "Parsed configs: configs=%s, ",
+		configs)
 
 	// 从 anypb.Any 中解析 TimeConfigurationSpec
 	if cfg.Spec != nil {
@@ -134,7 +118,7 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.Re
 	}
 
 	// 获取 chrony 模板内容
-	templateContent, err := getTemplateContent("chrony.conf.tpl", chronyConfigTemplate)
+	templateContent, err := utils.GetTemplateContent("chrony.conf.tpl", chronyConfigTemplate)
 	if err != nil {
 		result, _ := status.ReconcileError(cfg, "GetTemplateContentFailed", err)
 		results = append(results, result)
