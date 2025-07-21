@@ -38,9 +38,10 @@ func (r *memoryStatusRepository) GetStatus(ctx context.Context, name string) (*s
 
 	// 返回状态的深拷贝以避免并发修改
 	return &systemv1.ResourceStatus{
-		Phase:   status.Phase,
-		Reason:  status.Reason,
-		Message: status.Message,
+		Phase:              status.Phase,
+		Reason:             status.Reason,
+		Message:            status.Message,
+		ObservedGeneration: status.ObservedGeneration,
 	}, nil
 }
 
@@ -55,9 +56,10 @@ func (r *memoryStatusRepository) SetStatus(ctx context.Context, name string, sta
 
 	// 存储状态的深拷贝
 	r.statuses[name] = &systemv1.ResourceStatus{
-		Phase:   status.Phase,
-		Reason:  status.Reason,
-		Message: status.Message,
+		Phase:              status.Phase,
+		Reason:             status.Reason,
+		Message:            status.Message,
+		ObservedGeneration: status.ObservedGeneration,
 	}
 
 	r.logger.Debugf("status_repo", "Set status for resource %s: %s (%s)", name, status.Phase, status.Reason)
@@ -86,13 +88,14 @@ func (r *memoryStatusRepository) ListStatuses(ctx context.Context, kind string) 
 	for name, resourceKind := range r.kindMap {
 		if resourceKind == kind {
 			if status, exists := r.statuses[name]; exists {
-				// 返回状态的深拷贝
-				result[name] = &systemv1.ResourceStatus{
-					Phase:   status.Phase,
-					Reason:  status.Reason,
-					Message: status.Message,
+					// 返回状态的深拷贝
+					result[name] = &systemv1.ResourceStatus{
+						Phase:              status.Phase,
+						Reason:             status.Reason,
+						Message:            status.Message,
+						ObservedGeneration: status.ObservedGeneration,
+					}
 				}
-			}
 		}
 	}
 
@@ -132,9 +135,10 @@ func (r *memoryStatusRepository) GetAllStatuses(ctx context.Context) map[string]
 	result := make(map[string]*systemv1.ResourceStatus)
 	for name, status := range r.statuses {
 		result[name] = &systemv1.ResourceStatus{
-			Phase:   status.Phase,
-			Reason:  status.Reason,
-			Message: status.Message,
+			Phase:              status.Phase,
+			Reason:             status.Reason,
+			Message:            status.Message,
+			ObservedGeneration: status.ObservedGeneration,
 		}
 	}
 	return result

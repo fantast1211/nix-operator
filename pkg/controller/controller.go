@@ -188,6 +188,37 @@ func (c *Controller) GetHandler(kind string) Handler {
 	return c.Handlers[kind]
 }
 
+// filterConfigsForReconcile 过滤需要调谐的配置（基于generation判断）
+func (c *Controller) filterConfigsForReconcile(ctx context.Context, kind string, configs []*systemv1.ResourceConfig) []*systemv1.ResourceConfig {
+	var configsToReconcile []*systemv1.ResourceConfig
+
+	for _, config := range configs {
+		resourceName := config.Metadata.Name
+		currentGeneration := config.Metadata.Generation
+
+		// 获取当前状态
+		status, err := c.statusRepo.GetStatus(ctx, resourceName)
+		if err != nil {
+			// 状态不存在，首次调谐
+			c.logger.Debugf("controller", "Config %s/%s: no status found, will reconcile (first time)", kind, resourceName)
+			configsToReconcile = append(configsToReconcile, config)
+			continue
+		}
+
+		// 比较generation
+		if currentGeneration > status.ObservedGeneration {
+			c.logger.Debugf("controller", "Config %s/%s: generation %d > observed %d, will reconcile", 
+				kind, resourceName, currentGeneration, status.ObservedGeneration)
+			configsToReconcile = append(configsToReconcile, config)
+		} else {
+			c.logger.Debugf("controller", "Config %s/%s: generation %d <= observed %d, skipping", 
+				kind, resourceName, currentGeneration, status.ObservedGeneration)
+		}
+	}
+
+	return configsToReconcile
+}
+
 func (c *Controller) reconcile() {
 	ctx := context.Background()
 	grouped := make(map[string][]*systemv1.ResourceConfig)
@@ -215,8 +246,15 @@ func (c *Controller) reconcile() {
 			continue
 		}
 
-		c.logger.Infof("controller", "Reconciling %d %s configs", len(configs), kind)
-		results, err := handler.Reconcile(ctx, configs)
+		// 过滤需要调谐的配置（基于generation判断）
+		configsToReconcile := c.filterConfigsForReconcile(ctx, kind, configs)
+		if len(configsToReconcile) == 0 {
+			c.logger.Debugf("controller", "No %s configs need reconciliation (all up-to-date)", kind)
+			continue
+		}
+
+		c.logger.Infof("controller", "Reconciling %d/%d %s configs", len(configsToReconcile), len(configs), kind)
+		results, err := handler.Reconcile(ctx, configsToReconcile)
 		if err != nil {
 			c.logger.Errorf("controller", "Reconciliation error for kind %s: %v", kind, err)
 			// 为所有配置设置错误状态
@@ -235,6 +273,13 @@ func (c *Controller) reconcile() {
 			for _, result := range results {
 				if result != nil && result.Status != nil && result.Effective != nil && result.Effective.Metadata != nil {
 					resourceName := result.Effective.Metadata.Name
+					
+					// 调谐成功时更新ObservedGeneration
+					if result.Status.Phase == "Ready" {
+						result.Status.ObservedGeneration = result.Effective.Metadata.Generation
+						c.logger.Debugf("controller", "Updated ObservedGeneration for %s to %d", resourceName, result.Status.ObservedGeneration)
+					}
+					
 					if statusErr := c.statusRepo.SetStatusWithKind(ctx, resourceName, kind, result.Status); statusErr != nil {
 						c.logger.Errorf("controller", "Failed to update status for %s: %v", resourceName, statusErr)
 					} else {

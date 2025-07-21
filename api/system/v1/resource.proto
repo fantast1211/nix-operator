@@ -68,8 +68,8 @@ message ResourceStatus {
   // 消息
   string message = 3;
 
-  // 最后同步时间
-  google.protobuf.Timestamp last_reconcile_time = 4;
+  // 上次成功调谐的配置generation
+  int32 observed_generation = 4;
 }
 
 message Resource {

@@ -304,10 +304,10 @@
           "type": "string",
           "title": "消息"
         },
-        "lastReconcileTime": {
-          "type": "string",
-          "format": "date-time",
-          "title": "最后同步时间"
+        "observedGeneration": {
+          "type": "integer",
+          "format": "int32",
+          "title": "上次成功调谐的配置generation"
         }
       }
     }
