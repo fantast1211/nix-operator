@@ -6,7 +6,6 @@ import (
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
@@ -24,20 +23,24 @@ func (h *LinuxNetworkHandler) Match(osInfo controller.OSInfo) bool {
 	return false
 }
 
-func (h *LinuxNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
-	var results []*domain.ReconcileResult
+func (h *LinuxNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
 	var matchedConfig *systemv1.ResourceConfig
 	var fallbackConfig *systemv1.ResourceConfig
-	configStatusMap := make(map[string]*domain.ReconcileResult)
 
 	// 遍历所有配置，查找匹配的配置和fallback配置
 	for _, config := range configs {
 		// 解析配置规格
 		networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](config.Spec)
 		if err != nil {
-			result, _ := status.ReconcileError(config, status.ReasonSpecError, fmt.Errorf("failed to unmarshal spec: %v", err))
-			configStatusMap[config.Metadata.Name] = result
-			continue
+			return []*status.ReconcileResult{{
+				Config: config,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  "SpecError",
+					Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
+				},
+				Error: err,
+			}}, nil
 		}
 
 		// 检查nodeSelector匹配
@@ -45,26 +48,26 @@ func (h *LinuxNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1
 			// 有有效的nodeSelector，检查是否匹配
 			matched, err := utils.MatchNodeSelector(networkSpec.NodeSelector)
 			if err != nil {
-				result, _ := status.ReconcileError(config, status.ReasonNodeSelectorError, fmt.Errorf("failed to match nodeSelector: %v", err))
-				configStatusMap[config.Metadata.Name] = result
-				continue
+				return []*status.ReconcileResult{{
+					Config: config,
+					Status: &systemv1.ResourceStatus{
+						Phase:   status.PhaseError,
+						Reason:  "NodeSelectorError",
+						Message: fmt.Sprintf("failed to match nodeSelector: %v", err),
+					},
+					Error: err,
+				}}, nil
 			}
 			if matched {
 				matchedConfig = config
-				// 暂时不设置状态，等待应用后再设置
 			} else {
-				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "Configuration did not match nodeSelector")
-				configStatusMap[config.Metadata.Name] = result
+				// 不匹配的配置不更新状态，保持原状态
+				continue
 			}
 		} else {
 			// 没有有效的nodeSelector，作为fallback配置
 			if fallbackConfig == nil {
 				fallbackConfig = config
-				// 暂时不设置状态，等待应用后再设置
-			} else {
-				// 如果已经有fallback配置，则跳过这个
-				result, _ := status.ReconcileSkipped(config, status.ReasonFallback, "Another fallback configuration already exists")
-				configStatusMap[config.Metadata.Name] = result
 			}
 		}
 	}
@@ -75,63 +78,39 @@ func (h *LinuxNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1
 		configToApply = matchedConfig
 	} else if fallbackConfig != nil {
 		configToApply = fallbackConfig
-	}
-
-	// 如果有配置要应用，则应用它
-	if configToApply != nil {
-		networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](configToApply.Spec)
-		if err != nil {
-			result, _ := status.ReconcileError(configToApply, status.ReasonSpecError, fmt.Errorf("failed to unmarshal effective config spec: %v", err))
-			configStatusMap[configToApply.Metadata.Name] = result
-		} else {
-			// 应用配置
-			applyResult, err := h.applyConfiguration(ctx, configToApply, networkSpec)
-			if err != nil {
-				result, _ := status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to apply configuration: %v", err))
-				configStatusMap[configToApply.Metadata.Name] = result
-			} else {
-				// 应用成功
-				configStatusMap[configToApply.Metadata.Name] = applyResult
-			}
-		}
-
-		// 为其他未应用的配置设置跳过状态
-		for _, config := range configs {
-			if _, exists := configStatusMap[config.Metadata.Name]; !exists {
-				if config == configToApply {
-					// 这种情况不应该发生，但为了安全起见
-					continue
-				}
-				var reason, message string
-				if config == fallbackConfig {
-					reason = status.ReasonFallback
-					message = "Configuration used as fallback but not applied due to matched configuration"
-				} else {
-					reason = status.ReasonNotMatched
-					message = "Configuration not applied"
-				}
-				result, _ := status.ReconcileSkipped(config, reason, message)
-				configStatusMap[config.Metadata.Name] = result
-			}
-		}
 	} else {
-		// 没有配置可以应用，所有配置都标记为跳过
-		for _, config := range configs {
-			if _, exists := configStatusMap[config.Metadata.Name]; !exists {
-				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "No applicable configuration found")
-				configStatusMap[config.Metadata.Name] = result
-			}
-		}
+		return []*status.ReconcileResult{}, nil // 没有配置可以应用
 	}
 
-	// 按照原始配置顺序构建结果
-	for _, config := range configs {
-		if result, exists := configStatusMap[config.Metadata.Name]; exists {
-			results = append(results, result)
-		}
+	// 应用配置
+	networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](configToApply.Spec)
+	if err != nil {
+		return []*status.ReconcileResult{{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "SpecError",
+				Message: fmt.Sprintf("failed to unmarshal effective config spec: %v", err),
+			},
+			Error: err,
+		}}, nil
 	}
 
-	return results, nil
+	// 应用配置
+	result, err := h.applyConfiguration(ctx, configToApply, networkSpec)
+	if err != nil {
+		return []*status.ReconcileResult{{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "ReconcileError",
+				Message: fmt.Sprintf("failed to apply configuration: %v", err),
+			},
+			Error: err,
+		}}, nil
+	}
+
+	return []*status.ReconcileResult{result}, nil
 }
 
 // hasValidNodeSelector 检查是否有有效的 nodeSelector
@@ -143,11 +122,19 @@ func (h *LinuxNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelect
 }
 
 // applyConfiguration 应用网络配置
-func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*domain.ReconcileResult, error) {
+func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*status.ReconcileResult, error) {
 	// 检测并选择合适的网络管理器
 	manager, err := h.detectNetworkManager(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect network manager: %v", err)
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "DetectManagerError",
+				Message: fmt.Sprintf("failed to detect network manager: %v", err),
+			},
+			Error: err,
+		}, nil
 	}
 
 	// 跟踪是否有任何配置变更
@@ -169,7 +156,15 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 		// 使用ConfigureWithCheck检查配置是否有变更
 		changed, err := manager.ConfigureWithCheck(ctx, iface)
 		if err != nil {
-			return nil, fmt.Errorf("failed to configure network interface %s: %v", interfaceSpec.Name, err)
+			return &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  "ConfigureInterfaceError",
+					Message: fmt.Sprintf("failed to configure network interface %s: %v", interfaceSpec.Name, err),
+				},
+				Error: err,
+			}, nil
 		}
 		if changed {
 			hasChanges = true
@@ -180,12 +175,34 @@ func (h *LinuxNetworkHandler) applyConfiguration(ctx context.Context, configToAp
 	if hasChanges {
 		utils.Info("network", "Network configuration changed, reloading network services")
 		if err := manager.ReloadIfy(ctx); err != nil {
-			return nil, fmt.Errorf("failed to reload network configuration: %v", err)
+			return &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  "ReloadError",
+					Message: fmt.Sprintf("failed to reload network configuration: %v", err),
+				},
+				Error: err,
+			}, nil
 		}
-		return status.ReconcileReady(configToApply, "Configured", "Network configuration applied and reloaded successfully")
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  "Configured",
+				Message: "Network configuration applied and reloaded successfully",
+			},
+		}, nil
 	} else {
 		utils.Info("network", "Network configuration unchanged, skipping network service reload")
-		return status.ReconcileReady(configToApply, "Configured", "Network configuration verified, no changes needed")
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  "Configured",
+				Message: "Network configuration verified, no changes needed",
+			},
+		}, nil
 	}
 }
 

@@ -3,9 +3,9 @@
   "kind": "NodeConfiguration",
   "metadata": {
     "name": "node-test-machine-123",
-    "resourceVersion": "1753269572",
+    "resourceVersion": "1753274188",
     "generation": 1,
-    "creationTime": "2025-07-23T19:19:32+08:00",
+    "creationTime": "2025-07-23T20:36:28+08:00",
     "deletionTime": "",
     "labels": {},
     "annotations": {

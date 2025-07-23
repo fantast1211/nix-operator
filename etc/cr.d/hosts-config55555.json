@@ -2,20 +2,20 @@
   "apiVersion":  "system.xbrother.com/v1",
   "kind":  "HostsConfiguration",
   "metadata":  {
-    "name":  "hosts-config1",
-    "resourceVersion":  "1753276448",
-    "generation":  13,
-    "creationTime":  "2025-07-23T21:14:08+08:00",
+    "name":  "hosts-config55555",
+    "resourceVersion":  "1753271367",
+    "generation":  1,
+    "creationTime":  "2025-07-23T19:49:27+08:00",
     "deletionTime":  "",
     "labels":  {},
     "annotations":  {
-      "syncTriggerRandom":  "d6DZTmmw31p0K986cCsjhkk"
+      "syncTriggerRandom":  "Q8Cy6pQmnYBsxmzf9P9gWMxO7gXPMpfDETdFsVhcbNNbHA4m"
     }
   },
   "spec":  {
     "@type":  "type.googleapis.com/xtopus.api.system.v1.HostsConfigurationSpec",
     "nodeSelector":  {
-      "machineId":  "test-machine-123"
+      "machineId":  "5555555"
     },
     "hostname":  "QT-20220606",
     "hosts":  [
@@ -34,7 +34,7 @@
         ]
       },
       {
-        "ip":  "192.168.1.44",
+        "ip":  "192.168.1.66",
         "hostnames":  [
           "server3",
           "server3.local"

@@ -1,0 +1,32 @@
+{
+  "apiVersion":  "system.xbrother.com/v1",
+  "kind":  "HostsConfiguration",
+  "metadata":  {
+    "name":  "hosts-config-test",
+    "resourceVersion":  "1753271035",
+    "generation":  1,
+    "creationTime":  "2025-07-23T19:43:55+08:00",
+    "deletionTime":  "",
+    "labels":  {},
+    "annotations":  {
+      "syncTriggerRandom":  "OS9eLImvzkqQKcPTotPeui"
+    }
+  },
+  "spec":  {
+    "@type":  "type.googleapis.com/xtopus.api.system.v1.HostsConfigurationSpec",
+    "nodeSelector":  {
+      "machineId":  "test-machine-123"
+    },
+    "hostname":  "test-host",
+    "hosts":  [
+      {
+        "ip":  "192.168.1.100",
+        "hostnames":  [
+          "test-server",
+          "test-server.local"
+        ]
+      }
+    ]
+  },
+  "status":  null
+}

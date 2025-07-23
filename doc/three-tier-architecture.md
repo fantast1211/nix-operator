@@ -50,7 +50,7 @@ type SpecValidator interface {
 }
 
 type ConfigHandler interface {
-    Reconcile(ctx context.Context, config *domain.ResourceConfig) (*domain.ReconcileResult, error)
+    Reconcile(ctx context.Context, config *domain.ResourceConfig) (*status.ReconcileResult, error)
     Match(osInfo domain.OSInfo) bool
 }
 ```
@@ -204,7 +204,7 @@ func (h *LinuxDNSHandler) Match(osInfo controller.OSInfo) bool {
     return osInfo.KernelName == "Linux"
 }
 
-func (h *LinuxDNSHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*controller.ReconcileResult, error) {
+func (h *LinuxDNSHandler) Reconcile(ctx context.Context, cfg *config.ResourceConfig) (*status.ReconcileResult, error) {
     // 实现调谐逻辑
     return nil, nil
 }

@@ -7,7 +7,6 @@ import (
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/handlers/network/types"
 	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
@@ -42,8 +41,8 @@ func (h *CentOSNetworkHandler) Match(osInfo controller.OSInfo) bool {
 	return false
 }
 
-// Reconcile 执行网络配置调谐
-func (h *CentOSNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
+// Reconcile 执行网络配置调谐，返回结构化的调谐结果
+func (h *CentOSNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
 	return h.reconcileConfigs(ctx, configs)
 }
 
@@ -61,19 +60,25 @@ func (h *CentOSNetworkHandler) initializeManagers() {
 }
 
 // reconcileConfigs 调谐网络配置
-func (h *CentOSNetworkHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
-	var results []*domain.ReconcileResult
+func (h *CentOSNetworkHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
 	var matchedConfig *systemv1.ResourceConfig
 	var fallbackConfig *systemv1.ResourceConfig
-	configStatusMap := make(map[string]*domain.ReconcileResult)
+	var results []*status.ReconcileResult
 
 	// 遍历所有配置，查找匹配的配置和fallback配置
 	for _, config := range configs {
 		// 解析配置规格
 		networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](config.Spec)
 		if err != nil {
-			result, _ := status.ReconcileError(config, status.ReasonSpecError, fmt.Errorf("failed to unmarshal spec: %v", err))
-			configStatusMap[config.Metadata.Name] = result
+			results = append(results, &status.ReconcileResult{
+				Config: config,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonSpecError,
+					Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
+				},
+				Error: err,
+			})
 			continue
 		}
 
@@ -82,8 +87,15 @@ func (h *CentOSNetworkHandler) reconcileConfigs(ctx context.Context, configs []*
 			// 有有效的nodeSelector，检查是否匹配
 			matched, err := utils.MatchNodeSelector(networkSpec.NodeSelector)
 			if err != nil {
-				result, _ := status.ReconcileError(config, status.ReasonNodeSelectorError, fmt.Errorf("failed to match nodeSelector: %v", err))
-				configStatusMap[config.Metadata.Name] = result
+				results = append(results, &status.ReconcileResult{
+					Config: config,
+					Status: &systemv1.ResourceStatus{
+						Phase:   status.PhaseError,
+						Reason:  status.ReasonNodeSelectorError,
+						Message: fmt.Sprintf("failed to match nodeSelector: %v", err),
+					},
+					Error: err,
+				})
 				continue
 			}
 
@@ -92,20 +104,12 @@ func (h *CentOSNetworkHandler) reconcileConfigs(ctx context.Context, configs []*
 				matchedConfig = config
 				utils.Infof("network", "Found matching CentOS network config: %s", config.Metadata.Name)
 				break
-			} else {
-				// nodeSelector不匹配
-				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "nodeSelector does not match current node")
-				configStatusMap[config.Metadata.Name] = result
 			}
 		} else {
 			// 没有nodeSelector或nodeSelector无效，作为fallback配置
 			if fallbackConfig == nil {
 				fallbackConfig = config
 				utils.Infof("network", "Found fallback CentOS network config: %s", config.Metadata.Name)
-			} else {
-				// 多个fallback配置，跳过后续的
-				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "multiple fallback configs found, using first one")
-				configStatusMap[config.Metadata.Name] = result
 			}
 		}
 	}
@@ -116,31 +120,18 @@ func (h *CentOSNetworkHandler) reconcileConfigs(ctx context.Context, configs []*
 		configToApply = matchedConfig
 	} else if fallbackConfig != nil {
 		configToApply = fallbackConfig
+	} else {
+		return results, nil // 没有配置可以应用
 	}
 
 	// 应用配置
-	if configToApply != nil {
-		networkSpec, _ := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](configToApply.Spec)
-		result, err := h.applyConfiguration(ctx, configToApply, networkSpec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to apply CentOS network configuration: %v", err)
-		}
-		configStatusMap[configToApply.Metadata.Name] = result
+	networkSpec, _ := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](configToApply.Spec)
+	result, err := h.applyConfiguration(ctx, configToApply, networkSpec)
+	if err != nil {
+		return results, fmt.Errorf("failed to apply CentOS network configuration: %v", err)
 	}
-
-	// 为所有未处理的配置设置跳过状态
-	for _, config := range configs {
-		if _, exists := configStatusMap[config.Metadata.Name]; !exists {
-			result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "no matching nodeSelector found")
-			configStatusMap[config.Metadata.Name] = result
-		}
-	}
-
-	// 收集所有结果
-	for _, config := range configs {
-		if result, exists := configStatusMap[config.Metadata.Name]; exists {
-			results = append(results, result)
-		}
+	if result != nil {
+		results = append(results, result)
 	}
 
 	return results, nil
@@ -155,11 +146,19 @@ func (h *CentOSNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelec
 }
 
 // applyConfiguration 应用网络配置
-func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*domain.ReconcileResult, error) {
+func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*status.ReconcileResult, error) {
 	// 检测并选择合适的网络管理器
 	manager, err := h.detectNetworkManager(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect CentOS network manager: %v", err)
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  status.ReasonReconcileError,
+				Message: fmt.Sprintf("failed to detect CentOS network manager: %v", err),
+			},
+			Error: err,
+		}, nil
 	}
 
 	// 跟踪是否有任何配置变更
@@ -169,7 +168,15 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 	for _, interfaceSpec := range networkSpec.Interfaces {
 		// 验证接口配置
 		if err := h.validateCentOSInterface(interfaceSpec); err != nil {
-			return status.ReconcileError(configToApply, status.ReasonSpecError, fmt.Errorf("interface validation failed: %v", err))
+			return &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonSpecError,
+					Message: fmt.Sprintf("interface validation failed: %v", err),
+				},
+				Error: err,
+			}, nil
 		}
 
 		// 转换为内部接口结构
@@ -198,7 +205,15 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 		// 使用ConfigureWithCheck检查配置是否有变更
 		changed, err := manager.ConfigureWithCheck(ctx, iface)
 		if err != nil {
-			return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to configure interface %s: %v", interfaceSpec.Name, err))
+			return &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonReconcileError,
+					Message: fmt.Sprintf("failed to configure interface %s: %v", interfaceSpec.Name, err),
+				},
+				Error: err,
+			}, nil
 		}
 		if changed {
 			hasChanges = true
@@ -211,14 +226,36 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 	if hasChanges {
 		utils.Info("network", "CentOS network configuration changed, reloading network services")
 		if err := manager.ReloadIfy(ctx); err != nil {
-			return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to reload network configuration: %v", err))
+			return &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonReconcileError,
+					Message: fmt.Sprintf("failed to reload network configuration: %v", err),
+				},
+				Error: err,
+			}, nil
 		}
 		utils.Infof("network", "CentOS network configuration applied and reloaded successfully")
-		return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS network configuration applied and reloaded successfully")
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  status.ReasonConfigurationUpdated,
+				Message: "CentOS network configuration applied and reloaded successfully",
+			},
+		}, nil
 	} else {
 		utils.Info("network", "CentOS network configuration unchanged, skipping network service reload")
 		utils.Infof("network", "CentOS network configuration verified, no changes needed")
-		return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS network configuration verified, no changes needed")
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  status.ReasonAppliedSuccessfully,
+				Message: "CentOS network configuration verified, no changes needed",
+			},
+		}, nil
 	}
 }
 

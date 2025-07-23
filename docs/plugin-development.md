@@ -52,14 +52,14 @@ import (
     "fmt"
     
     systemv1 "go.xbrother.com/nix-operator/api/system/v1"
-    "go.xbrother.com/nix-operator/pkg/domain"
+    "go.xbrother.com/nix-operator/pkg/utils"
 )
 
 type DnsHandler struct {
-    logger domain.Logger
+    logger *utils.Logger
 }
 
-func NewDnsHandler(logger domain.Logger) *DnsHandler {
+func NewDnsHandler(logger *utils.Logger) *DnsHandler {
     return &DnsHandler{
         logger: logger,
     }
@@ -138,7 +138,7 @@ func (v *DnsValidator) Validate(spec *anypb.Any) error {
 然后在 `main.go` 的 `initializeValidators` 函数中注册自定义校验器：
 
 ```go
-func initializeValidators(logger domain.Logger) map[string]validator.SpecValidator {
+func initializeValidators(logger *utils.Logger) map[string]validator.SpecValidator {
     registry := validator.NewAutoValidatorRegistry()
     
     // 注册自定义校验器（会覆盖默认的 ProtoValidator）

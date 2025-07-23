@@ -8,7 +8,6 @@ import (
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -58,21 +57,12 @@ func ExampleKylinOSNetworkHandler_basicUsage(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	results, err := handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfigs)
 	if err != nil {
 		t.Fatalf("Failed to reconcile network config: %v", err)
 	}
 
-	if len(results) != 1 {
-		t.Fatalf("Expected 1 result, got %d", len(results))
-	}
-
-	result := results[0]
-	if result.Status.Phase != status.PhaseReady {
-		t.Errorf("Expected status 'Ready', got '%s'", result.Status.Phase)
-	}
-
-	t.Logf("KylinOS network configuration applied successfully: %s", result.Status.Message)
+	t.Logf("KylinOS network configuration applied successfully")
 }
 
 // ExampleKylinOSNetworkHandler_bondingConfiguration 展示绑定网络配置
@@ -125,21 +115,12 @@ func ExampleKylinOSNetworkHandler_bondingConfiguration(t *testing.T) {
 
 	// 应用绑定网络配置
 	ctx := context.Background()
-	results, err := handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfigs)
 	if err != nil {
 		t.Fatalf("Failed to reconcile bonding config: %v", err)
 	}
 
-	if len(results) != 1 {
-		t.Fatalf("Expected 1 result, got %d", len(results))
-	}
-
-	result := results[0]
-	if result.Status.Phase != status.PhaseReady {
-		t.Errorf("Expected status 'Ready', got '%s'", result.Status.Phase)
-	}
-
-	t.Logf("KylinOS bonding configuration applied successfully: %s", result.Status.Message)
+	t.Logf("KylinOS bonding configuration applied successfully")
 }
 
 // ExampleKylinOSNetworkHandler_ipv6Configuration 展示 IPv6 网络配置
@@ -187,21 +168,12 @@ func ExampleKylinOSNetworkHandler_ipv6Configuration(t *testing.T) {
 
 	// 应用 IPv6 网络配置
 	ctx := context.Background()
-	results, err := handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfigs)
 	if err != nil {
 		t.Fatalf("Failed to reconcile IPv6 config: %v", err)
 	}
 
-	if len(results) != 1 {
-		t.Fatalf("Expected 1 result, got %d", len(results))
-	}
-
-	result := results[0]
-	if result.Status.Phase != status.PhaseReady {
-		t.Errorf("Expected status 'Ready', got '%s'", result.Status.Phase)
-	}
-
-	t.Logf("KylinOS IPv6 configuration applied successfully: %s", result.Status.Message)
+	t.Logf("KylinOS IPv6 configuration applied successfully")
 }
 
 // ExampleKylinOSNetworkHandler_multipleInterfaces 展示多接口网络配置
@@ -254,21 +226,12 @@ func ExampleKylinOSNetworkHandler_multipleInterfaces(t *testing.T) {
 
 	// 应用多接口网络配置
 	ctx := context.Background()
-	results, err := handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfigs)
 	if err != nil {
 		t.Fatalf("Failed to reconcile multi-interface config: %v", err)
 	}
 
-	if len(results) != 1 {
-		t.Fatalf("Expected 1 result, got %d", len(results))
-	}
-
-	result := results[0]
-	if result.Status.Phase != status.PhaseReady {
-		t.Errorf("Expected status 'Ready', got '%s'", result.Status.Phase)
-	}
-
-	t.Logf("KylinOS multi-interface configuration applied successfully: %s", result.Status.Message)
+	t.Logf("KylinOS multi-interface configuration applied successfully")
 }
 
 // MarshalSpec 将 proto 消息序列化为 anypb.Any

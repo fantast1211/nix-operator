@@ -2,5 +2,5 @@
   "phase":  "Ready",
   "reason":  "Configured",
   "message":  "Hosts configuration applied successfully",
-  "observedGeneration":  13
+  "observedGeneration":  1
 }

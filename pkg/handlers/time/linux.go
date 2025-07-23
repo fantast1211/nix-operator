@@ -11,7 +11,6 @@ import (
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
@@ -23,50 +22,55 @@ func init() {
 	controller.RegisterHandler("TimeConfiguration", &LinuxTimeHandler{})
 }
 
-type LinuxTimeHandler struct{}
+type LinuxTimeHandler struct{
+}
 
 func (h *LinuxTimeHandler) Match(osInfo controller.OSInfo) bool {
 	return osInfo.KernelName == "Linux"
 }
 
-func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
-	var results []*domain.ReconcileResult
-
+func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
 	// time类型配置只会存在一个，因为这个配置可以各节点一致
 	if len(configs) == 0 {
-		result, _ := status.ReconcileError(nil, "NoTimeConfig", fmt.Errorf("no time configuration found"))
-		return []*domain.ReconcileResult{result}, nil
+		return nil, fmt.Errorf("no time configuration found")
 	}
 
-	// 使用第一个配置，如果有多个则记录警告并为其他配置设置跳过状态
+	// 使用第一个配置，如果有多个则记录警告
 	cfg := configs[0]
 	if len(configs) > 1 {
 		utils.Warnf("time", "Multiple time configurations found (%d), using the first one: %s", len(configs), cfg.Metadata.Name)
-		// 为其他配置设置跳过状态
-		for i := 1; i < len(configs); i++ {
-			result, _ := status.ReconcileSkipped(configs[i], status.ReasonSkippedByConfig, "Multiple time configurations found, only the first one is applied")
-			results = append(results, result)
-		}
 	}
 
 	// 解析时间配置
 	var timeSpec *systemv1.TimeConfigurationSpec
-	utils.Debugf("time", "Parsed configs: configs=%s, ",
-		configs)
+	utils.Debugf("time", "Parsed configs: configs=%s, ", configs)
 
 	// 从 anypb.Any 中解析 TimeConfigurationSpec
 	if cfg.Spec != nil {
 		var err error
 		timeSpec, err = utils.UnmarshalSpec[*systemv1.TimeConfigurationSpec](cfg.Spec)
 		if err != nil {
-			result, _ := status.ReconcileError(cfg, "DecodeSpecFailed", fmt.Errorf("decode spec failed: %w", err))
-			results = append(results, result)
-			return results, nil
+			return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "DecodeSpecFailed",
+				Message: fmt.Sprintf("decode spec failed: %v", err),
+			},
+			Error: err,
+		}}, nil
 		}
 	} else {
-		result, _ := status.ReconcileError(cfg, "SpecIsNil", fmt.Errorf("spec is nil"))
-		results = append(results, result)
-		return results, nil
+		err := fmt.Errorf("spec is nil")
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "SpecIsNil",
+				Message: "spec is nil",
+			},
+			Error: err,
+		}}, nil
 	}
 
 	// 安全地打印 NTP 配置
@@ -82,35 +86,59 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.Re
 	// 设置时区
 	if timeSpec.Timezone != "" {
 		if err := h.setTimezone(ctx, timeSpec.Timezone); err != nil {
-			result, _ := status.ReconcileError(cfg, "SetTimezoneFailed", fmt.Errorf("failed to set timezone: %v", err))
-			results = append(results, result)
-			return results, nil
+			return []*status.ReconcileResult{{
+				Config: cfg,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  "SetTimezoneFailed",
+					Message: fmt.Sprintf("failed to set timezone: %v", err),
+				},
+				Error: err,
+			}}, nil
 		}
 	}
 
 	// 配置NTP
 	if timeSpec.Ntp == nil || !timeSpec.Ntp.Enable {
-		result, _ := status.ReconcileReady(cfg, "NTPDisabled", "NTP is disabled, only timezone was configured")
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  "NTPDisabled",
+				Message: "NTP is disabled, only timezone was configured",
+			},
+		}}, nil
 	}
 
 	// 检查 chronyd 是否存在
 	if _, err := exec.LookPath("chronyd"); err != nil {
-		result, _ := status.ReconcileError(cfg, "ChronydNotInstalled", fmt.Errorf("chronyd not found in system, please install chrony before applying NTP configuration"))
-		results = append(results, result)
-		return results, nil
+		err := fmt.Errorf("chronyd not found in system, please install chrony before applying NTP configuration")
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "ChronydNotInstalled",
+				Message: "chronyd not found in system, please install chrony before applying NTP configuration",
+			},
+			Error: err,
+		}}, nil
 	}
 
 	// 检查 chronyc 是否存在
 	if _, err := exec.LookPath("chronyc"); err != nil {
-		result, _ := status.ReconcileError(cfg, "ChronycNotInstalled", fmt.Errorf("chronyc command not found, cannot reload chrony configuration"))
-		results = append(results, result)
-		return results, nil
+		err := fmt.Errorf("chronyc command not found, cannot reload chrony configuration")
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "ChronycNotInstalled",
+				Message: "chronyc command not found, cannot reload chrony configuration",
+			},
+			Error: err,
+		}}, nil
 	}
 
 	// 准备模板数据
-	// 重用前面已经声明的 ntpServers 变量
 	templateData := struct {
 		Servers []string
 	}{
@@ -120,71 +148,122 @@ func (h *LinuxTimeHandler) Reconcile(ctx context.Context, configs []*systemv1.Re
 	// 获取 chrony 模板内容
 	templateContent, err := utils.GetTemplateContent("chrony.conf.tpl", chronyConfigTemplate)
 	if err != nil {
-		result, _ := status.ReconcileError(cfg, "GetTemplateContentFailed", err)
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "GetTemplateContentFailed",
+				Message: fmt.Sprintf("failed to get template content: %v", err),
+			},
+			Error: err,
+		}}, nil
 	}
 
 	// 解析模板
 	tmpl, err := template.New("chrony").Parse(templateContent)
 	if err != nil {
-		result, _ := status.ReconcileError(cfg, "ParseTemplateFailed", fmt.Errorf("failed to parse template: %v", err))
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "ParseTemplateFailed",
+				Message: fmt.Sprintf("failed to parse template: %v", err),
+			},
+			Error: err,
+		}}, nil
 	}
 
 	// 渲染配置
 	var content strings.Builder
 	if err := tmpl.Execute(&content, templateData); err != nil {
-		result, _ := status.ReconcileError(cfg, "ExecuteTemplateFailed", fmt.Errorf("failed to execute template: %v", err))
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "ExecuteTemplateFailed",
+				Message: fmt.Sprintf("failed to execute template: %v", err),
+			},
+			Error: err,
+		}}, nil
 	}
 	desiredContent := content.String()
 
 	// 检查现有配置是否一致
 	currentContent, err := os.ReadFile("/etc/chrony/chrony.conf")
 	if err == nil && string(currentContent) == desiredContent {
-		result, _ := status.ReconcileNoChange(cfg, "Configuration is up to date")
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  "NoChange",
+				Message: "Configuration is up to date",
+			},
+		}}, nil
 	}
 
 	// 写入新配置
 	if err := os.MkdirAll("/etc/chrony", 0755); err != nil {
-		result, _ := status.ReconcileError(cfg, "CreateConfigDirFailed", fmt.Errorf("failed to create config directory: %v", err))
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "CreateConfigDirFailed",
+				Message: fmt.Sprintf("failed to create config directory: %v", err),
+			},
+			Error: err,
+		}}, nil
 	}
 
 	if err := utils.AtomicWriteFile([]byte(desiredContent), "/etc/chrony/chrony.conf", 0644); err != nil {
-		result, _ := status.ReconcileError(cfg, "WriteConfigFileFailed", fmt.Errorf("failed to write chrony.conf: %v", err))
-		results = append(results, result)
-		return results, nil
+		return []*status.ReconcileResult{{
+			Config: cfg,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "WriteConfigFileFailed",
+				Message: fmt.Sprintf("failed to write chrony.conf: %v", err),
+			},
+			Error: err,
+		}}, nil
 	}
 
 	// 重新加载 chrony 配置
-	// 优先尝试重启 chronyd 服务
 	if _, err := exec.LookPath("systemctl"); err == nil {
 		restartCmd := exec.CommandContext(ctx, "systemctl", "restart", "chronyd")
 		if output, err := restartCmd.CombinedOutput(); err != nil {
-			result, _ := status.ReconcileError(cfg, "RestartChronydFailed", fmt.Errorf("failed to restart chronyd: %v, output: %s", err, output))
-			results = append(results, result)
-			return results, nil
+			return []*status.ReconcileResult{{
+				Config: cfg,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  "RestartChronydFailed",
+					Message: fmt.Sprintf("failed to restart chronyd: %v, output: %s", err, output),
+				},
+				Error: err,
+			}}, nil
 		}
 	} else {
-		// 如果 systemctl 不可用（如非 root 或 alpine 容器），尝试使用 chronyc fallback
+		// 如果 systemctl 不可用，尝试使用 chronyc fallback
 		reloadCmd := exec.CommandContext(ctx, "chronyc", "reload", "sources")
 		if output, err := reloadCmd.CombinedOutput(); err != nil {
-			result, _ := status.ReconcileError(cfg, "ReloadChronydConfigFailed", fmt.Errorf("failed to reload chronyd config via chronyc: %v, output: %s", err, output))
-			results = append(results, result)
-			return results, nil
+			return []*status.ReconcileResult{{
+				Config: cfg,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  "ReloadChronydConfigFailed",
+					Message: fmt.Sprintf("failed to reload chronyd config via chronyc: %v, output: %s", err, output),
+				},
+				Error: err,
+			}}, nil
 		}
 	}
 
-	result, _ := status.ReconcileReady(cfg, "Configured", "Time configuration applied successfully")
-	results = append(results, result)
-	return results, nil
+	return []*status.ReconcileResult{{
+		Config: cfg,
+		Status: &systemv1.ResourceStatus{
+			Phase:   status.PhaseReady,
+			Reason:  "Configured",
+			Message: "Time configuration applied successfully",
+		},
+	}}, nil
 }
 
 func (h *LinuxTimeHandler) setTimezone(ctx context.Context, timezone string) error {

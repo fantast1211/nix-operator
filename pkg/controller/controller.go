@@ -9,8 +9,8 @@ import (
 	"time"
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
-	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/repository"
+	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 
 	"github.com/fsnotify/fsnotify"
@@ -35,8 +35,9 @@ type Controller struct {
 type Handler interface {
 	// Match 检查是否支持该操作系统
 	Match(osInfo OSInfo) bool
-	// Reconcile 处理配置
-	Reconcile(ctx context.Context, config []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error)
+	// Reconcile 处理配置，返回结构化的调谐结果
+	// Handler不再负责状态管理，只返回调谐结果给Controller
+	Reconcile(ctx context.Context, config []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error)
 }
 
 var handlerFactories = make(map[string][]Handler)
@@ -197,6 +198,7 @@ func (c *Controller) GetHandler(kind string) Handler {
 }
 
 // filterConfigsForReconcile 过滤需要调谐的配置（基于generation判断）
+// 注意：此方法不再负责状态更新，只负责过滤需要调谐的配置
 func (c *Controller) filterConfigsForReconcile(ctx context.Context, kind string, configs []*systemv1.ResourceConfig) []*systemv1.ResourceConfig {
 	var configsToReconcile []*systemv1.ResourceConfig
 
@@ -225,6 +227,34 @@ func (c *Controller) filterConfigsForReconcile(ctx context.Context, kind string,
 	}
 
 	return configsToReconcile
+}
+
+// processReconcileResults 处理调谐结果并更新状态
+func (c *Controller) processReconcileResults(ctx context.Context, results []*status.ReconcileResult) {
+	for _, result := range results {
+		if result == nil {
+			continue
+		}
+
+		// 如果有错误，记录日志但仍然更新状态
+		if result.Error != nil {
+			c.logger.Errorf("controller", "Reconcile error for %s/%s: %v", 
+				result.Config.Kind, result.Config.Metadata.Name, result.Error)
+		}
+
+		// 更新状态，包括observedGeneration
+		if result.Status != nil {
+			result.Status.ObservedGeneration = result.Config.Metadata.Generation
+			err := c.statusRepo.SetStatusWithKind(ctx, result.Config.Metadata.Name, result.Config.Kind, result.Status)
+			if err != nil {
+				c.logger.Errorf("controller", "Failed to update status for %s/%s: %v", 
+					result.Config.Kind, result.Config.Metadata.Name, err)
+			} else {
+				c.logger.Infof("controller", "Updated status for %s/%s: generation %d, phase %s", 
+					result.Config.Kind, result.Config.Metadata.Name, result.Config.Metadata.Generation, result.Status.Phase)
+			}
+		}
+	}
 }
 
 func (c *Controller) reconcile() {
@@ -262,49 +292,15 @@ func (c *Controller) reconcile() {
 		}
 
 		c.logger.Infof("controller", "Reconciling %d/%d %s configs", len(configsToReconcile), len(configs), kind)
+		// 调用Handler进行调谐
 		results, err := handler.Reconcile(ctx, configsToReconcile)
 		if err != nil {
 			c.logger.Errorf("controller", "Reconciliation error for kind %s: %v", kind, err)
-			// 为所有配置设置错误状态
-			for _, config := range configs {
-				errorStatus := &systemv1.ResourceStatus{
-					Phase:   "Error",
-					Reason:  "ReconcileError",
-					Message: fmt.Sprintf("Reconciliation failed: %v", err),
-				}
-				if statusErr := c.statusRepo.SetStatusWithKind(ctx, config.Metadata.Name, kind, errorStatus); statusErr != nil {
-					c.logger.Errorf("controller", "Failed to update error status for %s: %v", config.Metadata.Name, statusErr)
-				}
-			}
-		} else if len(results) > 0 {
-			// 更新状态缓存
-			for _, result := range results {
-				if result != nil && result.Status != nil && result.Effective != nil && result.Effective.Metadata != nil {
-					resourceName := result.Effective.Metadata.Name
-
-					// 调谐成功时更新ObservedGeneration
-					if result.Status.Phase == "Ready" {
-						result.Status.ObservedGeneration = result.Effective.Metadata.Generation
-						c.logger.Debugf("controller", "Updated ObservedGeneration for %s to %d", resourceName, result.Status.ObservedGeneration)
-					}
-
-					if statusErr := c.statusRepo.SetStatusWithKind(ctx, resourceName, kind, result.Status); statusErr != nil {
-						c.logger.Errorf("controller", "Failed to update status for %s: %v", resourceName, statusErr)
-					} else {
-						c.logger.Debugf("controller", "Updated status cache for %s: %s (%s)", resourceName, result.Status.Phase, result.Status.Reason)
-					}
-
-					// 记录日志
-					if result.Status.Phase == "Error" && result.Status.Message != "" {
-						c.logger.Errorf("controller", "Reconciliation result: %s/%s -> %s (Reason: %s, Message: %s)",
-							kind, resourceName, result.Status.Phase, result.Status.Reason, result.Status.Message)
-					} else {
-						c.logger.Infof("controller", "Reconciliation result: %s/%s -> %s (%s)",
-							kind, resourceName, result.Status.Phase, result.Status.Reason)
-					}
-				}
-			}
+			continue
 		}
+
+		// 处理调谐结果并更新状态
+		c.processReconcileResults(ctx, results)
 	}
 
 	// 调谐完成后，检查并更新节点配置文件

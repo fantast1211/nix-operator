@@ -7,16 +7,15 @@ import (
 
 	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
 	"go.xbrother.com/nix-operator/pkg/controller"
-	"go.xbrother.com/nix-operator/pkg/domain"
 	"go.xbrother.com/nix-operator/pkg/handlers/bond/types"
 	"go.xbrother.com/nix-operator/pkg/status"
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
-// CentOSBondHandler CentOS 7.2-7.9 专用Bond处理器
+// CentOSBondHandler CentOS Bond处理器
 type CentOSBondHandler struct {
-	osInfo   controller.OSInfo
-	managers []types.IBondManager
+	osInfo       controller.OSInfo
+	managers     []types.IBondManager
 }
 
 // NewCentOSBondHandler 创建 CentOS Bond处理器实例
@@ -42,8 +41,8 @@ func (h *CentOSBondHandler) Match(osInfo controller.OSInfo) bool {
 	return false
 }
 
-// Reconcile 执行Bond配置调谐
-func (h *CentOSBondHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
+// Reconcile 执行Bond配置调谐，返回结构化的调谐结果
+func (h *CentOSBondHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
 	return h.reconcileConfigs(ctx, configs)
 }
 
@@ -61,11 +60,10 @@ func (h *CentOSBondHandler) initializeManagers() {
 }
 
 // reconcileConfigs 调谐Bond配置
-func (h *CentOSBondHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*domain.ReconcileResult, error) {
-	var results []*domain.ReconcileResult
+func (h *CentOSBondHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
+	var results []*status.ReconcileResult
 	var matchedConfig *systemv1.ResourceConfig
 	var fallbackConfig *systemv1.ResourceConfig
-	configStatusMap := make(map[string]*domain.ReconcileResult)
 
 	utils.Infof("bond", "Starting CentOS bond reconciliation with %d configurations", len(configs))
 
@@ -76,8 +74,15 @@ func (h *CentOSBondHandler) reconcileConfigs(ctx context.Context, configs []*sys
 		bondSpec, err := utils.UnmarshalSpec[*systemv1.BondConfigurationSpec](config.Spec)
 		if err != nil {
 			utils.Errorf("bond", "Failed to unmarshal bond spec for %s: %v", config.Metadata.Name, err)
-			result, _ := status.ReconcileError(config, status.ReasonSpecError, fmt.Errorf("failed to unmarshal spec: %v", err))
-			configStatusMap[config.Metadata.Name] = result
+			results = append(results, &status.ReconcileResult{
+				Config: config,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonSpecError,
+					Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
+				},
+				Error: err,
+			})
 			continue
 		}
 
@@ -88,30 +93,35 @@ func (h *CentOSBondHandler) reconcileConfigs(ctx context.Context, configs []*sys
 			matched, err := utils.MatchNodeSelector(bondSpec.NodeSelector)
 			if err != nil {
 				utils.Errorf("bond", "Failed to match nodeSelector for %s: %v", config.Metadata.Name, err)
-				result, _ := status.ReconcileError(config, status.ReasonNodeSelectorError, fmt.Errorf("failed to match nodeSelector: %v", err))
-				configStatusMap[config.Metadata.Name] = result
+				results = append(results, &status.ReconcileResult{
+					Config: config,
+					Status: &systemv1.ResourceStatus{
+						Phase:   status.PhaseError,
+						Reason:  status.ReasonNodeSelectorError,
+						Message: fmt.Sprintf("failed to match nodeSelector: %v", err),
+					},
+					Error: err,
+				})
 				continue
 			}
 			if matched {
 				utils.Infof("bond", "Bond configuration %s matches nodeSelector", config.Metadata.Name)
 				matchedConfig = config
-				// 暂时不设置状态，等待应用后再设置
 			} else {
 				utils.Debugf("bond", "Bond configuration %s does not match nodeSelector", config.Metadata.Name)
-				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "Configuration did not match nodeSelector")
-				configStatusMap[config.Metadata.Name] = result
+				// nodeSelector不匹配时直接跳过，不更新状态
+				continue
 			}
 		} else {
 			utils.Debugf("bond", "Bond configuration %s has no valid nodeSelector, considering as fallback", config.Metadata.Name)
 			// 没有有效的nodeSelector，作为fallback配置
 			if fallbackConfig == nil {
 				fallbackConfig = config
-				// 暂时不设置状态，等待应用后再设置
 			} else {
 				// 如果已经有fallback配置，则跳过这个
 				utils.Debugf("bond", "Bond configuration %s skipped, another fallback already exists", config.Metadata.Name)
-				result, _ := status.ReconcileSkipped(config, status.ReasonFallback, "Another fallback configuration already exists")
-				configStatusMap[config.Metadata.Name] = result
+				// 多个fallback配置时直接跳过，不更新状态
+				continue
 			}
 		}
 	}
@@ -134,74 +144,73 @@ func (h *CentOSBondHandler) reconcileConfigs(ctx context.Context, configs []*sys
 		bondSpec, err := utils.UnmarshalSpec[*systemv1.BondConfigurationSpec](configToApply.Spec)
 		if err != nil {
 			utils.Errorf("bond", "Failed to unmarshal effective bond config spec: %v", err)
-			result, _ := status.ReconcileError(configToApply, status.ReasonSpecError, fmt.Errorf("failed to unmarshal effective config spec: %v", err))
-			configStatusMap[configToApply.Metadata.Name] = result
-		} else {
-			utils.Debugf("bond", "Starting bond configuration application")
-			// 应用配置
-			applyResult, err := h.applyBondConfiguration(ctx, configToApply, bondSpec)
-			if err != nil {
-				utils.Errorf("bond", "Failed to apply bond configuration: %v", err)
-				result, _ := status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to apply configuration: %v", err))
-				configStatusMap[configToApply.Metadata.Name] = result
-			} else {
-				utils.Infof("bond", "Bond configuration applied successfully")
-				// 应用成功
-				configStatusMap[configToApply.Metadata.Name] = applyResult
-			}
+			results = append(results, &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonSpecError,
+					Message: fmt.Sprintf("failed to unmarshal effective config spec: %v", err),
+				},
+				Error: err,
+			})
+			return results, err
 		}
-
-		// 为其他未应用的配置设置跳过状态
-		for _, config := range configs {
-			if _, exists := configStatusMap[config.Metadata.Name]; !exists {
-				if config == configToApply {
-					// 这种情况不应该发生，但为了安全起见
-					continue
-				}
-				var reason, message string
-				if config == fallbackConfig {
-					reason = status.ReasonFallback
-					message = "Configuration used as fallback but not applied due to matched configuration"
-				} else {
-					reason = status.ReasonNotMatched
-					message = "Configuration not applied"
-				}
-				result, _ := status.ReconcileSkipped(config, reason, message)
-				configStatusMap[config.Metadata.Name] = result
-			}
+		
+		utils.Debugf("bond", "Starting bond configuration application")
+		// 应用配置
+		result, err := h.applyBondConfiguration(ctx, configToApply, bondSpec)
+		if err != nil {
+			utils.Errorf("bond", "Failed to apply bond configuration: %v", err)
+			results = append(results, &status.ReconcileResult{
+					Config: configToApply,
+					Status: &systemv1.ResourceStatus{
+						Phase:   status.PhaseError,
+						Reason:  status.ReasonReconcileError,
+						Message: fmt.Sprintf("failed to apply configuration: %v", err),
+					},
+					Error: err,
+				})
+			return results, err
 		}
-	} else {
-		// 没有配置可以应用，所有配置都标记为跳过
-		for _, config := range configs {
-			if _, exists := configStatusMap[config.Metadata.Name]; !exists {
-				result, _ := status.ReconcileSkipped(config, status.ReasonNotMatched, "No applicable configuration found")
-				configStatusMap[config.Metadata.Name] = result
-			}
-		}
+		
+		utils.Infof("bond", "Bond configuration applied successfully")
+		results = append(results, result)
+		
+		// 其他未应用的配置保持原状态，不进行更新
 	}
+	// 没有配置可以应用时，保持原状态不变
 
-	// 按照原始配置顺序构建结果
-	for _, config := range configs {
-		if result, exists := configStatusMap[config.Metadata.Name]; exists {
-			results = append(results, result)
-		}
-	}
-
-	utils.Infof("bond", "CentOS bond reconciliation completed with %d results", len(results))
+	utils.Infof("bond", "CentOS bond reconciliation completed")
 	return results, nil
 }
 
 // applyBondConfiguration 应用Bond配置
-func (h *CentOSBondHandler) applyBondConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, bondSpec *systemv1.BondConfigurationSpec) (*domain.ReconcileResult, error) {
+func (h *CentOSBondHandler) applyBondConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, bondSpec *systemv1.BondConfigurationSpec) (*status.ReconcileResult, error) {
 	// 检测并选择合适的Bond管理器
 	manager, err := h.detectBondManager(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect CentOS bond manager: %v", err)
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  "NetworkManagerError",
+				Message: fmt.Sprintf("failed to detect CentOS bond manager: %v", err),
+			},
+			Error: err,
+		}, err
 	}
 
 	// 验证Bond配置
 	if err := h.validateCentOSBondConfig(bondSpec); err != nil {
-		return status.ReconcileError(configToApply, status.ReasonSpecError, fmt.Errorf("bond validation failed: %v", err))
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  status.ReasonSpecError,
+				Message: fmt.Sprintf("bond validation failed: %v", err),
+			},
+			Error: err,
+		}, err
 	}
 
 	// 转换为内部Bond结构
@@ -233,7 +242,15 @@ func (h *CentOSBondHandler) applyBondConfiguration(ctx context.Context, configTo
 	// 配置Bond接口并检查是否有变更
 	hasChanges, err := manager.ConfigureWithCheck(ctx, bondConfig)
 	if err != nil {
-		return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to configure bond %s: %v", bondSpec.Name, err))
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  status.ReasonReconcileError,
+				Message: fmt.Sprintf("failed to configure bond %s: %v", bondSpec.Name, err),
+			},
+			Error: err,
+		}, err
 	}
 
 	utils.Infof("bond", "CentOS bond %s configured successfully", bondSpec.Name)
@@ -242,13 +259,35 @@ func (h *CentOSBondHandler) applyBondConfiguration(ctx context.Context, configTo
 	if hasChanges {
 		utils.Infof("bond", "Bond configuration changed, reloading bond services")
 		if err := manager.ReloadIfy(ctx); err != nil {
-			return status.ReconcileError(configToApply, status.ReasonReconcileError, fmt.Errorf("failed to reload bond configuration: %v", err))
+			return &status.ReconcileResult{
+				Config: configToApply,
+				Status: &systemv1.ResourceStatus{
+					Phase:   status.PhaseError,
+					Reason:  status.ReasonReconcileError,
+					Message: fmt.Sprintf("failed to reload bond configuration: %v", err),
+				},
+				Error: err,
+			}, err
 		}
 		utils.Infof("bond", "CentOS bond configuration applied and reloaded successfully")
-		return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS bond configuration applied and reloaded successfully")
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  status.ReasonConfigurationUpdated,
+				Message: "CentOS bond configuration applied and reloaded successfully",
+			},
+		}, nil
 	} else {
 		utils.Infof("bond", "CentOS bond configuration unchanged, skipping reload")
-		return status.ReconcileReady(configToApply, status.ReasonNoChange, "CentOS bond configuration unchanged")
+		return &status.ReconcileResult{
+			Config: configToApply,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseReady,
+				Reason:  status.ReasonAppliedSuccessfully,
+				Message: "CentOS bond configuration unchanged",
+			},
+		}, nil
 	}
 }
 

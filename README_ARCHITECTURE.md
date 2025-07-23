@@ -107,7 +107,7 @@ type SpecValidator interface {
 
 // 处理器插件
 type ConfigHandler interface {
-    Reconcile(ctx context.Context, config *domain.ResourceConfig) (*domain.ReconcileResult, error)
+    Reconcile(ctx context.Context, config *domain.ResourceConfig) (*status.ReconcileResult, error)
     Match(osInfo domain.OSInfo) bool
 }
 ```
@@ -141,7 +141,7 @@ type HandlerAdapter struct {
     legacyHandler controller.Handler
 }
 
-func (a *HandlerAdapter) Reconcile(ctx context.Context, config *domain.ResourceConfig) (*domain.ReconcileResult, error) {
+func (a *HandlerAdapter) Reconcile(ctx context.Context, config *domain.ResourceConfig) (*status.ReconcileResult, error) {
     // 转换类型并调用现有处理器
     legacyConfig := convertToLegacyConfig(config)
     return a.legacyHandler.Reconcile(ctx, legacyConfig)

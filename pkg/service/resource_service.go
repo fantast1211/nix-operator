@@ -127,14 +127,21 @@ func (s *resourceService) UpdateResource(ctx context.Context, resourceConfig *sy
 
 	// 从状态仓库获取当前状态
 	resourceStatus, err := s.statusRepo.GetStatus(ctx, resourceConfig.Metadata.Name)
-	if err != nil {
+	if err != nil || resourceStatus == nil {
 		s.logger.Debugf("service", "No cached status found for resource %s: %v", resourceConfig.Metadata.Name, err)
-		// 配置已更新，但reconciliation尚未完成
-		resultConfig.Status = &systemv1.ResourceStatus{
-			Phase:   "Unknown",
-			Reason:  "ConfigurationUpdated",
-			Message: "Configuration updated, reconciliation will be triggered automatically",
+		// 创建初始状态为pending
+		initialStatus := &systemv1.ResourceStatus{
+			Phase:   "Pending",
+			Reason:  "ConfigurationCreated",
+			Message: "Configuration created, waiting for reconciliation",
 		}
+		
+		// 保存初始状态到状态仓库
+		if err := s.statusRepo.SetStatusWithKind(ctx, resourceConfig.Metadata.Name, resourceConfig.Kind, initialStatus); err != nil {
+			s.logger.Warnf("service", "Failed to save initial status for resource %s: %v", resourceConfig.Metadata.Name, err)
+		}
+		
+		resultConfig.Status = initialStatus
 	} else {
 		resultConfig.Status = resourceStatus
 	}

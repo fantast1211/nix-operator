@@ -1,0 +1,6 @@
+{
+  "phase":  "Skipped",
+  "reason":  "NotMatched",
+  "message":  "Configuration did not match nodeSelector",
+  "observedGeneration":  0
+}
