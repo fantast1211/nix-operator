@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/ListNodesRequest",
+    "definitions": {
+        "ListNodesRequest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "List Nodes Request",
+            "description": "可选的过滤条件，暂时为空"
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/NodeConfig",
+    "definitions": {
+        "NodeConfig": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "machine_id": {
+                    "type": "string"
+                },
+                "last_modified": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Node Config",
+            "description": "节点配置"
+        }
+    }
+}

@@ -111,6 +111,22 @@ func (s *SystemConfigServiceServer) GetResourceSchemas(ctx context.Context, req 
 	}, nil
 }
 
+// ListNodes 获取所有节点信息
+func (s *SystemConfigServiceServer) ListNodes(ctx context.Context, req *v1.ListNodesRequest) (*v1.ListNodesResponse, error) {
+	s.logger.Debugf("controller", "Listing all nodes")
+
+	// 调用服务层获取节点信息
+	nodes, err := s.resourceService.ListNodes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+
+	s.logger.Debugf("controller", "Listed %d nodes", len(nodes))
+	return &v1.ListNodesResponse{
+		Nodes: nodes,
+	}, nil
+}
+
 // generateTypeUrl 根据 kind 生成 typeUrl
 func (s *SystemConfigServiceServer) generateTypeUrl(kind string) string {
 	return fmt.Sprintf("type.googleapis.com/xtopus.api.system.v1.%sSpec", kind)

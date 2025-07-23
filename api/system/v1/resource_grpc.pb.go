@@ -30,6 +30,8 @@ type SystemConfigServiceClient interface {
 	UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error)
 	// 获取资源 JSON Schema
 	GetResourceSchemas(ctx context.Context, in *GetResourceSchemasRequest, opts ...grpc.CallOption) (*GetResourceSchemasResponse, error)
+	// 获取所有节点信息
+	ListNodes(ctx context.Context, in *ListNodesRequest, opts ...grpc.CallOption) (*ListNodesResponse, error)
 }
 
 type systemConfigServiceClient struct {
@@ -76,6 +78,15 @@ func (c *systemConfigServiceClient) GetResourceSchemas(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *systemConfigServiceClient) ListNodes(ctx context.Context, in *ListNodesRequest, opts ...grpc.CallOption) (*ListNodesResponse, error) {
+	out := new(ListNodesResponse)
+	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/ListNodes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemConfigServiceServer is the server API for SystemConfigService service.
 // All implementations must embed UnimplementedSystemConfigServiceServer
 // for forward compatibility
@@ -88,6 +99,8 @@ type SystemConfigServiceServer interface {
 	UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*ResourceConfig, error)
 	// 获取资源 JSON Schema
 	GetResourceSchemas(context.Context, *GetResourceSchemasRequest) (*GetResourceSchemasResponse, error)
+	// 获取所有节点信息
+	ListNodes(context.Context, *ListNodesRequest) (*ListNodesResponse, error)
 	mustEmbedUnimplementedSystemConfigServiceServer()
 }
 
@@ -106,6 +119,9 @@ func (UnimplementedSystemConfigServiceServer) UpdateResourceConfig(context.Conte
 }
 func (UnimplementedSystemConfigServiceServer) GetResourceSchemas(context.Context, *GetResourceSchemasRequest) (*GetResourceSchemasResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetResourceSchemas not implemented")
+}
+func (UnimplementedSystemConfigServiceServer) ListNodes(context.Context, *ListNodesRequest) (*ListNodesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListNodes not implemented")
 }
 func (UnimplementedSystemConfigServiceServer) mustEmbedUnimplementedSystemConfigServiceServer() {}
 
@@ -192,6 +208,24 @@ func _SystemConfigService_GetResourceSchemas_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemConfigService_ListNodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListNodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemConfigServiceServer).ListNodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/xtopus.api.system.v1.SystemConfigService/ListNodes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemConfigServiceServer).ListNodes(ctx, req.(*ListNodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemConfigService_ServiceDesc is the grpc.ServiceDesc for SystemConfigService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -214,6 +248,10 @@ var SystemConfigService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetResourceSchemas",
 			Handler:    _SystemConfigService_GetResourceSchemas_Handler,
+		},
+		{
+			MethodName: "ListNodes",
+			Handler:    _SystemConfigService_ListNodes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -38,6 +38,13 @@ service SystemConfigService {
       get: "/v1/schemas"
     };
   }
+  
+  // 获取所有节点信息
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse) {
+    option (google.api.http) = {
+      get: "/v1/nodes"
+    };
+  }
 }
 
 // 资源配置
@@ -111,4 +118,21 @@ message ResourceSchema {
   string version = 3;       // 当前 schema 的版本
   string type_url = 4;      // Any 类型的 typeUrl
   string json_schema = 5;   // 嵌入式返回的 JSON Schema
+}
+
+// 节点配置
+message NodeConfig {
+  string name = 1;
+  string hostname = 2;
+  string ip = 3;
+  string machine_id = 4;
+  string last_modified = 5;
+}
+
+message ListNodesRequest {
+  // 可选的过滤条件，暂时为空
+}
+
+message ListNodesResponse {
+  repeated NodeConfig nodes = 1;
 }

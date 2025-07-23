@@ -14,4 +14,6 @@ type ResourceService interface {
 	GetResource(ctx context.Context, name string) (*systemv1.ResourceConfig, error)
 	// UpdateResource 更新资源
 	UpdateResource(ctx context.Context, resource *systemv1.ResourceConfig) (*systemv1.ResourceConfig, error)
+	// ListNodes 列出所有节点信息
+	ListNodes(ctx context.Context) ([]*systemv1.NodeConfig, error)
 }

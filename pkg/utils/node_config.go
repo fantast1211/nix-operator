@@ -6,9 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	systemv1 "go.xbrother.com/nix-operator/api/system/v1"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // NodeInfo 节点信息结构
@@ -18,30 +15,13 @@ type NodeInfo struct {
 	Hostname  string `json:"hostname"`
 }
 
-// NodeConfigFile 节点配置文件结构
+// NodeConfigFile 简化的节点配置文件结构
 type NodeConfigFile struct {
-	APIVersion string                 `json:"apiVersion"`
-	Kind       string                 `json:"kind"`
-	Metadata   NodeConfigMetadata     `json:"metadata"`
-	Spec       *anypb.Any             `json:"spec"`
-	Status     interface{}            `json:"status"`
-}
-
-// NodeConfigMetadata 节点配置元数据
-type NodeConfigMetadata struct {
-	Name            string            `json:"name"`
-	ResourceVersion string            `json:"resourceVersion"`
-	Generation      int64             `json:"generation"`
-	CreationTime    string            `json:"creationTime"`
-	DeletionTime    string            `json:"deletionTime"`
-	Labels          map[string]string `json:"labels"`
-	Annotations     map[string]string `json:"annotations"`
-}
-
-// NodeConfigSpec 节点配置规范
-type NodeConfigSpec struct {
-	NodeSelector *systemv1.NodeSelector `json:"nodeSelector"`
-	NodeInfo     *NodeInfo              `json:"nodeInfo"`
+	Name         string `json:"name"`
+	Hostname     string `json:"hostname"`
+	IP           string `json:"ip"`
+	MachineID    string `json:"machine-id"`
+	LastModified string `json:"last-modified"`
 }
 
 // GetCurrentNodeInfo 获取当前节点信息
@@ -84,34 +64,13 @@ func GenerateNodeConfigFile(nodeDir string) error {
 		return fmt.Errorf("failed to get current node info: %v", err)
 	}
 
-	// 将规范转换为anypb.Any
-	specAny, err := anypb.New(&systemv1.NodeSelector{
-		MachineId: nodeInfo.MachineID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create spec any: %v", err)
-	}
-
-	// 创建配置文件结构
+	// 创建简化的配置文件结构
 	configFile := &NodeConfigFile{
-		APIVersion: "system.xbrother.com/v1",
-		Kind:       "NodeConfiguration",
-		Metadata: NodeConfigMetadata{
-			Name:            fmt.Sprintf("node-%s", nodeInfo.MachineID),
-			ResourceVersion: fmt.Sprintf("%d", time.Now().Unix()),
-			Generation:      1,
-			CreationTime:    time.Now().Format(time.RFC3339),
-			DeletionTime:    "",
-			Labels:          make(map[string]string),
-			Annotations: map[string]string{
-				"auto-generated": "true",
-				"machine-id":     nodeInfo.MachineID,
-				"ip":             nodeInfo.IP,
-				"hostname":       nodeInfo.Hostname,
-			},
-		},
-		Spec:   specAny,
-		Status: nil,
+		Name:         fmt.Sprintf("node-%s", nodeInfo.MachineID),
+		Hostname:     nodeInfo.Hostname,
+		IP:           nodeInfo.IP,
+		MachineID:    nodeInfo.MachineID,
+		LastModified: fmt.Sprintf("%d", time.Now().Unix()),
 	}
 
 	// 生成配置文件路径
@@ -157,18 +116,11 @@ func checkNodeConfigNeedsUpdate(configFilePath string, currentNodeInfo *NodeInfo
 		return true, nil // 解析失败，重新生成
 	}
 
-	// 检查注解中的信息是否有变化
-	if existingConfig.Metadata.Annotations != nil {
-		existingIP := existingConfig.Metadata.Annotations["ip"]
-		existingHostname := existingConfig.Metadata.Annotations["hostname"]
-		existingMachineID := existingConfig.Metadata.Annotations["machine-id"]
-
-		// 如果关键信息有变化，需要更新
-		if existingIP != currentNodeInfo.IP ||
-			existingHostname != currentNodeInfo.Hostname ||
-			existingMachineID != currentNodeInfo.MachineID {
-			return true, nil
-		}
+	// 检查节点信息是否有变化
+	if existingConfig.IP != currentNodeInfo.IP ||
+		existingConfig.Hostname != currentNodeInfo.Hostname ||
+		existingConfig.MachineID != currentNodeInfo.MachineID {
+		return true, nil
 	}
 
 	// 不需要更新

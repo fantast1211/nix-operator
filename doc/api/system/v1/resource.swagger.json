@@ -16,6 +16,29 @@
     "application/json"
   ],
   "paths": {
+    "/v1/nodes": {
+      "get": {
+        "summary": "获取所有节点信息",
+        "operationId": "SystemConfigService_ListNodes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNodesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SystemConfigService"
+        ]
+      }
+    },
     "/v1/resources": {
       "get": {
         "summary": "获取所有资源配置",
@@ -193,6 +216,17 @@
         }
       }
     },
+    "v1ListNodesResponse": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1NodeConfig"
+          }
+        }
+      }
+    },
     "v1ListResourceConfigsResponse": {
       "type": "object",
       "properties": {
@@ -236,6 +270,27 @@
           }
         }
       }
+    },
+    "v1NodeConfig": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "machineId": {
+          "type": "string"
+        },
+        "lastModified": {
+          "type": "string"
+        }
+      },
+      "title": "节点配置"
     },
     "v1ResourceConfig": {
       "type": "object",
