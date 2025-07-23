@@ -50,10 +50,6 @@
                 "machine_id": {
                     "type": "string",
                     "description": "机器ID匹配"
-                },
-                "ip": {
-                    "type": "string",
-                    "description": "IP地址匹配"
                 }
             },
             "additionalProperties": true,

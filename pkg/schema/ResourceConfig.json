@@ -31,6 +31,11 @@
                     "additionalProperties": true,
                     "type": "object",
                     "description": "使用Any类型支持强类型"
+                },
+                "status": {
+                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceStatus",
+                    "additionalProperties": true,
+                    "description": "资源状态"
                 }
             },
             "additionalProperties": true,
@@ -71,6 +76,29 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Metadata"
+        },
+        "xtopus.api.system.v1.ResourceStatus": {
+            "properties": {
+                "phase": {
+                    "type": "string",
+                    "description": "当前阶段"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "原因"
+                },
+                "message": {
+                    "type": "string",
+                    "description": "消息"
+                },
+                "observed_generation": {
+                    "type": "integer",
+                    "description": "上次成功调谐的配置generation"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Status"
         }
     }
 }

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"reflect"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -51,7 +52,42 @@ func (v *ProtoValidator) Validate(spec *anypb.Any) error {
 
 // validateRequiredFields 验证必填字段
 func (v *ProtoValidator) validateRequiredFields(msg proto.Message) error {
-	// 这里可以添加必填字段的校验逻辑
-	// 例如检查字符串字段是否为空等
+	// 验证NodeSelector必填
+	if err := v.validateNodeSelector(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateNodeSelector 验证NodeSelector字段必填
+func (v *ProtoValidator) validateNodeSelector(msg proto.Message) error {
+	// 使用反射检查是否有NodeSelector字段
+	reflectValue := reflect.ValueOf(msg)
+	if reflectValue.Kind() == reflect.Ptr {
+		reflectValue = reflectValue.Elem()
+	}
+	
+	if reflectValue.Kind() != reflect.Struct {
+		return nil
+	}
+	
+	// 查找NodeSelector字段
+	nodeSelectorField := reflectValue.FieldByName("NodeSelector")
+	if !nodeSelectorField.IsValid() {
+		return nil // 如果没有NodeSelector字段，跳过验证
+	}
+	
+	// 检查NodeSelector是否为nil
+	if nodeSelectorField.IsNil() {
+		return fmt.Errorf("nodeSelector is required but not provided")
+	}
+	
+	// 检查NodeSelector的MachineId字段是否为空
+	nodeSelector := nodeSelectorField.Elem()
+	machineIdField := nodeSelector.FieldByName("MachineId")
+	if machineIdField.IsValid() && machineIdField.String() == "" {
+		return fmt.Errorf("nodeSelector.machineId is required but empty")
+	}
+	
 	return nil
 }

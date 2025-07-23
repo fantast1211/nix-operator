@@ -243,7 +243,7 @@ func (h *OpenEulerBondHandler) hasValidNodeSelector(nodeSelector *systemv1.NodeS
 	if nodeSelector == nil {
 		return false
 	}
-	return nodeSelector.MachineId != "" || nodeSelector.Ip != ""
+	return nodeSelector.MachineId != ""
 }
 
 // applyBondConfiguration 应用Bond配置

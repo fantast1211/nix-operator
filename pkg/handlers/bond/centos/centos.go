@@ -297,7 +297,7 @@ func (h *CentOSBondHandler) hasValidNodeSelector(selector *systemv1.NodeSelector
 	if selector == nil {
 		return false
 	}
-	return selector.MachineId != "" || selector.Ip != ""
+	return selector.MachineId != ""
 }
 
 // isCentOS7Supported 检查是否为支持的CentOS 7版本

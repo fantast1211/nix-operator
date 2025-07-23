@@ -48,7 +48,7 @@ func (s *SystemConfigServiceServer) ListResourceConfigs(ctx context.Context, req
 }
 
 // GetResourceConfig 获取单个资源配置
-func (s *SystemConfigServiceServer) GetResourceConfig(ctx context.Context, req *v1.GetResourceConfigRequest) (*v1.Resource, error) {
+func (s *SystemConfigServiceServer) GetResourceConfig(ctx context.Context, req *v1.GetResourceConfigRequest) (*v1.ResourceConfig, error) {
 	s.logger.Debugf("controller", "Getting resource config: %s", req.Name)
 
 	// 调用服务层
@@ -62,7 +62,7 @@ func (s *SystemConfigServiceServer) GetResourceConfig(ctx context.Context, req *
 }
 
 // UpdateResourceConfig 更新资源配置
-func (s *SystemConfigServiceServer) UpdateResourceConfig(ctx context.Context, req *v1.UpdateResourceConfigRequest) (*v1.Resource, error) {
+func (s *SystemConfigServiceServer) UpdateResourceConfig(ctx context.Context, req *v1.UpdateResourceConfigRequest) (*v1.ResourceConfig, error) {
 	s.logger.Debugf("controller", "Updating resource config: %s", req.Config.Metadata.Name)
 
 	// 校验 spec

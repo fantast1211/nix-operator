@@ -139,7 +139,7 @@ func (h *LinuxNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelect
 	if selector == nil {
 		return false
 	}
-	return selector.MachineId != "" || selector.Ip != ""
+	return selector.MachineId != ""
 }
 
 // applyConfiguration 应用网络配置

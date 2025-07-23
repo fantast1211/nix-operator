@@ -165,7 +165,7 @@ func (h *OpenEulerNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSe
 	if selector == nil {
 		return false
 	}
-	return selector.MachineId != "" || selector.Ip != ""
+	return selector.MachineId != ""
 }
 
 // applyConfiguration 应用网络配置
@@ -250,7 +250,7 @@ func (h *OpenEulerNetworkHandler) detectNetworkManager(ctx context.Context) (typ
 }
 
 // validateOpenEulerInterface 验证openEuler网络接口配置
-func (h *OpenEulerNetworkHandler) validateOpenEulerInterface(iface *systemv1.NetworkInterfaceSpec) error {
+func (h *OpenEulerNetworkHandler) validateOpenEulerInterface(iface *systemv1.NetworkInterface) error {
 	// 验证接口名称
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")

@@ -195,12 +195,12 @@ func TestCentOSNetworkHandler_ConfigValidation(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		iface     *systemv1.NetworkInterfaceSpec
+		iface     *systemv1.NetworkInterface
 		expectErr bool
 	}{
 		{
 			name: "valid eth0 interface",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
 				Mtu:         1500,
@@ -209,7 +209,7 @@ func TestCentOSNetworkHandler_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "invalid interface name",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "invalid0",
 				Ipv4Address: "192.168.1.100/24",
 				Mtu:         1500,
@@ -218,7 +218,7 @@ func TestCentOSNetworkHandler_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "invalid MTU",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
 				Mtu:         50, // 太小
@@ -227,7 +227,7 @@ func TestCentOSNetworkHandler_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "invalid IP format",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100", // 缺少CIDR
 				Mtu:         1500,

@@ -10,8 +10,8 @@ import (
 )
 
 func MatchNodeSelector(selector *systemv1.NodeSelector) (bool, error) {
-	// 如果没有指定MachineID和IP，则认为匹配所有节点
-	if selector.MachineId == "" && selector.Ip == "" {
+	// 如果没有指定MachineID，则认为匹配所有节点
+	if selector.MachineId == "" {
 		return true, nil
 	}
 
@@ -29,23 +29,7 @@ func MatchNodeSelector(selector *systemv1.NodeSelector) (bool, error) {
 		}
 	}
 
-	// 如果指定了IP，检查是否匹配
-	if selector.Ip != "" {
-		// 获取本机IP
-		ips, err := GetLocalIPs()
-		if err != nil {
-			return false, fmt.Errorf("failed to get local IPs: %v", err)
-		}
-
-		// 检查是否有匹配的IP
-		for _, ip := range ips {
-			if ip == selector.Ip {
-				return true, nil
-			}
-		}
-	}
-
-	// 既不匹配machine-id也不匹配IP
+	// 不匹配machine-id
 	return false, nil
 }
 
@@ -124,4 +108,13 @@ func GetPrimaryIP() (string, error) {
 	}
 
 	return "", fmt.Errorf("no available IP addresses found")
+}
+
+// GetHostname 获取主机名
+func GetHostname() (string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname: %v", err)
+	}
+	return hostname, nil
 }

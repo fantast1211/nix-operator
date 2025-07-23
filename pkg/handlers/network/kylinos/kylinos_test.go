@@ -109,7 +109,7 @@ func TestKylinOSNetworkHandler_Reconcile(t *testing.T) {
 			},
 			Spec: func() *anypb.Any {
 				spec := &systemv1.NetworkConfigurationSpec{
-					Interfaces: []*systemv1.NetworkInterfaceSpec{
+					Interfaces: []*systemv1.NetworkInterface{
 						{
 							Name:        "eth0",
 							Ipv4Address: "192.168.1.100/24",
@@ -161,7 +161,7 @@ func TestKylinOSNetworkHandler_ReconcileWithBondSlave(t *testing.T) {
 			},
 			Spec: func() *anypb.Any {
 				spec := &systemv1.NetworkConfigurationSpec{
-					Interfaces: []*systemv1.NetworkInterfaceSpec{
+					Interfaces: []*systemv1.NetworkInterface{
 						{
 							Name: "eth0",
 							BondingSlave: &systemv1.BondingSlaveConfig{
@@ -208,12 +208,12 @@ func TestValidateKylinOSInterface(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		iface     *systemv1.NetworkInterfaceSpec
+		iface     *systemv1.NetworkInterface
 		expectErr bool
 	}{
 		{
 			name: "valid_interface",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
 				Ipv4Gateway: "192.168.1.1",
@@ -224,7 +224,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "valid_interface_with_ipv6",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth1",
 				Ipv4Address: "10.0.0.100/8",
 				Ipv6Address: "2001:db8::1/64",
@@ -236,7 +236,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "invalid_interface_-_empty_name",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "",
 				Ipv4Address: "192.168.1.100/24",
 			},
@@ -244,7 +244,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "invalid_interface_-_invalid_name",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "123invalid",
 				Ipv4Address: "192.168.1.100/24",
 			},
@@ -252,7 +252,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "invalid_interface_-_invalid_IPv4",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "invalid-ip",
 			},
@@ -260,7 +260,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "invalid_interface_-_invalid_IPv6",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv6Address: "invalid-ipv6",
 			},
@@ -268,7 +268,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "invalid_interface_-_invalid_MTU_low",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
 				Mtu:         50,
@@ -277,7 +277,7 @@ func TestValidateKylinOSInterface(t *testing.T) {
 		},
 		{
 			name: "invalid_interface_-_invalid_MTU_high",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
 				Mtu:         10000,

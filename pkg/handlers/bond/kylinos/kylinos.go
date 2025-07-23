@@ -258,7 +258,7 @@ func (h *KylinOSBondHandler) hasValidNodeSelector(selector *systemv1.NodeSelecto
 	if selector == nil {
 		return false
 	}
-	return selector.MachineId != "" || selector.Ip != ""
+	return selector.MachineId != ""
 }
 
 // applyBondConfiguration 应用Bond配置

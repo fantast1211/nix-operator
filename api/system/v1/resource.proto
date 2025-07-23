@@ -18,14 +18,14 @@ service SystemConfigService {
   }
   
   // 获取资源配置
-  rpc GetResourceConfig(GetResourceConfigRequest) returns (Resource) {
+  rpc GetResourceConfig(GetResourceConfigRequest) returns (ResourceConfig) {
     option (google.api.http) = {
       get: "/v1/resources/{name}"
     };
   }
   
   // 更新资源配置
-  rpc UpdateResourceConfig(UpdateResourceConfigRequest) returns (Resource) {
+  rpc UpdateResourceConfig(UpdateResourceConfigRequest) returns (ResourceConfig) {
     option (google.api.http) = {
       put: "/v1/resources/{name}"
       body: "*"
@@ -46,6 +46,7 @@ message ResourceConfig {
   string kind = 2;  // HostsConfiguration, TimeConfiguration, NetworkConfiguration
   Metadata metadata = 3;
   google.protobuf.Any spec = 4;  // 使用Any类型支持强类型
+  ResourceStatus status = 5;  // 资源状态
 }
 
 message Metadata {
@@ -72,18 +73,19 @@ message ResourceStatus {
   int32 observed_generation = 4;
 }
 
-message Resource {
-  ResourceConfig config = 1;
-  ResourceConfig effective_config = 2;
-  ResourceStatus status = 3;
-}
+// 废弃的Resource消息，已被ResourceConfig替代
+// message Resource {
+//   ResourceConfig config = 1;
+//   ResourceConfig effective_config = 2;
+//   ResourceStatus status = 3;
+// }
 
 message ListResourceConfigsRequest {
   string kind = 1;
 }
 
 message ListResourceConfigsResponse {
-  repeated Resource resources = 1;
+  repeated ResourceConfig resources = 1;
 }
 
 message GetResourceConfigRequest {

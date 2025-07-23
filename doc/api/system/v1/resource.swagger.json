@@ -55,7 +55,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Resource"
+              "$ref": "#/definitions/v1ResourceConfig"
             }
           },
           "default": {
@@ -84,7 +84,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Resource"
+              "$ref": "#/definitions/v1ResourceConfig"
             }
           },
           "default": {
@@ -199,7 +199,7 @@
         "resources": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/v1Resource"
+            "$ref": "#/definitions/v1ResourceConfig"
           }
         }
       }
@@ -237,20 +237,6 @@
         }
       }
     },
-    "v1Resource": {
-      "type": "object",
-      "properties": {
-        "config": {
-          "$ref": "#/definitions/v1ResourceConfig"
-        },
-        "effectiveConfig": {
-          "$ref": "#/definitions/v1ResourceConfig"
-        },
-        "status": {
-          "$ref": "#/definitions/v1ResourceStatus"
-        }
-      }
-    },
     "v1ResourceConfig": {
       "type": "object",
       "properties": {
@@ -265,6 +251,9 @@
         },
         "spec": {
           "$ref": "#/definitions/protobufAny"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ResourceStatus"
         }
       },
       "title": "资源配置"

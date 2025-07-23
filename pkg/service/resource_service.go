@@ -26,7 +26,7 @@ func NewResourceService(configRepo repository.ConfigRepository, statusRepo repos
 }
 
 // ListResources 列出指定类型的资源
-func (s *resourceService) ListResources(ctx context.Context, kind string) ([]*systemv1.Resource, error) {
+func (s *resourceService) ListResources(ctx context.Context, kind string) ([]*systemv1.ResourceConfig, error) {
 	s.logger.Debugf("service", "Listing resources of kind: %s", kind)
 
 	// 从配置仓库获取配置列表
@@ -43,29 +43,29 @@ func (s *resourceService) ListResources(ctx context.Context, kind string) ([]*sy
 	}
 
 	// 构建资源列表
-	resources := make([]*systemv1.Resource, 0, len(configs))
+	resources := make([]*systemv1.ResourceConfig, 0, len(configs))
 	for _, config := range configs {
-		resource := &systemv1.Resource{
-			Config: config,
+		// 复制配置以避免修改原始数据
+		resourceConfig := &systemv1.ResourceConfig{
+			ApiVersion: config.ApiVersion,
+			Kind:       config.Kind,
+			Metadata:   config.Metadata,
+			Spec:       config.Spec,
 		}
 
 		// 从缓存中获取状态
 		if status, exists := statuses[config.Metadata.Name]; exists {
-			resource.Status = status
-			// 当调谐成功时，设置 effectiveConfig 为 config 的值
-			if status.Phase == "Ready" || status.Reason == "AppliedSuccessfully" {
-				resource.EffectiveConfig = config
-			}
+			resourceConfig.Status = status
 		} else {
 			// 如果没有缓存状态，设置为未知状态
-			resource.Status = &systemv1.ResourceStatus{
+			resourceConfig.Status = &systemv1.ResourceStatus{
 				Phase:   "Unknown",
 				Reason:  "Initial",
 				Message: "Status not yet available, reconciliation may be in progress",
 			}
 		}
 
-		resources = append(resources, resource)
+		resources = append(resources, resourceConfig)
 	}
 
 	s.logger.Debugf("service", "Found %d resources of kind: %s", len(resources), kind)
@@ -73,7 +73,7 @@ func (s *resourceService) ListResources(ctx context.Context, kind string) ([]*sy
 }
 
 // GetResource 获取指定名称的资源
-func (s *resourceService) GetResource(ctx context.Context, name string) (*systemv1.Resource, error) {
+func (s *resourceService) GetResource(ctx context.Context, name string) (*systemv1.ResourceConfig, error) {
 	s.logger.Debugf("service", "Getting resource: %s", name)
 
 	// 从配置仓库获取配置
@@ -82,9 +82,12 @@ func (s *resourceService) GetResource(ctx context.Context, name string) (*system
 		return nil, fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// 构建资源
-	resource := &systemv1.Resource{
-		Config: config,
+	// 构建资源配置
+	resourceConfig := &systemv1.ResourceConfig{
+		ApiVersion: config.ApiVersion,
+		Kind:       config.Kind,
+		Metadata:   config.Metadata,
+		Spec:       config.Spec,
 	}
 
 	// 从状态仓库获取状态
@@ -92,25 +95,21 @@ func (s *resourceService) GetResource(ctx context.Context, name string) (*system
 	if err != nil {
 		s.logger.Debugf("service", "No cached status found for resource %s: %v", name, err)
 		// 如果没有缓存状态，设置为未知状态
-		resource.Status = &systemv1.ResourceStatus{
+		resourceConfig.Status = &systemv1.ResourceStatus{
 			Phase:   "Unknown",
 			Reason:  "Initial",
 			Message: "Status not yet available, reconciliation may be in progress",
 		}
 	} else {
-		resource.Status = resourceStatus
-		// 当调谐成功时，设置 effectiveConfig 为 config 的值
-		if resourceStatus.Phase == "Ready" || resourceStatus.Reason == "AppliedSuccessfully" {
-			resource.EffectiveConfig = config
-		}
+		resourceConfig.Status = resourceStatus
 	}
 
 	s.logger.Debugf("service", "Retrieved resource: %s", name)
-	return resource, nil
+	return resourceConfig, nil
 }
 
 // UpdateResource 更新资源
-func (s *resourceService) UpdateResource(ctx context.Context, resourceConfig *systemv1.ResourceConfig) (*systemv1.Resource, error) {
+func (s *resourceService) UpdateResource(ctx context.Context, resourceConfig *systemv1.ResourceConfig) (*systemv1.ResourceConfig, error) {
 	s.logger.Debugf("service", "Updating resource: %s", resourceConfig.Metadata.Name)
 
 	// 保存配置到文件
@@ -118,9 +117,12 @@ func (s *resourceService) UpdateResource(ctx context.Context, resourceConfig *sy
 		return nil, fmt.Errorf("failed to save config: %w", err)
 	}
 
-	// 构建资源
-	resource := &systemv1.Resource{
-		Config: resourceConfig,
+	// 构建返回的资源配置
+	resultConfig := &systemv1.ResourceConfig{
+		ApiVersion: resourceConfig.ApiVersion,
+		Kind:       resourceConfig.Kind,
+		Metadata:   resourceConfig.Metadata,
+		Spec:       resourceConfig.Spec,
 	}
 
 	// 从状态仓库获取当前状态
@@ -128,19 +130,15 @@ func (s *resourceService) UpdateResource(ctx context.Context, resourceConfig *sy
 	if err != nil {
 		s.logger.Debugf("service", "No cached status found for resource %s: %v", resourceConfig.Metadata.Name, err)
 		// 配置已更新，但reconciliation尚未完成
-		resource.Status = &systemv1.ResourceStatus{
+		resultConfig.Status = &systemv1.ResourceStatus{
 			Phase:   "Unknown",
 			Reason:  "ConfigurationUpdated",
 			Message: "Configuration updated, reconciliation will be triggered automatically",
 		}
 	} else {
-		resource.Status = resourceStatus
-		// 当调谐成功时，设置 effectiveConfig 为 config 的值
-		if resourceStatus.Phase == "Ready" || resourceStatus.Reason == "AppliedSuccessfully" {
-			resource.EffectiveConfig = resourceConfig
-		}
+		resultConfig.Status = resourceStatus
 	}
 
-	s.logger.Infof("service", "Updated resource: %s, current status: %s", resourceConfig.Metadata.Name, resource.Status.Phase)
-	return resource, nil
+	s.logger.Infof("service", "Updated resource: %s, current status: %s", resourceConfig.Metadata.Name, resultConfig.Status.Phase)
+	return resultConfig, nil
 }

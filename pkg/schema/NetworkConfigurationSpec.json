@@ -11,7 +11,7 @@
                 },
                 "interfaces": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.NetworkInterfaceSpec"
+                        "$ref": "#/definitions/xtopus.api.system.v1.NetworkInterface"
                     },
                     "type": "array",
                     "description": "网络接口列表"
@@ -38,7 +38,7 @@
             "title": "Bonding Slave Config",
             "description": "网卡作为 bond 从属配置"
         },
-        "xtopus.api.system.v1.NetworkInterfaceSpec": {
+        "xtopus.api.system.v1.NetworkInterface": {
             "properties": {
                 "name": {
                     "type": "string",
@@ -83,7 +83,7 @@
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "Network Interface Spec",
+            "title": "Network Interface",
             "description": "网络接口配置项"
         },
         "xtopus.api.system.v1.NodeSelector": {
@@ -91,10 +91,6 @@
                 "machine_id": {
                     "type": "string",
                     "description": "机器ID匹配"
-                },
-                "ip": {
-                    "type": "string",
-                    "description": "IP地址匹配"
                 }
             },
             "additionalProperties": true,

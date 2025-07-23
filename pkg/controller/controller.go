@@ -25,6 +25,7 @@ type OSInfo struct {
 
 type Controller struct {
 	configDir  string
+	nodeDir    string
 	Handlers   map[string]Handler // key 是处理器类型，公开字段供外部访问
 	osInfo     OSInfo
 	statusRepo repository.StatusRepository
@@ -45,7 +46,7 @@ func RegisterHandler(typeName string, handler Handler) {
 	handlerFactories[typeName] = append(handlerFactories[typeName], handler)
 }
 
-func NewController(configDir string, statusRepo repository.StatusRepository, logger *utils.Logger) (*Controller, error) {
+func NewController(configDir string, nodeDir string, statusRepo repository.StatusRepository, logger *utils.Logger) (*Controller, error) {
 	osInfo, err := getOSInfo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OS info: %v", err)
@@ -89,6 +90,7 @@ func NewController(configDir string, statusRepo repository.StatusRepository, log
 
 	return &Controller{
 		configDir:  configDir,
+		nodeDir:    nodeDir,
 		Handlers:   handlers,
 		osInfo:     osInfo,
 		statusRepo: statusRepo,
@@ -141,7 +143,8 @@ func (c *Controller) Run() error {
 		for {
 			select {
 			case event := <-watcher.Events:
-				if event.Op&fsnotify.Write == fsnotify.Write {
+				// 只监听配置目录的写入事件，忽略状态目录的变化
+				if event.Op&fsnotify.Write == fsnotify.Write && strings.Contains(event.Name, "/cr.d/") {
 					c.logger.Debugf("controller", "Config file changed: %s", event.Name)
 					time.Sleep(100 * time.Millisecond) // 等待写入完成
 					c.reconcile()
@@ -152,19 +155,24 @@ func (c *Controller) Run() error {
 		}
 	}()
 
-	// 监控配置目录
+	// 只监控配置目录（cr.d），不监控状态目录
 	err = watcher.Add(c.configDir)
 	if err != nil {
 		return err
 	}
 	c.logger.Infof("controller", "Watching config directory: %s", c.configDir)
 
-	// 递归监控子目录
+	// 递归监控配置目录的子目录，但排除status目录
 	err = filepath.Walk(c.configDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
+			// 排除status目录，避免状态更新触发配置监听
+			if strings.Contains(path, "/status") {
+				c.logger.Debugf("controller", "Skipping status directory: %s", path)
+				return filepath.SkipDir
+			}
 			c.logger.Debugf("controller", "Adding directory to watch: %s", path)
 			return watcher.Add(path)
 		}
@@ -198,7 +206,7 @@ func (c *Controller) filterConfigsForReconcile(ctx context.Context, kind string,
 
 		// 获取当前状态
 		status, err := c.statusRepo.GetStatus(ctx, resourceName)
-		if err != nil {
+		if err != nil || status == nil {
 			// 状态不存在，首次调谐
 			c.logger.Debugf("controller", "Config %s/%s: no status found, will reconcile (first time)", kind, resourceName)
 			configsToReconcile = append(configsToReconcile, config)
@@ -207,11 +215,11 @@ func (c *Controller) filterConfigsForReconcile(ctx context.Context, kind string,
 
 		// 比较generation
 		if currentGeneration > status.ObservedGeneration {
-			c.logger.Debugf("controller", "Config %s/%s: generation %d > observed %d, will reconcile", 
+			c.logger.Debugf("controller", "Config %s/%s: generation %d > observed %d, will reconcile",
 				kind, resourceName, currentGeneration, status.ObservedGeneration)
 			configsToReconcile = append(configsToReconcile, config)
 		} else {
-			c.logger.Debugf("controller", "Config %s/%s: generation %d <= observed %d, skipping", 
+			c.logger.Debugf("controller", "Config %s/%s: generation %d <= observed %d, skipping",
 				kind, resourceName, currentGeneration, status.ObservedGeneration)
 		}
 	}
@@ -273,13 +281,13 @@ func (c *Controller) reconcile() {
 			for _, result := range results {
 				if result != nil && result.Status != nil && result.Effective != nil && result.Effective.Metadata != nil {
 					resourceName := result.Effective.Metadata.Name
-					
+
 					// 调谐成功时更新ObservedGeneration
 					if result.Status.Phase == "Ready" {
 						result.Status.ObservedGeneration = result.Effective.Metadata.Generation
 						c.logger.Debugf("controller", "Updated ObservedGeneration for %s to %d", resourceName, result.Status.ObservedGeneration)
 					}
-					
+
 					if statusErr := c.statusRepo.SetStatusWithKind(ctx, resourceName, kind, result.Status); statusErr != nil {
 						c.logger.Errorf("controller", "Failed to update status for %s: %v", resourceName, statusErr)
 					} else {
@@ -297,5 +305,10 @@ func (c *Controller) reconcile() {
 				}
 			}
 		}
+	}
+
+	// 调谐完成后，检查并更新节点配置文件
+	if err := utils.CheckAndUpdateNodeConfig(c.nodeDir); err != nil {
+		c.logger.Errorf("controller", "Failed to check and update node config: %v", err)
 	}
 }

@@ -11,9 +11,6 @@ import "validate/validate.proto";
 message NodeSelector {
   // 机器ID匹配
   string machine_id = 1 [json_name="machineId"];
-  
-  // IP地址匹配
-  string ip = 2 [json_name="ip"];
 }
 
 
@@ -27,11 +24,11 @@ message NetworkConfigurationSpec {
   NodeSelector node_selector = 1;
 
   // 网络接口列表
-  repeated NetworkInterfaceSpec interfaces = 2;
+  repeated NetworkInterface interfaces = 2;
 }
 
 // 网络接口配置项
-message NetworkInterfaceSpec {
+message NetworkInterface {
 
   // 接口名称（如 eth0, enp0s3）
   string name = 1;

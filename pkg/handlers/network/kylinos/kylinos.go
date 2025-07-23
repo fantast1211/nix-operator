@@ -165,7 +165,7 @@ func (h *KylinOSNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSele
 	if selector == nil {
 		return false
 	}
-	return selector.MachineId != "" || selector.Ip != ""
+	return selector.MachineId != ""
 }
 
 // applyConfiguration 应用网络配置
@@ -246,7 +246,7 @@ func (h *KylinOSNetworkHandler) detectNetworkManager(ctx context.Context) (types
 }
 
 // validateKylinOSInterface 验证 KylinOS 网络接口配置
-func (h *KylinOSNetworkHandler) validateKylinOSInterface(iface *systemv1.NetworkInterfaceSpec) error {
+func (h *KylinOSNetworkHandler) validateKylinOSInterface(iface *systemv1.NetworkInterface) error {
 	// 验证接口名称
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")

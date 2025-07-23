@@ -27,7 +27,7 @@ func ExampleKylinOSNetworkHandler_basicUsage(t *testing.T) {
 
 	// 创建网络配置规格
 	networkSpec := &systemv1.NetworkConfigurationSpec{
-		Interfaces: []*systemv1.NetworkInterfaceSpec{
+		Interfaces: []*systemv1.NetworkInterface{
 			{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
@@ -89,7 +89,7 @@ func ExampleKylinOSNetworkHandler_bondingConfiguration(t *testing.T) {
 
 	// 创建绑定网络配置规格
 	networkSpec := &systemv1.NetworkConfigurationSpec{
-		Interfaces: []*systemv1.NetworkInterfaceSpec{
+		Interfaces: []*systemv1.NetworkInterface{
 			{
 				Name: "eth0",
 				BondingSlave: &systemv1.BondingSlaveConfig{
@@ -156,7 +156,7 @@ func ExampleKylinOSNetworkHandler_ipv6Configuration(t *testing.T) {
 
 	// 创建 IPv6 网络配置规格
 	networkSpec := &systemv1.NetworkConfigurationSpec{
-		Interfaces: []*systemv1.NetworkInterfaceSpec{
+		Interfaces: []*systemv1.NetworkInterface{
 			{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
@@ -218,7 +218,7 @@ func ExampleKylinOSNetworkHandler_multipleInterfaces(t *testing.T) {
 
 	// 创建多接口网络配置规格
 	networkSpec := &systemv1.NetworkConfigurationSpec{
-		Interfaces: []*systemv1.NetworkInterfaceSpec{
+		Interfaces: []*systemv1.NetworkInterface{
 			{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",

@@ -300,13 +300,7 @@ func TestOpenEulerBondHandler_hasValidNodeSelector(t *testing.T) {
 			},
 			expected: true,
 		},
-		{
-			name: "nodeSelector with IP should be valid",
-			nodeSelector: &systemv1.NodeSelector{
-				Ip: "192.168.1.100",
-			},
-			expected: true,
-		},
+
 		{
 			name: "empty nodeSelector should be invalid",
 			nodeSelector: &systemv1.NodeSelector{},

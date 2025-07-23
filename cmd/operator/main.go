@@ -39,7 +39,7 @@ const (
 )
 
 // 启动gRPC服务器
-func StartGRPCServer(validators map[string]validator.SpecValidator, logger *utils.Logger, resourceService service.ResourceService, schemaProvider schema.Provider) (*grpc.Server, net.Listener, error) {
+func StartGRPCServer(ctx context.Context, validators map[string]validator.SpecValidator, logger *utils.Logger, resourceService service.ResourceService, schemaProvider schema.Provider, cancel context.CancelFunc) (*grpc.Server, net.Listener, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to listen: %v", err)
@@ -51,9 +51,10 @@ func StartGRPCServer(validators map[string]validator.SpecValidator, logger *util
 	systemv1.RegisterSystemConfigServiceServer(grpcServer, webcontroller.NewSystemServiceServer(validators, logger, resourceService, schemaProvider))
 
 	go func() {
-		log.Printf("Starting gRPC server on port %d...", grpcPort)
+		logger.Infof("main", "Starting gRPC server on port %d...", grpcPort)
 		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve gRPC: %v", err)
+			logger.Errorf("main", "Failed to serve gRPC: %v", err)
+			cancel() // 触发上下文取消，通知主程序优雅关闭
 		}
 	}()
 
@@ -61,10 +62,7 @@ func StartGRPCServer(validators map[string]validator.SpecValidator, logger *util
 }
 
 // 启动HTTP服务器（gRPC-Gateway）
-func StartHTTPServer(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
+func StartHTTPServer(ctx context.Context, logger *utils.Logger, cancel context.CancelFunc) {
 	// 配置支持protobuf Any类型的marshaler
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.HTTPBodyMarshaler{
@@ -82,29 +80,24 @@ func StartHTTPServer(ctx context.Context) error {
 
 	// 注册SystemService的HTTP处理程序
 	if err := systemv1.RegisterSystemConfigServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf("localhost:%d", grpcPort), opts); err != nil {
-		return fmt.Errorf("failed to register system service gateway: %v", err)
+		logger.Errorf("main", "Failed to register system service gateway: %v", err)
+		cancel() // 触发上下文取消，通知主程序优雅关闭
+		return
 	}
 
-	log.Printf("Starting HTTP server on port %d...", httpPort)
-	return http.ListenAndServe(fmt.Sprintf(":%d", httpPort), mux)
+	logger.Infof("main", "Starting HTTP server on port %d...", httpPort)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", httpPort), mux); err != nil {
+		logger.Errorf("main", "HTTP server failed: %v", err)
+		cancel() // 触发上下文取消，通知主程序优雅关闭
+	}
 }
 
-// initializeLogger 初始化日志系统并设置优雅关闭
+// initializeLogger 初始化日志系统
 func initializeLogger() (*utils.Logger, error) {
 	// 初始化日志系统
 	if err := utils.InitLogger("xtopus"); err != nil {
 		return nil, fmt.Errorf("failed to initialize logger: %v", err)
 	}
-
-	// 设置信号处理，确保优雅关闭
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		utils.Info("main", "Received shutdown signal, closing logger...")
-		utils.CloseLogger()
-		os.Exit(0)
-	}()
 
 	return utils.GlobalLogger, nil
 }
@@ -117,7 +110,7 @@ type Application struct {
 }
 
 // initializeApplication 初始化三层架构应用
-func initializeApplication(configDir string, logger *utils.Logger, ctx context.Context, statusRepo repository.StatusRepository) (*grpc.Server, error) {
+func initializeApplication(configDir string, logger *utils.Logger, ctx context.Context, statusRepo repository.StatusRepository, cancel context.CancelFunc) (*grpc.Server, error) {
 
 	// 初始化校验器映射
 	validators := initializeValidators()
@@ -132,54 +125,41 @@ func initializeApplication(configDir string, logger *utils.Logger, ctx context.C
 	schemaProvider := schema.NewProvider()
 
 	// 启动gRPC服务器
-	grpcServer, _, err := StartGRPCServer(validators, logger, resourceService, schemaProvider)
+	grpcServer, _, err := StartGRPCServer(ctx, validators, logger, resourceService, schemaProvider, cancel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start gRPC server: %v", err)
 	}
 
 	// 启动HTTP服务器
-	go func() {
-		if err := StartHTTPServer(ctx); err != nil {
-			log.Fatalf("Failed to start HTTP server: %v", err)
-		}
-	}()
+	go StartHTTPServer(ctx, logger, cancel)
 
 	return grpcServer, nil
 }
 
 // initializeValidators 初始化校验器映射
+// 使用自动扫描注册系统，支持自动发现和注册所有 *ConfigurationSpec 类型
 func initializeValidators() map[string]validator.SpecValidator {
-	validators := make(map[string]validator.SpecValidator)
+	// 创建自动校验器注册表
+	registry := validator.NewAutoValidatorRegistry()
 
-	// 使用 proto 定义创建校验器
-	validators["HostsConfiguration"] = validator.NewProtoValidator(
-		"HostsConfiguration",
-		&systemv1.HostsConfigurationSpec{},
-	)
+	// 这里可以注册特殊的校验器覆盖（如果某些类型需要特殊校验逻辑）
+	// 例如：registry.RegisterOverride("SpecialConfiguration", customValidator)
 
-	// 添加 TimeConfiguration 校验器
-	validators["TimeConfiguration"] = validator.NewProtoValidator(
-		"TimeConfiguration",
-		&systemv1.TimeConfigurationSpec{},
-	)
+	// 自动扫描并注册所有配置类型的校验器
+	if err := registry.AutoScan(); err != nil {
+		// 如果自动扫描失败，记录错误但不中断程序
+		// 可以考虑降级到手动注册或者返回错误
+		panic(fmt.Sprintf("Failed to auto-scan validators: %v", err))
+	}
 
-	// 添加 NetworkConfiguration 校验器
-	validators["NetworkConfiguration"] = validator.NewProtoValidator(
-		"NetworkConfiguration",
-		&systemv1.NetworkConfigurationSpec{},
-	)
-
-	// 添加 BondConfiguration 校验器
-	validators["BondConfiguration"] = validator.NewProtoValidator(
-		"BondConfiguration",
-		&systemv1.BondConfigurationSpec{},
-	)
-
-	return validators
+	// 返回注册的校验器映射
+	return registry.GetValidators()
 }
 
 func main() {
 	configDir := flag.String("config-dir", "etc/cr.d", "Path to configuration directory")
+	statusDir := flag.String("status-dir", "etc/status", "Path to status directory")
+	nodeDir := flag.String("node-dir", "etc/nodes", "Path to node configuration directory")
 	enableAPI := flag.Bool("enable-api", true, "Enable HTTP/gRPC API")
 	flag.Parse()
 
@@ -194,13 +174,28 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// 统一的信号处理
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		logger.Info("main", "Received shutdown signal, initiating graceful shutdown...")
+		cancel() // 触发上下文取消，通知所有组件优雅关闭
+	}()
+
 	logger.Info("main", "Initializing xtopus operator with three-tier architecture...")
 
-	// 初始化 StatusRepository
-	statusRepo := repository.NewMemoryStatusRepository(logger)
+	// 生成节点配置文件
+	if err := utils.GenerateNodeConfigFile(*nodeDir); err != nil {
+		logger.Errorf("main", "Failed to generate node configuration file: %v", err)
+		// 不中断程序，继续运行
+	}
+
+	// 初始化基于文件的 StatusRepository
+	statusRepo := repository.NewFileStatusRepository(*statusDir, logger)
 
 	// 启动传统的文件监控控制器（保持现有功能）
-	controller, err := controller.NewController(*configDir, statusRepo, logger)
+	controller, err := controller.NewController(*configDir, *nodeDir, statusRepo, logger)
 	if err != nil {
 		logger.Fatal("main", "Failed to create controller: "+err.Error())
 	}
@@ -208,30 +203,31 @@ func main() {
 	// 启动控制器
 	go func() {
 		if err := controller.Run(); err != nil {
-			logger.Fatal("main", "Error running controller: "+err.Error())
+			logger.Errorf("main", "Error running controller: %v", err)
+			cancel() // 控制器出错时触发优雅关闭
 		}
 	}()
 
 	var grpcServer *grpc.Server
 	if *enableAPI {
 		// 初始化三层架构
-		grpcServer, err = initializeApplication(*configDir, logger, ctx, statusRepo)
+		grpcServer, err = initializeApplication(*configDir, logger, ctx, statusRepo, cancel)
 		if err != nil {
 			logger.Fatal("main", "Failed to initialize application: "+err.Error())
 		}
-		// 确保在程序退出时优雅关闭gRPC服务器
-		defer func() {
-			if grpcServer != nil {
-				grpcServer.GracefulStop()
-			}
-		}()
 	}
 
 	logger.Infof("main", "Starting xtopus operator with config directory: %s", *configDir)
 
-	// 等待信号
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-	log.Println("Shutting down...")
+	// 等待上下文取消（可能来自信号或组件错误）
+	<-ctx.Done()
+	logger.Info("main", "Shutting down...")
+
+	// 优雅关闭gRPC服务器
+	if grpcServer != nil {
+		logger.Info("main", "Stopping gRPC server...")
+		grpcServer.GracefulStop()
+	}
+
+	logger.Info("main", "Shutdown complete")
 }

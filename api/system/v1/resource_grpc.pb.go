@@ -25,9 +25,9 @@ type SystemConfigServiceClient interface {
 	// 获取所有资源配置
 	ListResourceConfigs(ctx context.Context, in *ListResourceConfigsRequest, opts ...grpc.CallOption) (*ListResourceConfigsResponse, error)
 	// 获取资源配置
-	GetResourceConfig(ctx context.Context, in *GetResourceConfigRequest, opts ...grpc.CallOption) (*Resource, error)
+	GetResourceConfig(ctx context.Context, in *GetResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error)
 	// 更新资源配置
-	UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*Resource, error)
+	UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error)
 	// 获取资源 JSON Schema
 	GetResourceSchemas(ctx context.Context, in *GetResourceSchemasRequest, opts ...grpc.CallOption) (*GetResourceSchemasResponse, error)
 }
@@ -49,8 +49,8 @@ func (c *systemConfigServiceClient) ListResourceConfigs(ctx context.Context, in 
 	return out, nil
 }
 
-func (c *systemConfigServiceClient) GetResourceConfig(ctx context.Context, in *GetResourceConfigRequest, opts ...grpc.CallOption) (*Resource, error) {
-	out := new(Resource)
+func (c *systemConfigServiceClient) GetResourceConfig(ctx context.Context, in *GetResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error) {
+	out := new(ResourceConfig)
 	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/GetResourceConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -58,8 +58,8 @@ func (c *systemConfigServiceClient) GetResourceConfig(ctx context.Context, in *G
 	return out, nil
 }
 
-func (c *systemConfigServiceClient) UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*Resource, error) {
-	out := new(Resource)
+func (c *systemConfigServiceClient) UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error) {
+	out := new(ResourceConfig)
 	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/UpdateResourceConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -83,9 +83,9 @@ type SystemConfigServiceServer interface {
 	// 获取所有资源配置
 	ListResourceConfigs(context.Context, *ListResourceConfigsRequest) (*ListResourceConfigsResponse, error)
 	// 获取资源配置
-	GetResourceConfig(context.Context, *GetResourceConfigRequest) (*Resource, error)
+	GetResourceConfig(context.Context, *GetResourceConfigRequest) (*ResourceConfig, error)
 	// 更新资源配置
-	UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*Resource, error)
+	UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*ResourceConfig, error)
 	// 获取资源 JSON Schema
 	GetResourceSchemas(context.Context, *GetResourceSchemasRequest) (*GetResourceSchemasResponse, error)
 	mustEmbedUnimplementedSystemConfigServiceServer()
@@ -98,10 +98,10 @@ type UnimplementedSystemConfigServiceServer struct {
 func (UnimplementedSystemConfigServiceServer) ListResourceConfigs(context.Context, *ListResourceConfigsRequest) (*ListResourceConfigsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListResourceConfigs not implemented")
 }
-func (UnimplementedSystemConfigServiceServer) GetResourceConfig(context.Context, *GetResourceConfigRequest) (*Resource, error) {
+func (UnimplementedSystemConfigServiceServer) GetResourceConfig(context.Context, *GetResourceConfigRequest) (*ResourceConfig, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetResourceConfig not implemented")
 }
-func (UnimplementedSystemConfigServiceServer) UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*Resource, error) {
+func (UnimplementedSystemConfigServiceServer) UpdateResourceConfig(context.Context, *UpdateResourceConfigRequest) (*ResourceConfig, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateResourceConfig not implemented")
 }
 func (UnimplementedSystemConfigServiceServer) GetResourceSchemas(context.Context, *GetResourceSchemasRequest) (*GetResourceSchemasResponse, error) {

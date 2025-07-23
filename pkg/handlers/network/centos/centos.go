@@ -151,7 +151,7 @@ func (h *CentOSNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelec
 	if selector == nil {
 		return false
 	}
-	return selector.MachineId != "" || selector.Ip != ""
+	return selector.MachineId != ""
 }
 
 // applyConfiguration 应用网络配置
@@ -223,7 +223,7 @@ func (h *CentOSNetworkHandler) applyConfiguration(ctx context.Context, configToA
 }
 
 // validateCentOSInterface 验证CentOS网络接口配置
-func (h *CentOSNetworkHandler) validateCentOSInterface(iface *systemv1.NetworkInterfaceSpec) error {
+func (h *CentOSNetworkHandler) validateCentOSInterface(iface *systemv1.NetworkInterface) error {
 	// 验证接口名称
 	if iface.Name == "" {
 		return fmt.Errorf("interface name cannot be empty")

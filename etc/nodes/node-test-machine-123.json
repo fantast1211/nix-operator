@@ -1,0 +1,23 @@
+{
+  "apiVersion": "system.xbrother.com/v1",
+  "kind": "NodeConfiguration",
+  "metadata": {
+    "name": "node-test-machine-123",
+    "resourceVersion": "1753269572",
+    "generation": 1,
+    "creationTime": "2025-07-23T19:19:32+08:00",
+    "deletionTime": "",
+    "labels": {},
+    "annotations": {
+      "auto-generated": "true",
+      "hostname": "QT-20220606",
+      "ip": "172.29.201.217",
+      "machine-id": "test-machine-123"
+    }
+  },
+  "spec": {
+    "type_url": "type.googleapis.com/xtopus.api.system.v1.NodeSelector",
+    "value": "ChB0ZXN0LW1hY2hpbmUtMTIz"
+  },
+  "status": null
+}

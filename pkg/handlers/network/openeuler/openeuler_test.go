@@ -256,12 +256,12 @@ func TestOpenEulerNetplan_TestMode(t *testing.T) {
 func TestValidateOpenEulerInterface(t *testing.T) {
 	tests := []struct {
 		name      string
-		iface     *systemv1.NetworkInterfaceSpec
+		iface     *systemv1.NetworkInterface
 		expectErr bool
 	}{
 		{
 			name: "valid interface with IPv4",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "192.168.1.100/24",
 				Ipv4Gateway: "192.168.1.1",
@@ -270,7 +270,7 @@ func TestValidateOpenEulerInterface(t *testing.T) {
 		},
 		{
 			name: "valid interface with IPv6",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv6Address: "2001:db8::1/64",
 			},
@@ -278,7 +278,7 @@ func TestValidateOpenEulerInterface(t *testing.T) {
 		},
 		{
 			name: "invalid interface - empty name",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "",
 				Ipv4Address: "192.168.1.100/24",
 			},
@@ -286,7 +286,7 @@ func TestValidateOpenEulerInterface(t *testing.T) {
 		},
 		{
 			name: "invalid interface - invalid IPv4",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv4Address: "invalid-ip",
 			},
@@ -294,7 +294,7 @@ func TestValidateOpenEulerInterface(t *testing.T) {
 		},
 		{
 			name: "invalid interface - invalid IPv6",
-			iface: &systemv1.NetworkInterfaceSpec{
+			iface: &systemv1.NetworkInterface{
 				Name:        "eth0",
 				Ipv6Address: "invalid-ipv6",
 			},

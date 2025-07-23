@@ -10,7 +10,8 @@
             },
             "additionalProperties": true,
             "type": "object",
-            "title": "List Resource Configs Request"
+            "title": "废弃的Resource消息，已被ResourceConfig替代\n message Resource {\n   ResourceConfig config = 1;\n   ResourceConfig effective_config = 2;\n   ResourceStatus status = 3;\n }",
+            "description": "废弃的Resource消息，已被ResourceConfig替代 message Resource {   ResourceConfig config = 1;   ResourceConfig effective_config = 2;   ResourceStatus status = 3; }"
         }
     }
 }
