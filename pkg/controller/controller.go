@@ -24,20 +24,21 @@ type OSInfo struct {
 }
 
 type Controller struct {
-	configDir  string
-	nodeDir    string
-	Handlers   map[string]Handler // key 是处理器类型，公开字段供外部访问
-	osInfo     OSInfo
-	statusRepo repository.StatusRepository
-	logger     *utils.Logger
+	configDir        string
+	nodeDir          string
+	Handlers         map[string]Handler // key 是处理器类型，公开字段供外部访问
+	osInfo           OSInfo
+	statusRepo       repository.StatusRepository
+	logger           *utils.Logger
+	nodeSelectorEval NodeSelectorEvaluator // 节点选择器评估器
 }
 
 type Handler interface {
 	// Match 检查是否支持该操作系统
 	Match(osInfo OSInfo) bool
-	// Reconcile 处理配置，返回结构化的调谐结果
+	// Reconcile 处理单个配置，返回调谐结果
 	// Handler不再负责状态管理，只返回调谐结果给Controller
-	Reconcile(ctx context.Context, config []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error)
+	Reconcile(ctx context.Context, config *systemv1.ResourceConfig) (*status.ReconcileResult, error)
 }
 
 var handlerFactories = make(map[string][]Handler)
@@ -58,8 +59,8 @@ func NewController(configDir string, nodeDir string, statusRepo repository.Statu
 	// 为每种类型选择合适的处理器
 	requiredTypes := []string{
 		"BondConfiguration",
-		"HostsConfiguration",
-		"TimeConfiguration",
+		// "HostsConfiguration",
+		// "TimeConfiguration",
 		"NetworkConfiguration",
 	}
 	for _, typeName := range requiredTypes {
@@ -86,16 +87,20 @@ func NewController(configDir string, nodeDir string, statusRepo repository.Statu
 		}
 	}
 
+	// 创建节点选择器评估器
+	nodeSelectorEval := NewNodeSelectorEvaluator(logger)
+
 	logger.Infof("controller", "Controller initialized with OS: %s %s, kernel: %s",
 		osInfo.ID, osInfo.VersionID, osInfo.KernelVer)
 
 	return &Controller{
-		configDir:  configDir,
-		nodeDir:    nodeDir,
-		Handlers:   handlers,
-		osInfo:     osInfo,
-		statusRepo: statusRepo,
-		logger:     logger,
+		configDir:        configDir,
+		nodeDir:          nodeDir,
+		Handlers:         handlers,
+		osInfo:           osInfo,
+		statusRepo:       statusRepo,
+		logger:           logger,
+		nodeSelectorEval: nodeSelectorEval,
 	}, nil
 }
 
@@ -238,7 +243,7 @@ func (c *Controller) processReconcileResults(ctx context.Context, results []*sta
 
 		// 如果有错误，记录日志但仍然更新状态
 		if result.Error != nil {
-			c.logger.Errorf("controller", "Reconcile error for %s/%s: %v", 
+			c.logger.Errorf("controller", "Reconcile error for %s/%s: %v",
 				result.Config.Kind, result.Config.Metadata.Name, result.Error)
 		}
 
@@ -247,10 +252,10 @@ func (c *Controller) processReconcileResults(ctx context.Context, results []*sta
 			result.Status.ObservedGeneration = result.Config.Metadata.Generation
 			err := c.statusRepo.SetStatusWithKind(ctx, result.Config.Metadata.Name, result.Config.Kind, result.Status)
 			if err != nil {
-				c.logger.Errorf("controller", "Failed to update status for %s/%s: %v", 
+				c.logger.Errorf("controller", "Failed to update status for %s/%s: %v",
 					result.Config.Kind, result.Config.Metadata.Name, err)
 			} else {
-				c.logger.Infof("controller", "Updated status for %s/%s: generation %d, phase %s", 
+				c.logger.Infof("controller", "Updated status for %s/%s: generation %d, phase %s",
 					result.Config.Kind, result.Config.Metadata.Name, result.Config.Metadata.Generation, result.Status.Phase)
 			}
 		}
@@ -291,16 +296,32 @@ func (c *Controller) reconcile() {
 			continue
 		}
 
-		c.logger.Infof("controller", "Reconciling %d/%d %s configs", len(configsToReconcile), len(configs), kind)
-		// 调用Handler进行调谐
-		results, err := handler.Reconcile(ctx, configsToReconcile)
+		// 使用节点选择器评估器筛选配置
+		filteredConfigs, err := c.nodeSelectorEval.FilterConfigs(ctx, configsToReconcile)
 		if err != nil {
-			c.logger.Errorf("controller", "Reconciliation error for kind %s: %v", kind, err)
+			c.logger.Errorf("controller", "Node selector evaluation error for kind %s: %v", kind, err)
 			continue
 		}
 
-		// 处理调谐结果并更新状态
-		c.processReconcileResults(ctx, results)
+		if len(filteredConfigs) == 0 {
+			c.logger.Debugf("controller", "No %s configs matched node selector", kind)
+			continue
+		}
+
+		c.logger.Infof("controller", "Reconciling %d/%d %s configs after node selector filtering", len(filteredConfigs), len(configsToReconcile), kind)
+		// 调用Handler进行调谐（现在只处理单个配置）
+		for _, config := range filteredConfigs {
+			result, err := handler.Reconcile(ctx, config)
+			if err != nil {
+				c.logger.Errorf("controller", "Reconciliation error for config %s/%s: %v", kind, config.Metadata.Name, err)
+				continue
+			}
+
+			// 处理调谐结果并更新状态
+			if result != nil {
+				c.processReconcileResults(ctx, []*status.ReconcileResult{result})
+			}
+		}
 	}
 
 	// 调谐完成后，检查并更新节点配置文件

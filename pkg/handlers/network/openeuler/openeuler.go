@@ -37,16 +37,19 @@ func NewOpenEulerNetworkHandlerForTest(osInfo controller.OSInfo) *OpenEulerNetwo
 // initializeTestManagers 初始化测试模式的网络管理器
 func (h *OpenEulerNetworkHandler) initializeTestManagers() {
 	h.managers = []types.INetworkManager{
-		NewOpenEulerIfupdownForTest(&h.osInfo),       // 优先级 1
+		// NewOpenEulerIfupdownForTest(&h.osInfo), network 服务在欧拉上好像不被支持了
 		NewOpenEulerNetworkManagerForTest(&h.osInfo), // 优先级 2
-		NewOpenEulerNetplanForTest(&h.osInfo),        // 优先级 3
 	}
 }
 
 // Match 检查是否匹配 openEuler 系统
 func (h *OpenEulerNetworkHandler) Match(osInfo controller.OSInfo) bool {
-	// 检查是否为 openEuler 系统
-	if osInfo.ID != "openeuler" {
+	utils.Infof("network", "[openEuler] Checking openEuler match: ID='%s', VersionID='%s', KernelName='%s'", osInfo.ID, osInfo.VersionID, osInfo.KernelName)
+
+	// 检查是否为 openEuler 系统（支持大小写不敏感匹配）
+	osID := strings.ToLower(osInfo.ID)
+	if osID != "openeuler" {
+		utils.Infof("network", "[openEuler] OS ID mismatch: expected 'openeuler', got '%s' (normalized: '%s')", osInfo.ID, osID)
 		return false
 	}
 
@@ -57,115 +60,46 @@ func (h *OpenEulerNetworkHandler) Match(osInfo controller.OSInfo) bool {
 }
 
 // Reconcile 执行网络配置调谐，返回结构化的调谐结果
-func (h *OpenEulerNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
-	return h.reconcileConfigs(ctx, configs)
+func (h *OpenEulerNetworkHandler) Reconcile(ctx context.Context, config *systemv1.ResourceConfig) (*status.ReconcileResult, error) {
+	utils.Infof("network", "Starting OpenEuler network configuration reconciliation for config: %s", config.Metadata.Name)
+
+	// 解析配置规格
+	networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](config.Spec)
+	if err != nil {
+		return &status.ReconcileResult{
+			Config: config,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  status.ReasonSpecError,
+				Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
+			},
+			Error: err,
+		}, nil
+	}
+
+	// 应用配置
+	return h.applyConfiguration(ctx, config, networkSpec)
 }
 
 // initializeManagers 初始化网络管理器
-// 按照用户要求的优先级：ifupdown(1) > NetworkManager(2) > Netplan(3)
+// 按照用户要求的优先级：ifupdown(1) > NetworkManager(2)
+// 注意：openEuler不支持Netplan，已移除相关代码
 func (h *OpenEulerNetworkHandler) initializeManagers() {
 	h.managers = []types.INetworkManager{
 		NewOpenEulerIfupdown(&h.osInfo),       // 1. ifupdown（传统网络脚本）- 最高优先级
 		NewOpenEulerNetworkManager(&h.osInfo), // 2. NetworkManager - 中等优先级
-		NewOpenEulerNetplan(&h.osInfo),        // 3. Netplan - 最低优先级
 	}
 
-	utils.Infof("network", "Initialized openEuler %s network managers with priority: ifupdown > NetworkManager > Netplan", h.osInfo.VersionID)
-}
-
-// reconcileConfigs 调谐网络配置
-func (h *OpenEulerNetworkHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
-	var matchedConfig *systemv1.ResourceConfig
-	var fallbackConfig *systemv1.ResourceConfig
-	var results []*status.ReconcileResult
-
-	// 遍历所有配置，查找匹配的配置和fallback配置
-	for _, config := range configs {
-		// 解析配置规格
-		networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](config.Spec)
-		if err != nil {
-			results = append(results, &status.ReconcileResult{
-				Config: config,
-				Status: &systemv1.ResourceStatus{
-					Phase:   status.PhaseError,
-					Reason:  status.ReasonSpecError,
-					Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
-				},
-				Error: err,
-			})
-			continue
-		}
-
-		// 检查nodeSelector匹配
-		if networkSpec.NodeSelector != nil && h.hasValidNodeSelector(networkSpec.NodeSelector) {
-			// 有有效的nodeSelector，检查是否匹配
-			matched, err := utils.MatchNodeSelector(networkSpec.NodeSelector)
-			if err != nil {
-				results = append(results, &status.ReconcileResult{
-					Config: config,
-					Status: &systemv1.ResourceStatus{
-						Phase:   status.PhaseError,
-						Reason:  status.ReasonNodeSelectorError,
-						Message: fmt.Sprintf("failed to match nodeSelector: %v", err),
-					},
-					Error: err,
-				})
-				continue
-			}
-
-			if matched {
-				// 找到匹配的配置
-				matchedConfig = config
-				utils.Infof("network", "Found matching openEuler network config: %s", config.Metadata.Name)
-				break
-			}
-		} else {
-			// 没有nodeSelector或nodeSelector无效，作为fallback配置
-			if fallbackConfig == nil {
-				fallbackConfig = config
-				utils.Infof("network", "Found fallback openEuler network config: %s", config.Metadata.Name)
-			}
-		}
-	}
-
-	// 确定要应用的配置
-	var configToApply *systemv1.ResourceConfig
-	if matchedConfig != nil {
-		configToApply = matchedConfig
-	} else if fallbackConfig != nil {
-		configToApply = fallbackConfig
-	}
-
-	// 应用配置
-	if configToApply != nil {
-		networkSpec, _ := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](configToApply.Spec)
-		result, err := h.applyConfiguration(ctx, configToApply, networkSpec)
-		if err != nil {
-			return results, fmt.Errorf("failed to apply openEuler network configuration: %v", err)
-		}
-		if result != nil {
-			results = append(results, result)
-		}
-	}
-
-	return results, nil
-}
-
-// hasValidNodeSelector 检查nodeSelector是否有效
-func (h *OpenEulerNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelector) bool {
-	if selector == nil {
-		return false
-	}
-	return selector.MachineId != ""
+	utils.Infof("network", "Initialized openEuler %s network managers with priority: ifupdown > NetworkManager", h.osInfo.VersionID)
 }
 
 // applyConfiguration 应用网络配置
-func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*status.ReconcileResult, error) {
+func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*status.ReconcileResult, error) {
 	// 检测并选择合适的网络管理器
 	manager, err := h.detectNetworkManager(ctx)
 	if err != nil {
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseError,
 				Reason:  status.ReasonReconcileError,
@@ -183,7 +117,7 @@ func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config
 		// 验证接口配置
 		if err := h.validateOpenEulerInterface(interfaceSpec); err != nil {
 			return &status.ReconcileResult{
-				Config: configToApply,
+				Config: config,
 				Status: &systemv1.ResourceStatus{
 					Phase:   status.PhaseError,
 					Reason:  status.ReasonSpecError,
@@ -220,7 +154,7 @@ func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config
 		changed, err := manager.ConfigureWithCheck(ctx, iface)
 		if err != nil {
 			return &status.ReconcileResult{
-				Config: configToApply,
+				Config: config,
 				Status: &systemv1.ResourceStatus{
 					Phase:   status.PhaseError,
 					Reason:  status.ReasonReconcileError,
@@ -241,7 +175,7 @@ func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config
 		utils.Info("network", "openEuler network configuration changed, reloading network services")
 		if err := manager.ReloadIfy(ctx); err != nil {
 			return &status.ReconcileResult{
-				Config: configToApply,
+				Config: config,
 				Status: &systemv1.ResourceStatus{
 					Phase:   status.PhaseError,
 					Reason:  status.ReasonReconcileError,
@@ -252,7 +186,7 @@ func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config
 		}
 		utils.Infof("network", "openEuler network configuration applied and reloaded successfully")
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseReady,
 				Reason:  status.ReasonConfigurationUpdated,
@@ -263,7 +197,7 @@ func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config
 		utils.Info("network", "openEuler network configuration unchanged, skipping network service reload")
 		utils.Infof("network", "openEuler network configuration verified, no changes needed")
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseReady,
 				Reason:  status.ReasonAppliedSuccessfully,
@@ -275,14 +209,20 @@ func (h *OpenEulerNetworkHandler) applyConfiguration(ctx context.Context, config
 
 // detectNetworkManager 检测并选择合适的网络管理器
 func (h *OpenEulerNetworkHandler) detectNetworkManager(ctx context.Context) (types.INetworkManager, error) {
-	// 按优先级检测网络管理器：ifupdown(1) > NetworkManager(2) > Netplan(3)
-	for _, manager := range h.managers {
+	utils.Infof("network", "[openEuler] Detecting openEuler network manager, checking %d managers", len(h.managers))
+
+	// 按优先级检测网络管理器：ifupdown(1) > NetworkManager(2)
+	for i, manager := range h.managers {
+		utils.Infof("network", "[openEuler] Checking manager %d: %T", i+1, manager)
 		if manager.IsInstall(ctx) {
 			utils.Info("network", fmt.Sprintf("Selected openEuler network manager: %T on %s %s", manager, h.osInfo.ID, h.osInfo.VersionID))
 			return manager, nil
+		} else {
+			utils.Infof("network", "[openEuler] Manager %T is not available", manager)
 		}
 	}
 
+	utils.Warnf("network", "No suitable network manager found for openEuler %s", h.osInfo.VersionID)
 	return nil, fmt.Errorf("no suitable network manager found for openEuler %s", h.osInfo.VersionID)
 }
 

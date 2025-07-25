@@ -31,3 +31,9 @@ type StatusRepository interface {
 	// Clear 清空所有状态缓存
 	Clear(ctx context.Context) error
 }
+
+// NodeRepository 节点配置操作接口
+type NodeRepository interface {
+	// ListNodes 列出所有节点信息
+	ListNodes(ctx context.Context) ([]*systemv1.NodeConfig, error)
+}

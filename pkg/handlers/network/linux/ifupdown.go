@@ -80,24 +80,30 @@ func (ifd *Ifupdown) Configure(ctx context.Context, iface types.Interface) error
 }
 
 func (ifd *Ifupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
+	utils.Infof("network", "Starting Linux ifupdown configuration for interface %s", iface.Name)
+
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return false, fmt.Errorf("interface name cannot be empty")
 	}
+	utils.Infof("network", "Interface %s details: IPv4=%s, IPv6=%s, MTU=%d", iface.Name, iface.IPv4Address, iface.IPv6Address, iface.MTU)
 
 	// 获取模板内容
+	utils.Info("network", "Loading Linux ifupdown template")
 	templateContent, err := utils.GetTemplateContent("ifupdown.tpl", ifupdownTemplate)
 	if err != nil {
 		return false, err
 	}
 
 	// 解析模板
+	utils.Info("network", "Parsing Linux ifupdown template")
 	tmpl, err := template.New("ifupdown").Parse(templateContent)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse ifupdown template: %v", err)
 	}
 
 	// 准备模板数据
+	utils.Info("network", "Preparing Linux ifupdown template data")
 	data := struct {
 		Interfaces map[string]types.Interface
 	}{
@@ -107,55 +113,71 @@ func (ifd *Ifupdown) ConfigureWithCheck(ctx context.Context, iface types.Interfa
 	}
 
 	// 渲染模板
+	utils.Info("network", "Rendering Linux ifupdown template")
 	var content strings.Builder
 	if err := tmpl.Execute(&content, data); err != nil {
 		return false, fmt.Errorf("failed to execute ifupdown template: %v", err)
 	}
+	utils.Info("network", "Linux ifupdown template rendered successfully")
 
 	newConfigData := []byte(content.String())
 
 	// 检查配置文件是否存在以及内容是否相同
 	configPath := "/etc/network/interfaces"
+	utils.Infof("network", "Linux ifupdown config file path: %s", configPath)
+
+	utils.Info("network", "Checking if Linux ifupdown configuration file exists")
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
+		utils.Info("network", "Linux ifupdown configuration file exists, comparing content")
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
-			utils.Debugf("network", "Ifupdown config unchanged, skipping write")
+			utils.Info("network", "Linux ifupdown config unchanged, skipping write")
 			return false, nil // 配置未变更
 		}
+		utils.Info("network", "Linux ifupdown configuration content has changed")
+	} else {
+		utils.Info("network", "Linux ifupdown configuration file does not exist, will create new one")
 	}
 
 	// 确保目标目录存在
+	utils.Infof("network", "Ensuring directory exists: %s", filepath.Dir(configPath))
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		return false, fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
 	}
 
 	// 写入配置文件
+	utils.Infof("network", "Writing Linux ifupdown configuration to file: %s", configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
 		return false, fmt.Errorf("failed to write ifupdown config: %v", err)
 	}
 
-	utils.Infof("network", "Ifupdown config updated")
+	utils.Info("network", "Linux ifupdown config updated successfully")
 	return true, nil // 配置已变更
 }
 
 func (ifd *Ifupdown) ReloadIfy(ctx context.Context) error {
+	utils.Info("network", "Restarting Linux ifupdown networking service")
 	// 重启网络服务
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	// 先尝试使用systemctl重启networking服务
+	utils.Info("network", "Attempting to restart networking service using systemctl")
 	cmd := exec.CommandContext(ctx, "systemctl", "restart", "networking")
 	if err := cmd.Run(); err == nil {
+		utils.Info("network", "Linux ifupdown networking service restarted successfully using systemctl")
 		return nil
 	}
 
 	// 如果systemctl失败，尝试使用service命令
+	utils.Info("network", "systemctl failed, attempting to restart networking service using service command")
 	cmd = exec.CommandContext(ctx, "service", "networking", "restart")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to restart networking service: %v, output: %s", err, string(output))
 	}
 
+	utils.Info("network", "Linux ifupdown networking service restarted successfully using service command")
 	return nil
 }

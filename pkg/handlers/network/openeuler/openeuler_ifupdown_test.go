@@ -192,35 +192,6 @@ func TestOpenEulerIfupdown_ReloadIfy(t *testing.T) {
 	}
 }
 
-// TestIsTruthy 测试模板辅助函数
-func TestIsTruthy(t *testing.T) {
-	tests := []struct {
-		name string
-		val  interface{}
-		want bool
-	}{
-		{"nil", nil, false},
-		{"true", true, true},
-		{"false", false, false},
-		{"empty string", "", false},
-		{"non-empty string", "hello", true},
-		{"zero int", 0, false},
-		{"non-zero int", 42, true},
-		{"zero float", 0.0, false},
-		{"non-zero float", 3.14, true},
-		{"struct", struct{}{}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := isTruthy(tt.val)
-			if got != tt.want {
-				t.Errorf("isTruthy(%v) = %v, want %v", tt.val, got, tt.want)
-			}
-		})
-	}
-}
-
 // TestBondSlaveConfiguration 测试Bond Slave配置的特殊处理
 func TestBondSlaveConfiguration(t *testing.T) {
 	// 创建一个Bond Slave接口配置

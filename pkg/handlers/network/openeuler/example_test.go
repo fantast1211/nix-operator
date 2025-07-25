@@ -34,21 +34,25 @@ func ExampleOpenEulerNetworkHandler() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	testConfigs := []*systemv1.ResourceConfig{}
-	_, err := handler.Reconcile(ctx, testConfigs)
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "example-config",
+		},
+	}
+	_, err := handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		fmt.Printf("❌ 网络配置失败: %v\n", err)
 		return
 	}
 
 	fmt.Println("✓ 网络配置成功完成")
-	fmt.Println("✓ 已按照 ifupdown > NetworkManager > Netplan 的优先级选择网络管理器")
+	fmt.Println("✓ 已按照 ifupdown > NetworkManager 的优先级选择网络管理器")
 	fmt.Println("✓ 测试模式下不会真实变更网络配置")
 
 	// Output:
 	// ✓ openEuler 系统匹配成功
 	// ✓ 网络配置成功完成
-	// ✓ 已按照 ifupdown > NetworkManager > Netplan 的优先级选择网络管理器
+	// ✓ 已按照 ifupdown > NetworkManager 的优先级选择网络管理器
 	// ✓ 测试模式下不会真实变更网络配置
 }
 
@@ -78,8 +82,7 @@ func ExampleNetworkManagerPriority() {
 		fmt.Println("选择的网络管理器: ifupdown (优先级: 1)")
 	case *OpenEulerNetworkManager:
 		fmt.Println("选择的网络管理器: NetworkManager (优先级: 2)")
-	case *OpenEulerNetplan:
-		fmt.Println("选择的网络管理器: Netplan (优先级: 3)")
+
 	default:
 		fmt.Println("未检测到支持的网络管理器")
 	}
@@ -102,8 +105,12 @@ func ExampleBondConfiguration() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	testConfigs := []*systemv1.ResourceConfig{}
-	_, err := handler.Reconcile(ctx, testConfigs)
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "bond-config",
+		},
+	}
+	_, err := handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		fmt.Printf("❌ Bond 配置失败: %v\n", err)
 		return
@@ -133,8 +140,12 @@ func ExampleDualStackConfiguration() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	testConfigs := []*systemv1.ResourceConfig{}
-	_, err := handler.Reconcile(ctx, testConfigs)
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "dual-stack-config",
+		},
+	}
+	_, err := handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		fmt.Printf("❌ 双栈配置失败: %v\n", err)
 		return

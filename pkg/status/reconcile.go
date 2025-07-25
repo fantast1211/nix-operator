@@ -25,6 +25,7 @@ const (
 	ReasonReconcileError        = "ReconcileError"
 	ReasonAppliedSuccessfully   = "AppliedSuccessfully"   // 原ReasonNoChange，表示配置已成功应用
 	ReasonConfigurationUpdated  = "ConfigurationUpdated"  // 配置有变化并成功应用
+	ReasonConfigurationCreated  = "ConfigurationCreated"  // 配置已创建，等待调谐
 	ReasonInitial               = "Initial"
 	ReasonSpecError             = "SpecError"
 	ReasonNodeSelectorError     = "NodeSelectorError"

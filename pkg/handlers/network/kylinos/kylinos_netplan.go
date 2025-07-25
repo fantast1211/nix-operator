@@ -79,13 +79,16 @@ func (np *KylinOSNetplan) Configure(ctx context.Context, iface types.Interface) 
 
 // ConfigureWithCheck 配置网络接口并检查是否有变更
 func (np *KylinOSNetplan) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
-	utils.Infof("network", "Configuring KylinOS interface %s with Netplan", iface.Name)
+	utils.Infof("network", "Starting KylinOS Netplan configuration for interface %s", iface.Name)
+	utils.Infof("network", "Interface %s details: IPv4=%s, IPv6=%s, MTU=%d", iface.Name, iface.IPv4Address, iface.IPv6Address, iface.MTU)
 
 	// 生成配置内容
+	utils.Info("network", "Generating KylinOS Netplan configuration content")
 	configContent, err := np.generateConfig(iface)
 	if err != nil {
 		return false, fmt.Errorf("failed to generate KylinOS Netplan config: %v", err)
 	}
+	utils.Info("network", "KylinOS Netplan configuration content generated successfully")
 
 	if np.testMode {
 		// 测试模式下只记录配置内容
@@ -95,29 +98,37 @@ func (np *KylinOSNetplan) ConfigureWithCheck(ctx context.Context, iface types.In
 
 	// 确定配置文件路径
 	configPath := fmt.Sprintf("/etc/netplan/50-nix-operator-%s.yaml", iface.Name)
+	utils.Infof("network", "KylinOS Netplan config file path: %s", configPath)
 
 	// 检查配置是否有变更
 	newConfigData := []byte(configContent)
+	utils.Info("network", "Checking if KylinOS Netplan configuration file exists")
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
+		utils.Info("network", "KylinOS Netplan configuration file exists, comparing content")
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
 			utils.Infof("network", "KylinOS Netplan config for %s unchanged", iface.Name)
 			return false, nil
 		}
+		utils.Info("network", "KylinOS Netplan configuration content has changed")
+	} else {
+		utils.Info("network", "KylinOS Netplan configuration file does not exist, will create new one")
 	}
 
 	// 创建配置目录
+	utils.Info("network", "Creating KylinOS Netplan configuration directory")
 	if err := os.MkdirAll("/etc/netplan", 0755); err != nil {
 		return false, fmt.Errorf("failed to create KylinOS Netplan config directory: %v", err)
 	}
 
 	// 写入配置文件
+	utils.Infof("network", "Writing KylinOS Netplan configuration to file: %s", configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
 		return false, fmt.Errorf("failed to write KylinOS Netplan config: %v", err)
 	}
 
-	utils.Infof("network", "KylinOS Netplan config for %s updated", iface.Name)
+	utils.Infof("network", "KylinOS Netplan config for %s updated successfully", iface.Name)
 	return true, nil
 }
 
@@ -161,26 +172,32 @@ func (np *KylinOSNetplan) ReloadIfy(ctx context.Context) error {
 // generateConfig 生成 Netplan 配置
 func (np *KylinOSNetplan) generateConfig(iface types.Interface) (string, error) {
 	// 获取模板内容
+	utils.Info("network", "Loading KylinOS Netplan template")
 	tmplContent, err := utils.GetTemplateContent("kylinos_netplan.tpl", np.getEmbeddedTemplate())
 	if err != nil {
 		return "", fmt.Errorf("failed to get KylinOS Netplan template: %v", err)
 	}
 
 	// 解析模板
+	utils.Info("network", "Parsing KylinOS Netplan template")
 	tmpl, err := template.New("kylinos_netplan").Parse(tmplContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse KylinOS Netplan template: %v", err)
 	}
 
 	// 准备模板数据
+	utils.Info("network", "Preparing KylinOS Netplan template data")
 	templateData := np.prepareTemplateData(iface)
+	utils.Infof("network", "Template data prepared: HasIPv4=%t, HasIPv6=%t, HasBonding=%t, Renderer=%s", templateData.HasIPv4, templateData.HasIPv6, templateData.HasBonding, templateData.Renderer)
 
 	// 渲染模板
+	utils.Info("network", "Rendering KylinOS Netplan template")
 	var result strings.Builder
 	if err := tmpl.Execute(&result, templateData); err != nil {
 		return "", fmt.Errorf("failed to execute KylinOS Netplan template: %v", err)
 	}
 
+	utils.Info("network", "KylinOS Netplan template rendered successfully")
 	return result.String(), nil
 }
 

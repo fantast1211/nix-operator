@@ -65,12 +65,12 @@ func (m *manager) UpdateStatusWithGeneration(ctx context.Context, config *system
 		return err
 	}
 
-	m.logger.Debugf("status_manager", "Updated status for %s/%s: %s (%s) with generation %d", 
+	m.logger.Debugf("status_manager", "Updated status for %s/%s: %s (%s) with generation %d",
 		config.Kind, config.Metadata.Name, phase, reason, config.Metadata.Generation)
 	return nil
 }
 
 // SetPendingStatus 设置资源为Pending状态
 func (m *manager) SetPendingStatus(ctx context.Context, config *systemv1.ResourceConfig) error {
-	return m.UpdateStatus(ctx, config, "Pending", "ConfigurationCreated", "Configuration created, waiting for reconciliation")
+	return m.UpdateStatus(ctx, config, PhasePending, ReasonConfigurationCreated, "Configuration created, waiting for reconciliation")
 }

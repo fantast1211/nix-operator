@@ -80,13 +80,16 @@ func (nm *KylinOSNetworkManager) Configure(ctx context.Context, iface types.Inte
 
 // ConfigureWithCheck 配置网络接口并检查是否有变更
 func (nm *KylinOSNetworkManager) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
-	utils.Infof("network", "Configuring KylinOS interface %s with NetworkManager", iface.Name)
+	utils.Infof("network", "Starting KylinOS NetworkManager configuration for interface %s", iface.Name)
+	utils.Infof("network", "Interface %s details: IPv4=%s, IPv6=%s, MTU=%d", iface.Name, iface.IPv4Address, iface.IPv6Address, iface.MTU)
 
 	// 生成配置内容
+	utils.Info("network", "Generating KylinOS NetworkManager configuration content")
 	configContent, err := nm.generateConfig(iface)
 	if err != nil {
 		return false, fmt.Errorf("failed to generate KylinOS NetworkManager config: %v", err)
 	}
+	utils.Info("network", "KylinOS NetworkManager configuration content generated successfully")
 
 	if nm.testMode {
 		// 测试模式下只记录配置内容
@@ -96,29 +99,37 @@ func (nm *KylinOSNetworkManager) ConfigureWithCheck(ctx context.Context, iface t
 
 	// 确定配置文件路径
 	configPath := fmt.Sprintf("/etc/NetworkManager/system-connections/%s.nmconnection", iface.Name)
+	utils.Infof("network", "KylinOS NetworkManager config file path: %s", configPath)
 
 	// 检查配置是否有变更
 	newConfigData := []byte(configContent)
+	utils.Info("network", "Checking if KylinOS NetworkManager configuration file exists")
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
+		utils.Info("network", "KylinOS NetworkManager configuration file exists, comparing content")
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
 			utils.Infof("network", "KylinOS NetworkManager config for %s unchanged", iface.Name)
 			return false, nil
 		}
+		utils.Info("network", "KylinOS NetworkManager configuration content has changed")
+	} else {
+		utils.Info("network", "KylinOS NetworkManager configuration file does not exist, will create new one")
 	}
 
 	// 创建配置目录
+	utils.Info("network", "Creating KylinOS NetworkManager configuration directory")
 	if err := os.MkdirAll("/etc/NetworkManager/system-connections", 0755); err != nil {
 		return false, fmt.Errorf("failed to create KylinOS NetworkManager config directory: %v", err)
 	}
 
 	// 写入配置文件
+	utils.Infof("network", "Writing KylinOS NetworkManager configuration to file: %s", configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0600); err != nil {
 		return false, fmt.Errorf("failed to write KylinOS NetworkManager config: %v", err)
 	}
 
-	utils.Infof("network", "KylinOS NetworkManager config for %s updated", iface.Name)
+	utils.Infof("network", "KylinOS NetworkManager config for %s updated successfully", iface.Name)
 	return true, nil
 }
 
@@ -147,26 +158,32 @@ func (nm *KylinOSNetworkManager) ReloadIfy(ctx context.Context) error {
 // generateConfig 生成 NetworkManager 配置
 func (nm *KylinOSNetworkManager) generateConfig(iface types.Interface) (string, error) {
 	// 获取模板内容
+	utils.Info("network", "Loading KylinOS NetworkManager template")
 	tmplContent, err := utils.GetTemplateContent("kylinos_nmconnection.tpl", nm.getEmbeddedTemplate())
 	if err != nil {
 		return "", fmt.Errorf("failed to get KylinOS NetworkManager template: %v", err)
 	}
 
 	// 解析模板
+	utils.Info("network", "Parsing KylinOS NetworkManager template")
 	tmpl, err := template.New("kylinos_nmconnection").Parse(tmplContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse KylinOS NetworkManager template: %v", err)
 	}
 
 	// 准备模板数据
+	utils.Info("network", "Preparing KylinOS NetworkManager template data")
 	templateData := nm.prepareTemplateData(iface)
+	utils.Infof("network", "Template data prepared: HasIPv4=%t, HasIPv6=%t, HasBonding=%t", templateData.HasIPv4, templateData.HasIPv6, templateData.HasBonding)
 
 	// 渲染模板
+	utils.Info("network", "Rendering KylinOS NetworkManager template")
 	var result strings.Builder
 	if err := tmpl.Execute(&result, templateData); err != nil {
 		return "", fmt.Errorf("failed to execute KylinOS NetworkManager template: %v", err)
 	}
 
+	utils.Info("network", "KylinOS NetworkManager template rendered successfully")
 	return result.String(), nil
 }
 

@@ -104,12 +104,16 @@ func (cif *CentOSIfupdown) Configure(ctx context.Context, iface types.Interface)
 }
 
 func (cif *CentOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
+	utils.Infof("network", "Starting CentOS ifupdown configuration for interface %s", iface.Name)
+
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return false, fmt.Errorf("interface name cannot be empty")
 	}
+	utils.Infof("network", "Interface %s details: IPv4=%s, IPv6=%s, MTU=%d", iface.Name, iface.IPv4Address, iface.IPv6Address, iface.MTU)
 
 	// 准备模板数据，解析 CIDR 格式的地址
+	utils.Info("network", "Preparing CentOS ifcfg template data")
 	templateData := CentOSIfcfgData{
 		Interface: iface,
 	}
@@ -124,6 +128,7 @@ func (cif *CentOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.I
 
 	// 解析 IPv4 地址和子网掩码
 	if iface.IPv4Address != "" {
+		utils.Infof("network", "Parsing IPv4 address: %s", iface.IPv4Address)
 		if strings.Contains(iface.IPv4Address, "/") {
 			// CIDR 格式：192.168.1.100/24
 			ip, ipNet, err := net.ParseCIDR(iface.IPv4Address)
@@ -132,14 +137,17 @@ func (cif *CentOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.I
 			}
 			templateData.IPv4IP = ip.String()
 			templateData.IPv4Netmask = cif.cidrToNetmask(ipNet)
+			utils.Infof("network", "IPv4 parsed: IP=%s, Netmask=%s", templateData.IPv4IP, templateData.IPv4Netmask)
 		} else {
 			// 纯 IP 地址格式
 			templateData.IPv4IP = iface.IPv4Address
+			utils.Infof("network", "IPv4 address (no CIDR): %s", templateData.IPv4IP)
 		}
 	}
 
 	// 解析 IPv6 地址和前缀
 	if iface.IPv6Address != "" {
+		utils.Infof("network", "Parsing IPv6 address: %s", iface.IPv6Address)
 		if strings.Contains(iface.IPv6Address, "/") {
 			// CIDR 格式：2001:db8::1/64
 			ip, ipNet, err := net.ParseCIDR(iface.IPv6Address)
@@ -149,65 +157,84 @@ func (cif *CentOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.I
 			templateData.IPv6IP = ip.String()
 			prefixLen, _ := ipNet.Mask.Size()
 			templateData.IPv6Prefix = strconv.Itoa(prefixLen)
+			utils.Infof("network", "IPv6 parsed: IP=%s, Prefix=%s", templateData.IPv6IP, templateData.IPv6Prefix)
 		} else {
 			// 纯 IP 地址格式
 			templateData.IPv6IP = iface.IPv6Address
+			utils.Infof("network", "IPv6 address (no CIDR): %s", templateData.IPv6IP)
 		}
 	}
 
 	// 获取模板内容
+	utils.Info("network", "Loading CentOS ifcfg template")
 	templateContent, err := utils.GetTemplateContent("centos_ifcfg.tpl", centosIfcfgTemplate)
 	if err != nil {
 		return false, err
 	}
 
 	// 解析模板
+	utils.Info("network", "Parsing CentOS ifcfg template")
 	tmpl, err := template.New("centos_ifcfg").Parse(templateContent)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse CentOS ifcfg template: %v", err)
 	}
 
 	// 渲染模板
+	utils.Info("network", "Rendering CentOS ifcfg template")
 	var content strings.Builder
 	if err := tmpl.Execute(&content, templateData); err != nil {
 		return false, fmt.Errorf("failed to execute CentOS ifcfg template: %v", err)
 	}
+	utils.Info("network", "CentOS ifcfg template rendered successfully")
 
 	newConfigData := []byte(content.String())
 
 	// 检查配置文件是否存在以及内容是否相同
 	configPath := fmt.Sprintf("/etc/sysconfig/network-scripts/ifcfg-%s", iface.Name)
+	utils.Infof("network", "CentOS ifcfg config file path: %s", configPath)
+
+	utils.Info("network", "Checking if CentOS ifcfg configuration file exists")
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
+		utils.Info("network", "CentOS ifcfg configuration file exists, comparing content")
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
-			utils.Debugf("network", "CentOS ifcfg config for interface %s unchanged, skipping write", iface.Name)
+			utils.Infof("network", "CentOS ifcfg config for interface %s unchanged, skipping write", iface.Name)
 			return false, nil // 配置未变更
 		}
+		utils.Info("network", "CentOS ifcfg configuration content has changed")
+	} else {
+		utils.Info("network", "CentOS ifcfg configuration file does not exist, will create new one")
 	}
 
 	// 确保目标目录存在
+	utils.Infof("network", "Ensuring directory exists: %s", filepath.Dir(configPath))
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		return false, fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
 	}
 
 	// 写入配置文件
+	utils.Infof("network", "Writing CentOS ifcfg configuration to file: %s", configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
 		return false, fmt.Errorf("failed to write CentOS ifcfg config: %v", err)
 	}
 
 	// 如果配置了DNS，更新 /etc/resolv.conf
 	if len(iface.Nameservers) > 0 {
+		utils.Infof("network", "Updating DNS configuration with %d nameservers", len(iface.Nameservers))
 		if err := cif.updateResolvConf(iface.Nameservers); err != nil {
 			utils.Warnf("network", "Failed to update resolv.conf: %v", err)
+		} else {
+			utils.Info("network", "DNS configuration updated successfully")
 		}
 	}
 
-	utils.Infof("network", "CentOS ifcfg configuration written for interface %s", iface.Name)
+	utils.Infof("network", "CentOS ifcfg configuration written successfully for interface %s", iface.Name)
 	return true, nil // 配置已变更
 }
 
 func (cif *CentOSIfupdown) ReloadIfy(ctx context.Context) error {
+	utils.Info("network", "Reloading CentOS ifupdown network configuration")
 	// CentOS 7.2-7.9 特定的网络重载逻辑
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -223,19 +250,20 @@ func (cif *CentOSIfupdown) ReloadIfy(ctx context.Context) error {
 	}
 
 	for _, method := range reloadMethods {
-		utils.Debugf("network", "Trying reload method: %s", method.name)
+		utils.Infof("network", "Trying CentOS network reload method: %s", method.name)
 		cmd := exec.CommandContext(ctx, method.cmd[0], method.cmd[1:]...)
 		output, err := cmd.CombinedOutput()
 		if err == nil {
-			utils.Infof("network", "Successfully reloaded network using: %s", method.name)
+			utils.Infof("network", "Successfully reloaded CentOS network using: %s", method.name)
 			// 等待网络稳定
+			utils.Info("network", "Waiting for network to stabilize...")
 			time.Sleep(3 * time.Second)
 			return nil
 		}
-		utils.Debugf("network", "Method %s failed: %v, output: %s", method.name, err, string(output))
+		utils.Infof("network", "CentOS reload method %s failed: %v, output: %s", method.name, err, string(output))
 	}
 
-	return fmt.Errorf("all network reload methods failed")
+	return fmt.Errorf("all CentOS network reload methods failed")
 }
 
 // cidrToNetmask 将 CIDR 网络转换为子网掩码

@@ -123,10 +123,14 @@ func TestOpenEulerNetworkHandler_Reconcile(t *testing.T) {
 	defer cancel()
 
 	// 测试配置
-	testConfigs := []*systemv1.ResourceConfig{}
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "test-config",
+		},
+	}
 
 	// 执行调谐
-	_, err := handler.Reconcile(ctx, testConfigs)
+	_, err := handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		t.Errorf("Reconcile() failed: %v", err)
 	}
@@ -212,45 +216,7 @@ func TestOpenEulerNetworkManager_TestMode(t *testing.T) {
 	}
 }
 
-// TestOpenEulerNetplan_TestMode 测试 Netplan 测试模式
-func TestOpenEulerNetplan_TestMode(t *testing.T) {
-	osInfo := controller.OSInfo{
-		ID:         "openeuler",
-		VersionID:  "22.03",
-		KernelName: "Linux",
-		KernelVer:  "5.10.0",
-	}
 
-	netplan := NewOpenEulerNetplanForTest(&osInfo)
-	ctx := context.Background()
-
-	// 测试检测（在测试模式下应该返回false，因为优先级最低）
-	if netplan.IsInstall(ctx) {
-		t.Error("Expected Netplan to not be detected in test mode")
-	}
-
-	// 测试配置
-	iface := types.Interface{
-		Name:        "eth0",
-		IPv4Address: "192.168.1.100/24",
-		IPv4Gateway: "192.168.1.1",
-		Nameservers: []string{"8.8.8.8"},
-	}
-
-	changed, err := netplan.ConfigureWithCheck(ctx, iface)
-	if err != nil {
-		t.Errorf("ConfigureWithCheck() failed: %v", err)
-	}
-	if !changed {
-		t.Error("Expected configuration to be changed in test mode")
-	}
-
-	// 测试重载
-	err = netplan.ReloadIfy(ctx)
-	if err != nil {
-		t.Errorf("ReloadIfy() failed: %v", err)
-	}
-}
 
 // TestValidateOpenEulerInterface 测试接口验证
 func TestValidateOpenEulerInterface(t *testing.T) {

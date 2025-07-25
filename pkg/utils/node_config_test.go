@@ -47,34 +47,20 @@ func TestGenerateNodeConfigFile(t *testing.T) {
 	}
 
 	// 验证基本字段
-	if config.APIVersion != "system.xbrother.com/v1" {
-		t.Errorf("Expected APIVersion 'system.xbrother.com/v1', got '%s'", config.APIVersion)
+	if config.Name != "node-"+nodeInfo.MachineID {
+		t.Errorf("Expected name 'node-%s', got '%s'", nodeInfo.MachineID, config.Name)
 	}
-	if config.Kind != "NodeConfiguration" {
-		t.Errorf("Expected Kind 'NodeConfiguration', got '%s'", config.Kind)
+	if config.Hostname != nodeInfo.Hostname {
+		t.Errorf("Expected hostname '%s', got '%s'", nodeInfo.Hostname, config.Hostname)
 	}
-	if config.Metadata.Name != "node-"+nodeInfo.MachineID {
-		t.Errorf("Expected metadata name 'node-%s', got '%s'", nodeInfo.MachineID, config.Metadata.Name)
+	if config.IP != nodeInfo.IP {
+		t.Errorf("Expected IP '%s', got '%s'", nodeInfo.IP, config.IP)
 	}
-
-	// 验证spec内容
-	if config.Spec == nil {
-		t.Fatal("Spec should not be nil")
+	if config.MachineID != nodeInfo.MachineID {
+		t.Errorf("Expected MachineID '%s', got '%s'", nodeInfo.MachineID, config.MachineID)
 	}
-
-	// 验证注解中的信息
-	if config.Metadata.Annotations == nil {
-		t.Fatal("Annotations should not be nil")
-	}
-
-	if config.Metadata.Annotations["machine-id"] != nodeInfo.MachineID {
-		t.Errorf("Expected machine-id '%s', got '%s'", nodeInfo.MachineID, config.Metadata.Annotations["machine-id"])
-	}
-	if config.Metadata.Annotations["ip"] != nodeInfo.IP {
-		t.Errorf("Expected ip '%s', got '%s'", nodeInfo.IP, config.Metadata.Annotations["ip"])
-	}
-	if config.Metadata.Annotations["hostname"] != nodeInfo.Hostname {
-		t.Errorf("Expected hostname '%s', got '%s'", nodeInfo.Hostname, config.Metadata.Annotations["hostname"])
+	if config.LastModified == "" {
+		t.Error("LastModified should not be empty")
 	}
 }
 

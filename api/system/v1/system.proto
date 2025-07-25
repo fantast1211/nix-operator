@@ -126,11 +126,14 @@ message HostEntry {
 
 // 时间配置项
 message TimeConfigurationSpec {
+  // 节点选择器
+  NodeSelector node_selector = 1;
+
   // 时区设置（如 Asia/Shanghai）
-  string timezone = 1;
+  string timezone = 2;
 
   // NTP 配置
-  NtpConfig ntp = 2;
+  NtpConfig ntp = 3;
 }
 
 // NTP 配置

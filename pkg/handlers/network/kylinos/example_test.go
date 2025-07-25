@@ -44,20 +44,18 @@ func ExampleKylinOSNetworkHandler_basicUsage(t *testing.T) {
 	}
 
 	// 创建网络配置
-	testConfigs := []*systemv1.ResourceConfig{
-		{
-			Metadata: &systemv1.Metadata{
-				Name: "kylin-network-config",
-			},
-			Spec: specData,
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "kylin-network-config",
 		},
+		Spec: specData,
 	}
 
 	// 应用网络配置
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err = handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		t.Fatalf("Failed to reconcile network config: %v", err)
 	}
@@ -104,18 +102,16 @@ func ExampleKylinOSNetworkHandler_bondingConfiguration(t *testing.T) {
 	}
 
 	// 创建绑定网络配置
-	testConfigs := []*systemv1.ResourceConfig{
-		{
-			Metadata: &systemv1.Metadata{
-				Name: "kylin-bonding-config",
-			},
-			Spec: specData,
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "kylin-bonding-config",
 		},
+		Spec: specData,
 	}
 
 	// 应用绑定网络配置
 	ctx := context.Background()
-	_, err = handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		t.Fatalf("Failed to reconcile bonding config: %v", err)
 	}
@@ -157,18 +153,16 @@ func ExampleKylinOSNetworkHandler_ipv6Configuration(t *testing.T) {
 	}
 
 	// 创建 IPv6 网络配置
-	testConfigs := []*systemv1.ResourceConfig{
-		{
-			Metadata: &systemv1.Metadata{
-				Name: "kylin-ipv6-config",
-			},
-			Spec: specData,
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "kylin-ipv6-config",
 		},
+		Spec: specData,
 	}
 
 	// 应用 IPv6 网络配置
 	ctx := context.Background()
-	_, err = handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		t.Fatalf("Failed to reconcile IPv6 config: %v", err)
 	}
@@ -215,18 +209,16 @@ func ExampleKylinOSNetworkHandler_multipleInterfaces(t *testing.T) {
 	}
 
 	// 创建多接口网络配置
-	testConfigs := []*systemv1.ResourceConfig{
-		{
-			Metadata: &systemv1.Metadata{
-				Name: "kylin-multi-interface-config",
-			},
-			Spec: specData,
+	testConfig := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "kylin-multi-interface-config",
 		},
+		Spec: specData,
 	}
 
 	// 应用多接口网络配置
 	ctx := context.Background()
-	_, err = handler.Reconcile(ctx, testConfigs)
+	_, err = handler.Reconcile(ctx, testConfig)
 	if err != nil {
 		t.Fatalf("Failed to reconcile multi-interface config: %v", err)
 	}

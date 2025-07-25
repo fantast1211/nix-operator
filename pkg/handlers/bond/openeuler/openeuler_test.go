@@ -194,11 +194,7 @@ func TestOpenEulerBondHandler_detectBondManager(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 模拟Netplan环境
-	netplanDir := filepath.Join(tempDir, "netplan")
-	if err := os.MkdirAll(filepath.Join(netplanDir, "etc", "netplan"), 0755); err != nil {
-		t.Fatal(err)
-	}
+
 
 	// 模拟Ifupdown环境
 	ifupdownDir := filepath.Join(tempDir, "ifupdown")
@@ -245,8 +241,7 @@ func TestOpenEulerBondHandler_detectBondManager(t *testing.T) {
 			switch manager.(type) {
 			case *OpenEulerBondNetworkManager:
 				managerType = "NetworkManager"
-			case *OpenEulerBondNetplan:
-				managerType = "Netplan"
+
 			case *OpenEulerBondIfupdown:
 				managerType = "Ifupdown"
 			default:
@@ -281,43 +276,7 @@ func TestOpenEulerBondHandler_Reconcile(t *testing.T) {
 	t.Log("Bond configurations processed successfully")
 }
 
-// TestOpenEulerBondHandler_hasValidNodeSelector 测试nodeSelector验证
-func TestOpenEulerBondHandler_hasValidNodeSelector(t *testing.T) {
-	tests := []struct {
-		name         string
-		nodeSelector *systemv1.NodeSelector
-		expected     bool
-	}{
-		{
-			name:         "nil nodeSelector should be invalid",
-			nodeSelector: nil,
-			expected:     false,
-		},
-		{
-			name: "nodeSelector with MachineId should be valid",
-			nodeSelector: &systemv1.NodeSelector{
-				MachineId: "test-machine-id",
-			},
-			expected: true,
-		},
 
-		{
-			name: "empty nodeSelector should be invalid",
-			nodeSelector: &systemv1.NodeSelector{},
-			expected: false,
-		},
-	}
-
-	handler := NewOpenEulerBondHandler()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := handler.hasValidNodeSelector(tt.nodeSelector)
-			if result != tt.expected {
-				t.Errorf("hasValidNodeSelector() = %v, expected %v", result, tt.expected)
-			}
-		})
-	}
-}
 
 // TestOpenEulerBondHandler_reconcileConfigs 测试配置调谐功能
 func TestOpenEulerBondHandler_reconcileConfigs(t *testing.T) {

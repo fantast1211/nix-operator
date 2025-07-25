@@ -45,8 +45,11 @@ func (h *KylinOSNetworkHandler) initializeTestManagers() {
 
 // Match 检查是否匹配 KylinOS 系统
 func (h *KylinOSNetworkHandler) Match(osInfo controller.OSInfo) bool {
-	// 检查是否为 KylinOS 系统
-	if osInfo.ID != "kylin" {
+	// 检查是否为 KylinOS 系统（支持大小写不敏感匹配）
+	osID := strings.ToLower(osInfo.ID)
+	utils.Infof("network", "[KylinOS] Checking OS ID: '%s' (lowercase: '%s')", osInfo.ID, osID)
+	if osID != "kylin" {
+		utils.Infof("network", "[KylinOS] OS ID '%s' does not match 'kylin'", osInfo.ID)
 		return false
 	}
 
@@ -57,8 +60,25 @@ func (h *KylinOSNetworkHandler) Match(osInfo controller.OSInfo) bool {
 }
 
 // Reconcile 执行网络配置调谐
-func (h *KylinOSNetworkHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
-	return h.reconcileConfigs(ctx, configs)
+func (h *KylinOSNetworkHandler) Reconcile(ctx context.Context, config *systemv1.ResourceConfig) (*status.ReconcileResult, error) {
+	utils.Infof("network", "Starting KylinOS network configuration reconciliation for config: %s", config.Metadata.Name)
+
+	// 解析配置规格
+	networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](config.Spec)
+	if err != nil {
+		return &status.ReconcileResult{
+			Config: config,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  status.ReasonSpecError,
+				Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
+			},
+			Error: err,
+		}, nil
+	}
+
+	// 应用配置
+	return h.applyConfiguration(ctx, config, networkSpec)
 }
 
 // initializeManagers 初始化网络管理器
@@ -73,97 +93,13 @@ func (h *KylinOSNetworkHandler) initializeManagers() {
 	utils.Infof("network", "Initialized KylinOS %s network managers with priority: ifupdown > NetworkManager > Netplan", h.osInfo.VersionID)
 }
 
-// reconcileConfigs 调谐网络配置
-func (h *KylinOSNetworkHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
-	var results []*status.ReconcileResult
-	var matchedConfig *systemv1.ResourceConfig
-	var fallbackConfig *systemv1.ResourceConfig
-
-	// 遍历所有配置，查找匹配的配置和fallback配置
-	for _, config := range configs {
-		// 解析配置规格
-		networkSpec, err := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](config.Spec)
-		if err != nil {
-			results = append(results, &status.ReconcileResult{
-				Config: config,
-				Status: &systemv1.ResourceStatus{
-					Phase:   status.PhaseError,
-					Reason:  status.ReasonSpecError,
-					Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
-				},
-				Error: err,
-			})
-			continue
-		}
-
-		// 检查nodeSelector匹配
-		if networkSpec.NodeSelector != nil && h.hasValidNodeSelector(networkSpec.NodeSelector) {
-			// 有有效的nodeSelector，检查是否匹配
-			matched, err := utils.MatchNodeSelector(networkSpec.NodeSelector)
-			if err != nil {
-				results = append(results, &status.ReconcileResult{
-					Config: config,
-					Status: &systemv1.ResourceStatus{
-						Phase:   status.PhaseError,
-						Reason:  status.ReasonNodeSelectorError,
-						Message: fmt.Sprintf("failed to match nodeSelector: %v", err),
-					},
-					Error: err,
-				})
-				continue
-			}
-
-			if matched {
-				// 找到匹配的配置
-				matchedConfig = config
-				utils.Infof("network", "Found matching KylinOS network config: %s", config.Metadata.Name)
-				break
-			}
-		} else {
-			// 没有nodeSelector或nodeSelector无效，作为fallback配置
-			if fallbackConfig == nil {
-				fallbackConfig = config
-				utils.Infof("network", "Found fallback KylinOS network config: %s", config.Metadata.Name)
-			}
-		}
-	}
-
-	// 确定要应用的配置
-	var configToApply *systemv1.ResourceConfig
-	if matchedConfig != nil {
-		configToApply = matchedConfig
-	} else if fallbackConfig != nil {
-		configToApply = fallbackConfig
-	} else {
-		return results, nil // 没有配置可以应用
-	}
-
-	// 应用配置
-	networkSpec, _ := utils.UnmarshalSpec[*systemv1.NetworkConfigurationSpec](configToApply.Spec)
-	result, err := h.applyConfiguration(ctx, configToApply, networkSpec)
-	if err != nil {
-		return results, fmt.Errorf("failed to apply KylinOS network configuration: %v", err)
-	}
-	results = append(results, result)
-
-	return results, nil
-}
-
-// hasValidNodeSelector 检查nodeSelector是否有效
-func (h *KylinOSNetworkHandler) hasValidNodeSelector(selector *systemv1.NodeSelector) bool {
-	if selector == nil {
-		return false
-	}
-	return selector.MachineId != ""
-}
-
 // applyConfiguration 应用网络配置
-func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*status.ReconcileResult, error) {
+func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, config *systemv1.ResourceConfig, networkSpec *systemv1.NetworkConfigurationSpec) (*status.ReconcileResult, error) {
 	// 检测并选择合适的网络管理器
 	manager, err := h.detectNetworkManager(ctx)
 	if err != nil {
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseError,
 				Reason:  status.ReasonReconcileError,
@@ -181,7 +117,7 @@ func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, configTo
 		// 验证接口配置
 		if err := h.validateKylinOSInterface(interfaceSpec); err != nil {
 			return &status.ReconcileResult{
-				Config: configToApply,
+				Config: config,
 				Status: &systemv1.ResourceStatus{
 					Phase:   status.PhaseError,
 					Reason:  status.ReasonSpecError,
@@ -218,7 +154,7 @@ func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, configTo
 		changed, err := manager.ConfigureWithCheck(ctx, iface)
 		if err != nil {
 			return &status.ReconcileResult{
-				Config: configToApply,
+				Config: config,
 				Status: &systemv1.ResourceStatus{
 					Phase:   status.PhaseError,
 					Reason:  status.ReasonReconcileError,
@@ -237,7 +173,7 @@ func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, configTo
 		utils.Info("network", "KylinOS network configuration changed, reloading network services")
 		if err := manager.ReloadIfy(ctx); err != nil {
 			return &status.ReconcileResult{
-				Config: configToApply,
+				Config: config,
 				Status: &systemv1.ResourceStatus{
 					Phase:   status.PhaseError,
 					Reason:  status.ReasonReconcileError,
@@ -247,7 +183,7 @@ func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, configTo
 			}, nil
 		}
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseReady,
 				Reason:  status.ReasonConfigurationUpdated,
@@ -257,7 +193,7 @@ func (h *KylinOSNetworkHandler) applyConfiguration(ctx context.Context, configTo
 	} else {
 		utils.Info("network", "KylinOS network configuration unchanged, skipping network service reload")
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseReady,
 				Reason:  status.ReasonAppliedSuccessfully,

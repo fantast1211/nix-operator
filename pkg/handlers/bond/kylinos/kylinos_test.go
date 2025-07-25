@@ -288,16 +288,14 @@ func TestKylinOSBondHandler_Reconcile(t *testing.T) {
 		t.Fatalf("Failed to create Any from bondSpec: %v", err)
 	}
 
-	configs := []*systemv1.ResourceConfig{
-		{
-			Metadata: &systemv1.Metadata{
-				Name: "test-bond",
-			},
-			Spec: bondSpecAny,
+	config := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "test-bond",
 		},
+		Spec: bondSpecAny,
 	}
 
-	_, err = handler.Reconcile(ctx, configs)
+	_, err = handler.Reconcile(ctx, config)
 	if err != nil {
 		t.Errorf("Reconcile() error = %v", err)
 		return

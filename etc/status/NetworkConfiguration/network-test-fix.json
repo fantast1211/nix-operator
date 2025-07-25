@@ -1,0 +1,6 @@
+{
+  "phase":  "Error",
+  "reason":  "DetectManagerError",
+  "message":  "failed to detect network manager: no supported network manager found on ubuntu 22.04",
+  "observedGeneration":  1
+}

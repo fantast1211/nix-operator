@@ -229,8 +229,8 @@ func (obi *OpenEulerBondIfupdown) ReloadIfy(ctx context.Context) error {
 		utils.Warnf("bond", "Failed to load bonding module: %v, output: %s", err, string(output))
 	}
 
-	// 2. 重启网络服务
-	cmd = exec.CommandContext(ctx, "systemctl", "restart", "network")
+	// 2. 尝试重新加载网络配置（更温和的方式）
+	cmd = exec.CommandContext(ctx, "systemctl", "reload-or-restart", "network")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// 如果network服务不可用，尝试使用NetworkManager
@@ -238,7 +238,9 @@ func (obi *OpenEulerBondIfupdown) ReloadIfy(ctx context.Context) error {
 		cmd = exec.CommandContext(ctx, "systemctl", "restart", "NetworkManager")
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("failed to restart network services: %v, output: %s", err, string(output))
+			// 如果NetworkManager也失败，尝试手动启动bond接口
+			utils.Warnf("bond", "Failed to restart NetworkManager: %v, trying manual interface activation", err)
+			return obi.manualActivateBond(ctx)
 		}
 	}
 
@@ -276,6 +278,36 @@ func (obi *OpenEulerBondIfupdown) cidrToNetmask(ipNet *net.IPNet) string {
 		return fmt.Sprintf("%d.%d.%d.%d", mask[0], mask[1], mask[2], mask[3])
 	}
 	return ""
+}
+
+// manualActivateBond 手动激活bond接口
+func (obi *OpenEulerBondIfupdown) manualActivateBond(ctx context.Context) error {
+	utils.Infof("bond", "Attempting manual bond interface activation")
+	
+	// 1. 尝试使用ifup命令激活所有bond接口
+	cmd := exec.CommandContext(ctx, "bash", "-c", "for f in /etc/sysconfig/network-scripts/ifcfg-bond*; do [ -f \"$f\" ] && ifup $(basename $f | sed 's/ifcfg-//'); done")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		utils.Warnf("bond", "Failed to activate bond interfaces with ifup: %v, output: %s", err, string(output))
+	} else {
+		utils.Infof("bond", "Bond interfaces activated with ifup")
+	}
+	
+	// 2. 等待接口稳定
+	time.Sleep(3 * time.Second)
+	
+	// 3. 验证bond接口是否创建成功
+	cmd = exec.CommandContext(ctx, "ip", "link", "show", "type", "bond")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to verify bond interfaces after manual activation: %v", err)
+	}
+	
+	if len(strings.TrimSpace(string(output))) == 0 {
+		return fmt.Errorf("no bond interfaces found after manual activation")
+	}
+	
+	utils.Infof("bond", "Manual bond activation completed successfully")
+	return nil
 }
 
 // 测试模式相关方法

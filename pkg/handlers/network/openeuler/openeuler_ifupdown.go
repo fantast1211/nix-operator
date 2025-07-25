@@ -125,6 +125,8 @@ func (oif *OpenEulerIfupdown) Configure(ctx context.Context, iface types.Interfa
 }
 
 func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
+	utils.Infof("network", "Starting openEuler ifupdown configuration for interface %s", iface.Name)
+
 	// 测试模式下模拟配置逻辑
 	if oif.testMode {
 		return oif.mockConfigureWithCheck(iface)
@@ -135,8 +137,11 @@ func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface type
 		return false, fmt.Errorf("interface name cannot be empty")
 	}
 
+	utils.Infof("network", "Interface validation passed for %s", iface.Name)
+
 	// 验证IPv4地址格式
 	if iface.IPv4Address != "" {
+		utils.Infof("network", "Validating IPv4 address format: %s", iface.IPv4Address)
 		if _, _, err := net.ParseCIDR(iface.IPv4Address); err != nil {
 			return false, fmt.Errorf("invalid IPv4 CIDR format: %s", iface.IPv4Address)
 		}
@@ -144,6 +149,7 @@ func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface type
 
 	// 验证IPv6地址格式
 	if iface.IPv6Address != "" {
+		utils.Infof("network", "Validating IPv6 address format: %s", iface.IPv6Address)
 		if _, _, err := net.ParseCIDR(iface.IPv6Address); err != nil {
 			return false, fmt.Errorf("invalid IPv6 CIDR format: %s", iface.IPv6Address)
 		}
@@ -159,7 +165,7 @@ func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface type
 		BondingSlave: iface.BondingSlave,
 	}
 
-	// 调试日志：输出bond配置信息
+	// 输出bond配置信息
 	if iface.BondingSlave != nil && iface.BondingSlave.Enabled {
 		utils.Infof("network", "Bond slave configuration detected for interface %s: master=%s",
 			iface.Name, iface.BondingSlave.Master)
@@ -213,71 +219,73 @@ func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface type
 	}
 
 	// 获取模板内容
+	utils.Infof("network", "Loading openEuler ifcfg template for interface %s", iface.Name)
 	templateContent, err := utils.GetTemplateContent("openeuler_ifcfg.tpl", openeulerIfcfgTemplate)
 	if err != nil {
 		return false, err
 	}
 
-	// 解析模板，添加必要的函数
-	tmpl, err := template.New("openeuler_ifcfg").Funcs(template.FuncMap{
-		"add": func(a, b int) int { return a + b },
-		"and": func(args ...interface{}) bool {
-			for _, arg := range args {
-				if !isTruthy(arg) {
-					return false
-				}
-			}
-			return true
-		},
-		"not": func(arg interface{}) bool {
-			return !isTruthy(arg)
-		},
-	}).Parse(templateContent)
+	// 解析模板
+	tmpl, err := template.New("openeuler_ifcfg").Parse(templateContent)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse openEuler ifcfg template: %v", err)
 	}
 
+	utils.Infof("network", "Template parsed successfully for interface %s", iface.Name)
+
 	// 渲染模板
+	utils.Infof("network", "Rendering ifcfg configuration template for interface %s", iface.Name)
 	var content strings.Builder
 	if err := tmpl.Execute(&content, templateData); err != nil {
 		return false, fmt.Errorf("failed to execute openEuler ifcfg template: %v", err)
 	}
 
 	newConfigData := []byte(content.String())
+	utils.Infof("network", "Template rendered successfully for interface %s, config size: %d bytes", iface.Name, len(newConfigData))
 
 	// 检查配置文件是否存在以及内容是否相同
 	configPath := fmt.Sprintf("/etc/sysconfig/network-scripts/ifcfg-%s", iface.Name)
+	utils.Infof("network", "Checking existing configuration file: %s", configPath)
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
-			utils.Debugf("network", "openEuler ifcfg config for interface %s unchanged, skipping write", iface.Name)
+			utils.Infof("network", "openEuler ifcfg config for interface %s unchanged, skipping write", iface.Name)
 			return false, nil // 配置未变更
 		}
+		utils.Infof("network", "Configuration changed for interface %s, updating file", iface.Name)
+	} else {
+		utils.Infof("network", "Configuration file does not exist for interface %s, creating new file", iface.Name)
 	}
 
 	// 确保目标目录存在
+	utils.Infof("network", "Ensuring target directory exists: %s", filepath.Dir(configPath))
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		return false, fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
 	}
 
 	// 写入配置文件
+	utils.Infof("network", "Writing ifcfg configuration file for interface %s to %s", iface.Name, configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
 		return false, fmt.Errorf("failed to write openEuler ifcfg config: %v", err)
 	}
 
 	// 如果配置了DNS，更新 /etc/resolv.conf
 	if len(iface.Nameservers) > 0 {
+		utils.Infof("network", "Updating DNS configuration with %d nameservers", len(iface.Nameservers))
 		if err := oif.updateResolvConf(iface.Nameservers); err != nil {
 			utils.Warnf("network", "Failed to update /etc/resolv.conf: %v", err)
+		} else {
+			utils.Infof("network", "DNS configuration updated successfully")
 		}
 	}
 
-	utils.Infof("network", "openEuler ifcfg configuration written for interface %s", iface.Name)
+	utils.Infof("network", "openEuler ifcfg configuration written successfully for interface %s", iface.Name)
 	return true, nil // 配置已变更
 }
 
 func (oif *OpenEulerIfupdown) ReloadIfy(ctx context.Context) error {
+	utils.Info("network", "Reloading openEuler ifupdown network configuration")
 	// 测试模式下模拟重载逻辑
 	if oif.testMode {
 		return oif.mockReloadIfy()
@@ -287,15 +295,94 @@ func (oif *OpenEulerIfupdown) ReloadIfy(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// 重启网络服务
-	cmd := exec.CommandContext(ctx, "systemctl", "restart", "network")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to restart openEuler network service: %v, output: %s", err, string(output))
+	// 尝试多种重启网络的方法，按优先级排序
+	reloadMethods := []struct {
+		name string
+		cmd  []string
+	}{
+		{"systemctl restart network", []string{"systemctl", "restart", "network"}},
+		{"service network restart", []string{"service", "network", "restart"}},
+		{"systemctl restart NetworkManager", []string{"systemctl", "restart", "NetworkManager"}},
+		{"systemctl restart systemd-networkd", []string{"systemctl", "restart", "systemd-networkd"}},
 	}
 
-	utils.Infof("network", "openEuler network service restarted successfully")
-	return nil
+	for _, method := range reloadMethods {
+		utils.Infof("network", "Trying openEuler network reload method: %s", method.name)
+		cmd := exec.CommandContext(ctx, method.cmd[0], method.cmd[1:]...)
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			utils.Infof("network", "Successfully reloaded openEuler network using: %s", method.name)
+			// 等待网络稳定
+			utils.Info("network", "Waiting for network to stabilize...")
+			time.Sleep(3 * time.Second)
+			return nil
+		}
+		utils.Infof("network", "openEuler reload method %s failed: %v, output: %s", method.name, err, string(output))
+	}
+
+	// 如果所有系统级重载方法都失败，尝试使用 ifup/ifdown 命令逐个重载接口
+	utils.Info("network", "All system-level reload methods failed, trying interface-level reload")
+	return oif.reloadInterfacesIndividually(ctx)
+}
+
+// reloadInterfacesIndividually 尝试使用 ifup/ifdown 命令逐个重载网络接口
+func (oif *OpenEulerIfupdown) reloadInterfacesIndividually(ctx context.Context) error {
+	// 获取所有网络接口配置文件
+	files, err := filepath.Glob("/etc/sysconfig/network-scripts/ifcfg-*")
+	if err != nil {
+		return fmt.Errorf("failed to find interface config files: %v", err)
+	}
+
+	var lastError error
+	successCount := 0
+
+	for _, file := range files {
+		// 从文件名提取接口名
+		basename := filepath.Base(file)
+		if !strings.HasPrefix(basename, "ifcfg-") {
+			continue
+		}
+		ifaceName := strings.TrimPrefix(basename, "ifcfg-")
+
+		// 跳过回环接口和特殊接口
+		if ifaceName == "lo" || strings.HasPrefix(ifaceName, "ifcfg-") {
+			continue
+		}
+
+		utils.Infof("network", "Reloading interface: %s", ifaceName)
+
+		// 先 down 接口
+		downCmd := exec.CommandContext(ctx, "ifdown", ifaceName)
+		downOutput, downErr := downCmd.CombinedOutput()
+		if downErr != nil {
+			utils.Infof("network", "Warning: ifdown %s failed: %v, output: %s", ifaceName, downErr, string(downOutput))
+		}
+
+		// 等待一下
+		time.Sleep(1 * time.Second)
+
+		// 再 up 接口
+		upCmd := exec.CommandContext(ctx, "ifup", ifaceName)
+		upOutput, upErr := upCmd.CombinedOutput()
+		if upErr != nil {
+			utils.Infof("network", "Warning: ifup %s failed: %v, output: %s", ifaceName, upErr, string(upOutput))
+			lastError = fmt.Errorf("failed to reload interface %s: %v", ifaceName, upErr)
+		} else {
+			utils.Infof("network", "Successfully reloaded interface: %s", ifaceName)
+			successCount++
+		}
+	}
+
+	if successCount > 0 {
+		utils.Infof("network", "Successfully reloaded %d interfaces", successCount)
+		return nil
+	}
+
+	if lastError != nil {
+		return lastError
+	}
+
+	return fmt.Errorf("no network interfaces found to reload")
 }
 
 // cidrToNetmask 将CIDR转换为子网掩码
@@ -316,25 +403,6 @@ func (oif *OpenEulerIfupdown) updateResolvConf(nameservers []string) error {
 	}
 
 	return utils.AtomicWriteFile([]byte(content.String()), "/etc/resolv.conf", 0644)
-}
-
-// isTruthy 检查值是否为真值
-func isTruthy(v interface{}) bool {
-	if v == nil {
-		return false
-	}
-	switch val := v.(type) {
-	case bool:
-		return val
-	case string:
-		return val != ""
-	case int:
-		return val != 0
-	case float64:
-		return val != 0.0
-	default:
-		return true
-	}
 }
 
 // 测试模式相关方法

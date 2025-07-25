@@ -26,9 +26,8 @@ import (
 	"go.xbrother.com/nix-operator/pkg/webcontroller"
 
 	// 注册所有处理器
-	_ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
-	_ "go.xbrother.com/nix-operator/pkg/handlers/time"
-
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/hosts"
+	// _ "go.xbrother.com/nix-operator/pkg/handlers/time"
 	_ "go.xbrother.com/nix-operator/pkg/handlers/bond"
 	_ "go.xbrother.com/nix-operator/pkg/handlers/network"
 )
@@ -110,16 +109,17 @@ type Application struct {
 }
 
 // initializeApplication 初始化三层架构应用
-func initializeApplication(configDir string, logger *utils.Logger, ctx context.Context, statusRepo repository.StatusRepository, cancel context.CancelFunc) (*grpc.Server, error) {
+func initializeApplication(configDir, nodeDir string, logger *utils.Logger, ctx context.Context, statusRepo repository.StatusRepository, cancel context.CancelFunc) (*grpc.Server, error) {
 
 	// 初始化校验器映射
 	validators := initializeValidators()
 
 	// 初始化 Repository 层
 	configRepo := repository.NewConfigRepository(configDir, logger)
+	nodeRepo := repository.NewNodeRepository(nodeDir, logger)
 
 	// 初始化 Service 层
-	resourceService := service.NewResourceService(configRepo, statusRepo, logger)
+	resourceService := service.NewResourceService(configRepo, statusRepo, nodeRepo, logger)
 
 	// 初始化 Schema Provider
 	schemaProvider := schema.NewProvider()
@@ -157,11 +157,22 @@ func initializeValidators() map[string]validator.SpecValidator {
 }
 
 func main() {
-	configDir := flag.String("config-dir", "etc/cr.d", "Path to configuration directory")
-	statusDir := flag.String("status-dir", "etc/status", "Path to status directory")
-	nodeDir := flag.String("node-dir", "etc/nodes", "Path to node configuration directory")
+	baseDir := flag.String("base-dir", ".", "Base directory for configurations, status, and nodes")
 	enableAPI := flag.Bool("enable-api", true, "Enable HTTP/gRPC API")
 	flag.Parse()
+
+	configDir := flag.String("config-dir", *baseDir+"/etc/cr.d", "Path to configuration directory")
+	statusDir := flag.String("status-dir", *baseDir+"/etc/status", "Path to status directory")
+	nodeDir := flag.String("node-dir", *baseDir+"/etc/nodes", "Path to node configuration directory")
+
+	// 检查并创建目录
+	for _, dir := range []string{*configDir, *statusDir, *nodeDir, *baseDir} {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				log.Fatalf("Failed to create directory %s: %v", dir, err)
+			}
+		}
+	}
 
 	// 初始化日志系统
 	logger, err := initializeLogger()
@@ -211,7 +222,7 @@ func main() {
 	var grpcServer *grpc.Server
 	if *enableAPI {
 		// 初始化三层架构
-		grpcServer, err = initializeApplication(*configDir, logger, ctx, statusRepo, cancel)
+		grpcServer, err = initializeApplication(*configDir, *nodeDir, logger, ctx, statusRepo, cancel)
 		if err != nil {
 			logger.Fatal("main", "Failed to initialize application: "+err.Error())
 		}

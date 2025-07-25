@@ -126,7 +126,7 @@ func TestKylinOSNetworkHandler_Reconcile(t *testing.T) {
 	}
 
 	// 执行调谐
-	_, err := handler.Reconcile(ctx, testConfigs)
+	_, err := handler.Reconcile(ctx, testConfigs[0])
 	if err != nil {
 		t.Fatalf("Reconcile() error = %v", err)
 	}
@@ -181,7 +181,7 @@ func TestKylinOSNetworkHandler_ReconcileWithBondSlave(t *testing.T) {
 	}
 
 	// 执行调谐
-	_, err := handler.Reconcile(ctx, testConfigs)
+	_, err := handler.Reconcile(ctx, testConfigs[0])
 	if err != nil {
 		t.Fatalf("Reconcile() error = %v", err)
 	}

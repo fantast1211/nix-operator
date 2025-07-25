@@ -81,13 +81,16 @@ func (i *KylinOSIfupdown) Configure(ctx context.Context, iface types.Interface) 
 
 // ConfigureWithCheck 配置网络接口并检查是否有变更
 func (i *KylinOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
-	utils.Infof("network", "Configuring KylinOS interface %s with ifupdown", iface.Name)
+	utils.Infof("network", "Starting KylinOS ifupdown configuration for interface %s", iface.Name)
+	utils.Infof("network", "Interface %s details: IPv4=%s, IPv6=%s, MTU=%d", iface.Name, iface.IPv4Address, iface.IPv6Address, iface.MTU)
 
 	// 生成配置内容
+	utils.Info("network", "Generating KylinOS ifupdown configuration content")
 	configContent, err := i.generateConfig(iface)
 	if err != nil {
 		return false, fmt.Errorf("failed to generate KylinOS ifupdown config: %v", err)
 	}
+	utils.Info("network", "KylinOS ifupdown configuration content generated successfully")
 
 	if i.testMode {
 		// 测试模式下只记录配置内容
@@ -97,29 +100,37 @@ func (i *KylinOSIfupdown) ConfigureWithCheck(ctx context.Context, iface types.In
 
 	// 确定配置文件路径
 	configPath := fmt.Sprintf("/etc/network/interfaces.d/%s", iface.Name)
+	utils.Infof("network", "KylinOS ifupdown config file path: %s", configPath)
 
 	// 检查配置是否有变更
 	newConfigData := []byte(configContent)
+	utils.Info("network", "Checking if KylinOS ifupdown configuration file exists")
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
+		utils.Info("network", "KylinOS ifupdown configuration file exists, comparing content")
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
 			utils.Infof("network", "KylinOS ifupdown config for %s unchanged", iface.Name)
 			return false, nil
 		}
+		utils.Info("network", "KylinOS ifupdown configuration content has changed")
+	} else {
+		utils.Info("network", "KylinOS ifupdown configuration file does not exist, will create new one")
 	}
 
 	// 创建配置目录
+	utils.Info("network", "Creating KylinOS ifupdown configuration directory")
 	if err := os.MkdirAll("/etc/network/interfaces.d", 0755); err != nil {
 		return false, fmt.Errorf("failed to create KylinOS ifupdown config directory: %v", err)
 	}
 
 	// 写入配置文件
+	utils.Infof("network", "Writing KylinOS ifupdown configuration to file: %s", configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
 		return false, fmt.Errorf("failed to write KylinOS ifupdown config: %v", err)
 	}
 
-	utils.Infof("network", "KylinOS ifupdown config for %s updated", iface.Name)
+	utils.Infof("network", "KylinOS ifupdown config for %s updated successfully", iface.Name)
 	return true, nil
 }
 
@@ -157,26 +168,32 @@ func (i *KylinOSIfupdown) ReloadIfy(ctx context.Context) error {
 // generateConfig 生成 ifupdown 配置
 func (i *KylinOSIfupdown) generateConfig(iface types.Interface) (string, error) {
 	// 获取模板内容
+	utils.Info("network", "Loading KylinOS ifupdown template")
 	tmplContent, err := utils.GetTemplateContent("kylinos_ifupdown.tpl", i.getEmbeddedTemplate())
 	if err != nil {
 		return "", fmt.Errorf("failed to get KylinOS ifupdown template: %v", err)
 	}
 
 	// 解析模板
+	utils.Info("network", "Parsing KylinOS ifupdown template")
 	tmpl, err := template.New("kylinos_ifupdown").Parse(tmplContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse KylinOS ifupdown template: %v", err)
 	}
 
 	// 准备模板数据
+	utils.Info("network", "Preparing KylinOS ifupdown template data")
 	templateData := i.prepareTemplateData(iface)
+	utils.Infof("network", "Template data prepared: HasBonding=%t, IPv4Network=%s, IPv6Network=%s", templateData.HasBonding, templateData.IPv4Network, templateData.IPv6Network)
 
 	// 渲染模板
+	utils.Info("network", "Rendering KylinOS ifupdown template")
 	var result strings.Builder
 	if err := tmpl.Execute(&result, templateData); err != nil {
 		return "", fmt.Errorf("failed to execute KylinOS ifupdown template: %v", err)
 	}
 
+	utils.Info("network", "KylinOS ifupdown template rendered successfully")
 	return result.String(), nil
 }
 

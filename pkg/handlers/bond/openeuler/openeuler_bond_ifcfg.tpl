@@ -9,7 +9,7 @@ DEFROUTE=yes
 IPV4_FAILURE_FATAL=no
 IPV6INIT=no
 NAME={{.Name}}
-UUID={{.Name}}-$(uuidgen)
+UUID={{.Name}}-nix-operator
 {{if .IPv4IP}}
 IPADDR={{.IPv4IP}}
 {{if .IPv4Netmask}}

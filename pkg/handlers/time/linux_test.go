@@ -23,6 +23,9 @@ func TestReconcileWithNilNtp(t *testing.T) {
 
 	// 创建 ResourceConfig
 	cfg := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "test-time-config",
+		},
 		Spec: anySpec,
 	}
 
@@ -30,7 +33,7 @@ func TestReconcileWithNilNtp(t *testing.T) {
 	handler := &LinuxTimeHandler{}
 
 	// 调用 Reconcile 方法
-	_, err = handler.Reconcile(context.Background(), []*systemv1.ResourceConfig{cfg})
+	_, err = handler.Reconcile(context.Background(), cfg)
 	// 我们只关心是否有空指针引用，不关心其他错误
 	if err != nil {
 		// 检查错误是否是空指针引用
@@ -57,6 +60,9 @@ func TestReconcileWithEmptyNtp(t *testing.T) {
 
 	// 创建 ResourceConfig
 	cfg := &systemv1.ResourceConfig{
+		Metadata: &systemv1.Metadata{
+			Name: "test-time-config-empty-ntp",
+		},
 		Spec: anySpec,
 	}
 
@@ -64,7 +70,7 @@ func TestReconcileWithEmptyNtp(t *testing.T) {
 	handler := &LinuxTimeHandler{}
 
 	// 调用 Reconcile 方法
-	_, err = handler.Reconcile(context.Background(), []*systemv1.ResourceConfig{cfg})
+	_, err = handler.Reconcile(context.Background(), cfg)
 	// 我们只关心是否有空指针引用，不关心其他错误
 	if err != nil {
 		// 检查错误是否是空指针引用

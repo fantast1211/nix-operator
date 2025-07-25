@@ -71,12 +71,17 @@ func (cnm *CentOSNetworkManager) Configure(ctx context.Context, iface types.Inte
 }
 
 func (cnm *CentOSNetworkManager) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
+	utils.Infof("network", "Starting CentOS NetworkManager configuration for interface %s", iface.Name)
+
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return false, fmt.Errorf("interface name cannot be empty")
 	}
 
+	utils.Infof("network", "Interface validation passed for %s", iface.Name)
+
 	// 获取模板内容
+	utils.Infof("network", "Loading CentOS NetworkManager template for interface %s", iface.Name)
 	templateContent, err := utils.GetTemplateContent("centos_nmconnection.tpl", centosNmConnectionTemplate)
 	if err != nil {
 		return false, err
@@ -88,31 +93,47 @@ func (cnm *CentOSNetworkManager) ConfigureWithCheck(ctx context.Context, iface t
 		return false, fmt.Errorf("failed to parse CentOS NetworkManager template: %v", err)
 	}
 
+	utils.Infof("network", "Template parsed successfully for interface %s", iface.Name)
+
+	// 记录配置详情
+	if iface.BondingSlave != nil && iface.BondingSlave.Enabled {
+		utils.Infof("network", "Configuring bond slave interface %s with master %s", iface.Name, iface.BondingSlave.Master)
+	} else {
+		utils.Infof("network", "Configuring regular interface %s with IPv4: %s, IPv6: %s", iface.Name, iface.IPv4Address, iface.IPv6Address)
+	}
+
 	// 渲染模板
+	utils.Infof("network", "Rendering NetworkManager configuration template for interface %s", iface.Name)
 	var content strings.Builder
 	if err := tmpl.Execute(&content, iface); err != nil {
 		return false, fmt.Errorf("failed to execute CentOS NetworkManager template: %v", err)
 	}
 
 	newConfigData := []byte(content.String())
+	utils.Infof("network", "Template rendered successfully for interface %s, config size: %d bytes", iface.Name, len(newConfigData))
 
 	// 检查配置文件是否存在以及内容是否相同
 	configPath := fmt.Sprintf("/etc/NetworkManager/system-connections/nix-operator-%s.nmconnection", iface.Name)
+	utils.Infof("network", "Checking existing configuration file: %s", configPath)
 	existingData, err := os.ReadFile(configPath)
 	if err == nil {
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
-			utils.Debugf("network", "CentOS NetworkManager config for interface %s unchanged, skipping write", iface.Name)
+			utils.Infof("network", "CentOS NetworkManager config for interface %s unchanged, skipping write", iface.Name)
 			return false, nil // 配置未变更
 		}
+		utils.Infof("network", "Configuration changed for interface %s, updating file", iface.Name)
+	} else {
+		utils.Infof("network", "Configuration file does not exist for interface %s, creating new file", iface.Name)
 	}
 
 	// 写入连接配置文件
+	utils.Infof("network", "Writing NetworkManager configuration file for interface %s to %s", iface.Name, configPath)
 	if err := utils.AtomicWriteFile(newConfigData, configPath, 0600); err != nil {
 		return false, fmt.Errorf("failed to write CentOS NetworkManager config: %v", err)
 	}
 
-	utils.Infof("network", "CentOS NetworkManager configuration written for interface %s", iface.Name)
+	utils.Infof("network", "CentOS NetworkManager configuration written successfully for interface %s", iface.Name)
 	return true, nil // 配置已变更
 }
 

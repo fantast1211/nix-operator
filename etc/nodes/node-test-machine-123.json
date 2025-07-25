@@ -1,7 +1,7 @@
 {
   "name": "node-test-machine-123",
-  "hostname": "QT-20220606",
+  "hostname": "test-hostname",
   "ip": "172.29.201.217",
   "machine-id": "test-machine-123",
-  "last-modified": "1703001600"
+  "last-modified": "1753358701"
 }

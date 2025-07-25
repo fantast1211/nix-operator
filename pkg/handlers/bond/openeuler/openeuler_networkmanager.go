@@ -82,8 +82,13 @@ func (obnm *OpenEulerBondNetworkManager) ConfigureWithCheck(ctx context.Context,
 		return false, fmt.Errorf("failed to get openEuler Bond NetworkManager template: %v", err)
 	}
 
-	// 解析模板
-	tmpl, err := template.New("openeuler_bond_nmconnection").Parse(templateContent)
+	// 解析模板，添加自定义函数
+	funcMap := template.FuncMap{
+		"add": func(a, b int) int {
+			return a + b
+		},
+	}
+	tmpl, err := template.New("openeuler_bond_nmconnection").Funcs(funcMap).Parse(templateContent)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse openEuler Bond NetworkManager template: %v", err)
 	}

@@ -70,8 +70,11 @@ func init() {
 
 // Match 检查是否匹配KylinOS系统
 func (h *KylinOSBondHandler) Match(osInfo controller.OSInfo) bool {
-	// 检查操作系统ID
-	if osInfo.ID != "kylin" {
+	// 检查操作系统ID（支持大小写不敏感匹配）
+	osID := strings.ToLower(osInfo.ID)
+	utils.Infof("bond", "[KylinOS] Checking OS ID: '%s' (lowercase: '%s')", osInfo.ID, osID)
+	if osID != "kylin" {
+		utils.Infof("bond", "[KylinOS] OS ID '%s' does not match 'kylin'", osInfo.ID)
 		return false
 	}
 
@@ -92,9 +95,27 @@ func (h *KylinOSBondHandler) Match(osInfo controller.OSInfo) bool {
 }
 
 // Reconcile 执行Bond配置调谐，返回结构化的调谐结果
-func (h *KylinOSBondHandler) Reconcile(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
-	utils.Infof("bond", "Starting KylinOS bond reconciliation with %d configurations", len(configs))
-	return h.reconcileConfigs(ctx, configs)
+func (h *KylinOSBondHandler) Reconcile(ctx context.Context, config *systemv1.ResourceConfig) (*status.ReconcileResult, error) {
+	utils.Infof("bond", "Starting KylinOS bond reconciliation for config: %s", config.Metadata.Name)
+
+	// 解析配置规格
+	bondSpec, err := utils.UnmarshalSpec[*systemv1.BondConfigurationSpec](config.Spec)
+	if err != nil {
+		utils.Errorf("bond", "Failed to unmarshal bond spec for %s: %v", config.Metadata.Name, err)
+		return &status.ReconcileResult{
+			Config: config,
+			Status: &systemv1.ResourceStatus{
+				Phase:   status.PhaseError,
+				Reason:  status.ReasonSpecError,
+				Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
+			},
+			Error: err,
+		}, nil
+	}
+
+	utils.Debugf("bond", "Starting bond configuration application")
+	// 应用配置
+	return h.applyBondConfiguration(ctx, config, bondSpec)
 }
 
 // isKylinOSSupported 检查给定的版本ID是否为支持的KylinOS版本
@@ -151,154 +172,13 @@ func (h *KylinOSBondHandler) detectBondManager(ctx context.Context) (types.IBond
 	return nil, fmt.Errorf("no available KylinOS bond manager found")
 }
 
-// reconcileConfigs 调谐Bond配置
-func (h *KylinOSBondHandler) reconcileConfigs(ctx context.Context, configs []*systemv1.ResourceConfig) ([]*status.ReconcileResult, error) {
-	var matchedConfig *systemv1.ResourceConfig
-	var fallbackConfig *systemv1.ResourceConfig
-	var results []*status.ReconcileResult
-
-	utils.Infof("bond", "Starting KylinOS bond reconciliation with %d configurations", len(configs))
-
-	// 遍历所有配置，查找匹配的配置和fallback配置
-	for _, config := range configs {
-		utils.Debugf("bond", "Processing bond configuration: %s", config.Metadata.Name)
-		// 解析配置规格
-		bondSpec, err := utils.UnmarshalSpec[*systemv1.BondConfigurationSpec](config.Spec)
-		if err != nil {
-			utils.Errorf("bond", "Failed to unmarshal bond spec for %s: %v", config.Metadata.Name, err)
-			results = append(results, &status.ReconcileResult{
-				Config: config,
-				Status: &systemv1.ResourceStatus{
-					Phase:   status.PhaseError,
-					Reason:  status.ReasonSpecError,
-					Message: fmt.Sprintf("failed to unmarshal spec: %v", err),
-				},
-				Error: err,
-			})
-			continue
-		}
-
-		// 检查nodeSelector匹配
-		if bondSpec.NodeSelector != nil && h.hasValidNodeSelector(bondSpec.NodeSelector) {
-			utils.Debugf("bond", "Checking nodeSelector for bond configuration: %s", config.Metadata.Name)
-			// 有有效的nodeSelector，检查是否匹配
-			matched, err := utils.MatchNodeSelector(bondSpec.NodeSelector)
-			if err != nil {
-				utils.Errorf("bond", "Failed to match nodeSelector for %s: %v", config.Metadata.Name, err)
-				results = append(results, &status.ReconcileResult{
-					Config: config,
-					Status: &systemv1.ResourceStatus{
-						Phase:   status.PhaseError,
-						Reason:  status.ReasonNodeSelectorError,
-						Message: fmt.Sprintf("failed to match nodeSelector: %v", err),
-					},
-					Error: err,
-				})
-				continue
-			}
-			if matched {
-				utils.Infof("bond", "Bond configuration %s matches nodeSelector", config.Metadata.Name)
-				matchedConfig = config
-			} else {
-				utils.Debugf("bond", "Bond configuration %s does not match nodeSelector", config.Metadata.Name)
-				// nodeSelector不匹配时直接跳过，不更新状态
-				continue
-			}
-		} else {
-			utils.Debugf("bond", "Bond configuration %s has no valid nodeSelector, considering as fallback", config.Metadata.Name)
-			// 没有有效的nodeSelector，作为fallback配置
-			if fallbackConfig == nil {
-				fallbackConfig = config
-			} else {
-				// 如果已经有fallback配置，则跳过这个
-				utils.Debugf("bond", "Bond configuration %s skipped, another fallback already exists", config.Metadata.Name)
-				// 多个fallback配置时直接跳过，不更新状态
-				continue
-			}
-		}
-	}
-
-	// 确定要应用的配置
-	var configToApply *systemv1.ResourceConfig
-
-	if matchedConfig != nil {
-		utils.Infof("bond", "Using matched bond configuration: %s", matchedConfig.Metadata.Name)
-		configToApply = matchedConfig
-	} else if fallbackConfig != nil {
-		utils.Infof("bond", "Using fallback bond configuration: %s", fallbackConfig.Metadata.Name)
-		configToApply = fallbackConfig
-	} else {
-		utils.Warnf("bond", "No applicable bond configuration found")
-	}
-
-	// 如果有配置要应用，则应用它
-	if configToApply != nil {
-		utils.Infof("bond", "Applying bond configuration: %s", configToApply.Metadata.Name)
-		bondSpec, err := utils.UnmarshalSpec[*systemv1.BondConfigurationSpec](configToApply.Spec)
-		if err != nil {
-			utils.Errorf("bond", "Failed to unmarshal effective bond config spec: %v", err)
-			results = append(results, &status.ReconcileResult{
-				Config: configToApply,
-				Status: &systemv1.ResourceStatus{
-					Phase:   status.PhaseError,
-					Reason:  status.ReasonSpecError,
-					Message: fmt.Sprintf("failed to unmarshal effective config spec: %v", err),
-				},
-				Error: err,
-			})
-			return results, nil
-		}
-		
-		utils.Debugf("bond", "Starting bond configuration application")
-		// 应用配置
-		result, err := h.applyBondConfiguration(ctx, configToApply, bondSpec)
-		if err != nil {
-			utils.Errorf("bond", "Failed to apply bond configuration: %v", err)
-			results = append(results, &status.ReconcileResult{
-				Config: configToApply,
-				Status: &systemv1.ResourceStatus{
-					Phase:   status.PhaseError,
-					Reason:  status.ReasonReconcileError,
-					Message: fmt.Sprintf("failed to apply configuration: %v", err),
-				},
-				Error: err,
-			})
-			return results, nil
-		}
-		
-		utils.Infof("bond", "Bond configuration applied successfully")
-		if result != nil {
-			results = append(results, result)
-		} else {
-			results = append(results, &status.ReconcileResult{
-				Config: configToApply,
-				Status: &systemv1.ResourceStatus{
-					Phase:   status.PhaseReady,
-					Reason:  "ReconcileSuccess",
-					Message: "Bond configuration applied successfully",
-				},
-			})
-		}
-	}
-
-	return results, nil
-}
-
-// hasValidNodeSelector 检查nodeSelector是否有效
-func (h *KylinOSBondHandler) hasValidNodeSelector(selector *systemv1.NodeSelector) bool {
-	if selector == nil {
-		return false
-	}
-	return selector.MachineId != ""
-}
-
 // applyBondConfiguration 应用Bond配置
-func (h *KylinOSBondHandler) applyBondConfiguration(ctx context.Context, configToApply *systemv1.ResourceConfig, bondSpec *systemv1.BondConfigurationSpec) (*status.ReconcileResult, error) {
+func (h *KylinOSBondHandler) applyBondConfiguration(ctx context.Context, config *systemv1.ResourceConfig, bondSpec *systemv1.BondConfigurationSpec) (*status.ReconcileResult, error) {
 	// 检测并选择合适的Bond管理器
 	manager, err := h.detectBondManager(ctx)
 	if err != nil {
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseError,
 				Reason:  status.ReasonReconcileError,
@@ -311,7 +191,7 @@ func (h *KylinOSBondHandler) applyBondConfiguration(ctx context.Context, configT
 	// 验证Bond配置
 	if err := h.validateKylinOSBondConfig(bondSpec); err != nil {
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseError,
 				Reason:  status.ReasonSpecError,
@@ -351,7 +231,7 @@ func (h *KylinOSBondHandler) applyBondConfiguration(ctx context.Context, configT
 	changed, err := manager.ConfigureWithCheck(ctx, bondConfig)
 	if err != nil {
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseError,
 				Reason:  status.ReasonReconcileError,
@@ -364,20 +244,20 @@ func (h *KylinOSBondHandler) applyBondConfiguration(ctx context.Context, configT
 	if changed {
 		utils.Infof("bond", "KylinOS bond configuration changed, reloading bond services")
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseReady,
-				Reason:  "ConfigurationUpdated",
+				Reason:  status.ReasonConfigurationUpdated,
 				Message: "Bond configuration applied and services reloaded",
 			},
 		}, nil
 	} else {
 		utils.Infof("bond", "KylinOS bond configuration unchanged")
 		return &status.ReconcileResult{
-			Config: configToApply,
+			Config: config,
 			Status: &systemv1.ResourceStatus{
 				Phase:   status.PhaseReady,
-				Reason:  "AppliedSuccessfully",
+				Reason:  status.ReasonAppliedSuccessfully,
 				Message: "Bond configuration unchanged",
 			},
 		}, nil
