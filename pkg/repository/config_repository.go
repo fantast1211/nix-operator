@@ -120,49 +120,17 @@ func (r *configRepository) SaveConfig(ctx context.Context, config *systemv1.Reso
 	existingConfig, err := r.GetConfig(ctx, config.Metadata.Name)
 	var currentGeneration int32 = 0
 	var creationTime string
-	var shouldIncrementGeneration bool = true // 默认为新配置
 
 	if err == nil && existingConfig != nil && existingConfig.Metadata != nil {
 		currentGeneration = existingConfig.Metadata.Generation
 		creationTime = existingConfig.Metadata.CreationTime
-
-		// 比较 spec 部分是否发生变化
-		if existingConfig.Spec != nil && config.Spec != nil {
-			// 使用 protojson 序列化进行比较，确保比较的准确性
-			marshaler := protojson.MarshalOptions{
-				EmitUnpopulated: true,
-				Indent:          "",
-			}
-
-			existingSpecData, existingErr := marshaler.Marshal(existingConfig.Spec)
-			newSpecData, newErr := marshaler.Marshal(config.Spec)
-
-			if existingErr == nil && newErr == nil {
-				// 如果 spec 内容相同，则不需要自增 Generation
-				if string(existingSpecData) == string(newSpecData) {
-					shouldIncrementGeneration = false
-					r.logger.Debugf("repository", "Spec unchanged for config %s, keeping Generation at %d", config.Metadata.Name, currentGeneration)
-				} else {
-					r.logger.Debugf("repository", "Spec changed for config %s, incrementing Generation from %d to %d", config.Metadata.Name, currentGeneration, currentGeneration+1)
-				}
-			} else {
-				// 如果序列化失败，保守地自增 Generation
-				r.logger.Warnf("repository", "Failed to compare specs for config %s, incrementing Generation: existing_err=%v, new_err=%v", config.Metadata.Name, existingErr, newErr)
-			}
-		} else if existingConfig.Spec == nil && config.Spec == nil {
-			// 两者都为 nil，认为没有变化
-			shouldIncrementGeneration = false
-			r.logger.Debugf("repository", "Both specs are nil for config %s, keeping Generation at %d", config.Metadata.Name, currentGeneration)
-		}
 	}
 
 	// 更新元数据
 	config.Metadata.ResourceVersion = fmt.Sprintf("%d", time.Now().Unix())
-	if shouldIncrementGeneration {
-		config.Metadata.Generation = currentGeneration + 1
-	} else {
-		config.Metadata.Generation = currentGeneration
-	}
+	// 每次PUT请求都将Generation加1，实现手动重试
+	config.Metadata.Generation = currentGeneration + 1
+	r.logger.Debugf("repository", "Incrementing Generation for config %s from %d to %d", config.Metadata.Name, currentGeneration, currentGeneration+1)
 
 	if creationTime != "" {
 		config.Metadata.CreationTime = creationTime // 保留原创建时间

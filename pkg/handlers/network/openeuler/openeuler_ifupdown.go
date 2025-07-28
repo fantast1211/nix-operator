@@ -22,8 +22,7 @@ import (
 // OpenEulerIfupdown openEuler 专用的传统网络脚本实现
 // 专注于物理网卡配置，支持bond slave接口
 type OpenEulerIfupdown struct {
-	osInfo   *controller.OSInfo
-	testMode bool // 测试模式标志
+	osInfo *controller.OSInfo
 }
 
 //go:embed openeuler_ifcfg.tpl
@@ -46,24 +45,11 @@ type OpenEulerIfcfgData struct {
 // NewOpenEulerIfupdown 创建 openEuler Ifupdown 实例
 func NewOpenEulerIfupdown(osInfo *controller.OSInfo) *OpenEulerIfupdown {
 	return &OpenEulerIfupdown{
-		osInfo:   osInfo,
-		testMode: false,
-	}
-}
-
-// NewOpenEulerIfupdownForTest 创建测试用的 openEuler Ifupdown 实例
-func NewOpenEulerIfupdownForTest(osInfo *controller.OSInfo) *OpenEulerIfupdown {
-	return &OpenEulerIfupdown{
-		osInfo:   osInfo,
-		testMode: true,
+		osInfo: osInfo,
 	}
 }
 
 func (oif *OpenEulerIfupdown) IsInstall(ctx context.Context) bool {
-	// 测试模式下模拟检测逻辑
-	if oif.testMode {
-		return oif.mockIsInstall()
-	}
 
 	// 检查传统网络脚本工具是否存在
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -126,11 +112,6 @@ func (oif *OpenEulerIfupdown) Configure(ctx context.Context, iface types.Interfa
 
 func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
 	utils.Infof("network", "Starting openEuler ifupdown configuration for interface %s", iface.Name)
-
-	// 测试模式下模拟配置逻辑
-	if oif.testMode {
-		return oif.mockConfigureWithCheck(iface)
-	}
 
 	// 验证接口名称不能为空
 	if iface.Name == "" {
@@ -286,10 +267,6 @@ func (oif *OpenEulerIfupdown) ConfigureWithCheck(ctx context.Context, iface type
 
 func (oif *OpenEulerIfupdown) ReloadIfy(ctx context.Context) error {
 	utils.Info("network", "Reloading openEuler ifupdown network configuration")
-	// 测试模式下模拟重载逻辑
-	if oif.testMode {
-		return oif.mockReloadIfy()
-	}
 
 	// openEuler 特定的网络重载逻辑
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -403,49 +380,4 @@ func (oif *OpenEulerIfupdown) updateResolvConf(nameservers []string) error {
 	}
 
 	return utils.AtomicWriteFile([]byte(content.String()), "/etc/resolv.conf", 0644)
-}
-
-// 测试模式相关方法
-func (oif *OpenEulerIfupdown) mockIsInstall() bool {
-	// 模拟检测逻辑：假设ifupdown总是可用
-	utils.Info("network", "[TEST MODE] openEuler ifupdown tools detected")
-	return true
-}
-
-func (oif *OpenEulerIfupdown) mockConfigureWithCheck(iface types.Interface) (bool, error) {
-	// 验证接口名称
-	if iface.Name == "" {
-		return false, fmt.Errorf("interface name cannot be empty")
-	}
-
-	// 验证IPv4地址格式
-	if iface.IPv4Address != "" {
-		if _, _, err := net.ParseCIDR(iface.IPv4Address); err != nil {
-			return false, fmt.Errorf("invalid IPv4 CIDR format: %s", iface.IPv4Address)
-		}
-	}
-
-	// 验证IPv6地址格式
-	if iface.IPv6Address != "" {
-		if _, _, err := net.ParseCIDR(iface.IPv6Address); err != nil {
-			return false, fmt.Errorf("invalid IPv6 CIDR format: %s", iface.IPv6Address)
-		}
-	}
-
-	// 如果是Bond从属接口，清空IP配置并发出警告
-	if iface.BondingSlave != nil && iface.BondingSlave.Enabled {
-		if iface.IPv4Address != "" || iface.IPv6Address != "" || iface.IPv4Gateway != "" || iface.IPv6Gateway != "" || len(iface.Nameservers) > 0 {
-			utils.Warnf("network", "[TEST MODE] Bond从属接口不应配置IP地址，将忽略IP配置: %s", iface.Name)
-		}
-	}
-
-	// 模拟配置逻辑：总是返回配置已变更
-	utils.Infof("network", "[TEST MODE] openEuler ifcfg configuration simulated for interface %s", iface.Name)
-	return true, nil
-}
-
-func (oif *OpenEulerIfupdown) mockReloadIfy() error {
-	// 模拟重载逻辑：总是成功
-	utils.Info("network", "[TEST MODE] openEuler network service restart simulated")
-	return nil
 }

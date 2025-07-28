@@ -23,24 +23,7 @@ func NewOpenEulerNetworkHandler() *OpenEulerNetworkHandler {
 	return &OpenEulerNetworkHandler{}
 }
 
-// NewOpenEulerNetworkHandlerForTest 创建测试用的 openEuler 网络处理器
-func NewOpenEulerNetworkHandlerForTest(osInfo controller.OSInfo) *OpenEulerNetworkHandler {
-	handler := &OpenEulerNetworkHandler{
-		osInfo:   osInfo,
-		managers: []types.INetworkManager{},
-	}
-	// 初始化测试模式的网络管理器
-	handler.initializeTestManagers()
-	return handler
-}
 
-// initializeTestManagers 初始化测试模式的网络管理器
-func (h *OpenEulerNetworkHandler) initializeTestManagers() {
-	h.managers = []types.INetworkManager{
-		// NewOpenEulerIfupdownForTest(&h.osInfo), network 服务在欧拉上好像不被支持了
-		NewOpenEulerNetworkManagerForTest(&h.osInfo), // 优先级 2
-	}
-}
 
 // Match 检查是否匹配 openEuler 系统
 func (h *OpenEulerNetworkHandler) Match(osInfo controller.OSInfo) bool {

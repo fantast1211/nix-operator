@@ -23,26 +23,6 @@ func NewKylinOSNetworkHandler() *KylinOSNetworkHandler {
 	return &KylinOSNetworkHandler{}
 }
 
-// NewKylinOSNetworkHandlerForTest 创建测试用的 KylinOS 网络处理器
-func NewKylinOSNetworkHandlerForTest(osInfo controller.OSInfo) *KylinOSNetworkHandler {
-	handler := &KylinOSNetworkHandler{
-		osInfo:   osInfo,
-		managers: []types.INetworkManager{},
-	}
-	// 初始化测试模式的网络管理器
-	handler.initializeTestManagers()
-	return handler
-}
-
-// initializeTestManagers 初始化测试模式的网络管理器
-func (h *KylinOSNetworkHandler) initializeTestManagers() {
-	h.managers = []types.INetworkManager{
-		NewKylinOSIfupdownForTest(&h.osInfo),       // 优先级 1
-		NewKylinOSNetworkManagerForTest(&h.osInfo), // 优先级 2
-		NewKylinOSNetplanForTest(&h.osInfo),        // 优先级 3
-	}
-}
-
 // Match 检查是否匹配 KylinOS 系统
 func (h *KylinOSNetworkHandler) Match(osInfo controller.OSInfo) bool {
 	// 检查是否为 KylinOS 系统（支持大小写不敏感匹配）
@@ -85,9 +65,9 @@ func (h *KylinOSNetworkHandler) Reconcile(ctx context.Context, config *systemv1.
 // 按照用户要求的优先级：ifupdown(1) > NetworkManager(2) > Netplan(3)
 func (h *KylinOSNetworkHandler) initializeManagers() {
 	h.managers = []types.INetworkManager{
-		NewKylinOSIfupdown(&h.osInfo),       // 1. ifupdown（传统网络脚本）- 最高优先级
+		// NewKylinOSIfupdown(&h.osInfo), // 1. ifupdown（传统网络脚本）- 最高优先级
 		NewKylinOSNetworkManager(&h.osInfo), // 2. NetworkManager - 中等优先级
-		NewKylinOSNetplan(&h.osInfo),        // 3. Netplan - 最低优先级
+		// NewKylinOSNetplan(&h.osInfo),        // 3. Netplan - 最低优先级 暂时注释掉
 	}
 
 	utils.Infof("network", "Initialized KylinOS %s network managers with priority: ifupdown > NetworkManager > Netplan", h.osInfo.VersionID)

@@ -82,8 +82,6 @@ func (r *fileStatusRepository) SetStatus(ctx context.Context, name string, statu
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-
-
 	// 序列化状态
 	marshaler := protojson.MarshalOptions{
 		EmitUnpopulated: true,
@@ -115,7 +113,6 @@ func (r *fileStatusRepository) SetStatus(ctx context.Context, name string, statu
 func (r *fileStatusRepository) SetStatusWithKind(ctx context.Context, name, kind string, status *systemv1.ResourceStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
 	if status == nil {
 		return fmt.Errorf("status cannot be nil")
 	}
@@ -129,7 +126,6 @@ func (r *fileStatusRepository) SetStatusWithKind(ctx context.Context, name, kind
 	if err != nil {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
-
 	// 创建kind子目录
 	kindDir := filepath.Join(r.statusDir, kind)
 	if err := os.MkdirAll(kindDir, 0755); err != nil {
@@ -138,13 +134,12 @@ func (r *fileStatusRepository) SetStatusWithKind(ctx context.Context, name, kind
 
 	// 构建状态文件路径（在kind子目录中）
 	statusPath := filepath.Join(kindDir, name+".json")
-
 	// 原子性写入文件
 	if err := utils.AtomicWriteFile(data, statusPath, 0644); err != nil {
 		return fmt.Errorf("failed to write status file: %w", err)
 	}
 
-	r.logger.Debugf("status_repo", "Set status for resource %s/%s: %s (%s)", kind, name, status.Phase, status.Reason)
+	r.logger.Debugf("status_repo", "Set status for resource %s/%s: %s (%s) ,ObservedGeneration: %v", kind, name, status.Phase, status.Reason, status.ObservedGeneration)
 	return nil
 }
 

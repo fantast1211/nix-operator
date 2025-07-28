@@ -78,9 +78,9 @@ func ExampleNetworkManagerPriority() {
 	manager, _ := handler.detectNetworkManager(ctx)
 
 	switch manager.(type) {
-	case *OpenEulerIfupdown:
+	case *MockOpenEulerIfupdown:
 		fmt.Println("选择的网络管理器: ifupdown (优先级: 1)")
-	case *OpenEulerNetworkManager:
+	case *MockOpenEulerNetworkManager:
 		fmt.Println("选择的网络管理器: NetworkManager (优先级: 2)")
 
 	default:

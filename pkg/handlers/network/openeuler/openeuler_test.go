@@ -104,8 +104,8 @@ func TestOpenEulerNetworkHandler_NetworkManagerPriority(t *testing.T) {
 	}
 
 	// 在测试模式下，应该选择 ifupdown（优先级最高且模拟为可用）
-	if _, ok := manager.(*OpenEulerIfupdown); !ok {
-		t.Errorf("Expected OpenEulerIfupdown manager, got %T", manager)
+	if _, ok := manager.(*MockOpenEulerIfupdown); !ok {
+		t.Errorf("Expected MockOpenEulerIfupdown manager, got %T", manager)
 	}
 }
 
@@ -299,14 +299,14 @@ func TestCIDRToNetmask(t *testing.T) {
 		{"192.168.1.100/30", "255.255.255.252"},
 	}
 
-	// 创建测试用的 ifupdown 实例
+	// 创建真实的 ifupdown 实例来测试内部方法
 	osInfo := controller.OSInfo{
 		ID:         "openeuler",
 		VersionID:  "22.03",
 		KernelName: "Linux",
 		KernelVer:  "5.10.0",
 	}
-	ifupdown := NewOpenEulerIfupdownForTest(&osInfo)
+	ifupdown := NewOpenEulerIfupdown(&osInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.cidr, func(t *testing.T) {

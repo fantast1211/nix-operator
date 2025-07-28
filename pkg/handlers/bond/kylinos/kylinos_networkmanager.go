@@ -2,10 +2,12 @@ package kylinos
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -17,34 +19,23 @@ import (
 	"go.xbrother.com/nix-operator/pkg/utils"
 )
 
+//go:embed kylinos_networkmanager.tpl
+var kylinOSBondNetworkManagerTemplate string
+
 // KylinOSBondNetworkManager KylinOS NetworkManager Bond管理器
 type KylinOSBondNetworkManager struct {
-	osInfo   *controller.OSInfo
-	testMode bool
+	osInfo *controller.OSInfo
 }
 
 // NewKylinOSBondNetworkManager 创建KylinOS NetworkManager Bond实例
 func NewKylinOSBondNetworkManager(osInfo *controller.OSInfo) *KylinOSBondNetworkManager {
 	return &KylinOSBondNetworkManager{
-		osInfo:   osInfo,
-		testMode: false,
-	}
-}
-
-// NewKylinOSBondNetworkManagerForTest 创建测试用的KylinOS NetworkManager Bond实例
-func NewKylinOSBondNetworkManagerForTest(osInfo *controller.OSInfo) *KylinOSBondNetworkManager {
-	return &KylinOSBondNetworkManager{
-		osInfo:   osInfo,
-		testMode: true,
+		osInfo: osInfo,
 	}
 }
 
 // IsInstall 检查NetworkManager是否已安装
 func (nm *KylinOSBondNetworkManager) IsInstall(ctx context.Context) bool {
-	if nm.testMode {
-		return true
-	}
-
 	// 检查NetworkManager服务是否运行
 	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -76,10 +67,6 @@ func (nm *KylinOSBondNetworkManager) Configure(ctx context.Context, bondConfig t
 
 // ConfigureWithCheck 配置Bond接口并检查是否有变更
 func (nm *KylinOSBondNetworkManager) ConfigureWithCheck(ctx context.Context, bondConfig types.BondConfig) (bool, error) {
-	if nm.testMode {
-		return nm.mockConfigureWithCheck(ctx, bondConfig)
-	}
-
 	utils.Infof("bond", "Configuring KylinOS bond interface %s with NetworkManager", bondConfig.Name)
 
 	// 生成配置内容
@@ -93,21 +80,33 @@ func (nm *KylinOSBondNetworkManager) ConfigureWithCheck(ctx context.Context, bon
 
 	// 检查配置文件是否存在以及内容是否相同
 	existingData, err := os.ReadFile(configPath)
+	fileChanged := true
 	if err == nil {
 		// 文件存在，比较内容
 		if string(existingData) == configContent {
-			return false, nil // 配置未变更
+			utils.Debugf("bond", "KylinOS NetworkManager bond config for %s unchanged", bondConfig.Name)
+			fileChanged = false
 		}
 	}
 
-	// 写入配置文件
-	if err := utils.AtomicWriteFile([]byte(configContent), configPath, 0600); err != nil {
-		return false, fmt.Errorf("failed to write bond NetworkManager config: %v", err)
+	// 获取当前接口状态
+	currentStatus, err := nm.getCurrentInterfaceStatus(ctx, bondConfig.Name)
+	if err != nil {
+		utils.Warnf("bond", "Failed to get current interface status for bond %s: %v", bondConfig.Name, err)
+		// 继续执行，但假设需要重新加载
+	} else {
+		// 比较期望配置与当前状态
+		if !fileChanged && nm.compareBondConfig(bondConfig, currentStatus) {
+			utils.Infof("bond", "KylinOS NetworkManager bond config and interface status for bond %s are up-to-date, skipping reload", bondConfig.Name)
+			return false, nil // 配置和状态都未变更
+		}
 	}
 
-	changed := true
-
-	if changed {
+	// 写入配置文件（如果有变更）
+	if fileChanged {
+		if err := utils.AtomicWriteFile([]byte(configContent), configPath, 0600); err != nil {
+			return false, fmt.Errorf("failed to write bond NetworkManager config: %v", err)
+		}
 		utils.Infof("bond", "KylinOS NetworkManager bond config for %s updated", bondConfig.Name)
 
 		// 重新加载NetworkManager配置
@@ -115,38 +114,12 @@ func (nm *KylinOSBondNetworkManager) ConfigureWithCheck(ctx context.Context, bon
 			utils.Warnf("bond", "Failed to reload NetworkManager: %v", err)
 			// 不返回错误，因为配置文件已经更新
 		}
-	} else {
-		utils.Infof("bond", "KylinOS NetworkManager bond config for %s unchanged", bondConfig.Name)
 	}
 
-	return changed, nil
+	return true, nil // 配置已变更或需要重新加载
 }
 
-// mockConfigureWithCheck 模拟配置Bond接口（测试模式）
-func (nm *KylinOSBondNetworkManager) mockConfigureWithCheck(ctx context.Context, bondConfig types.BondConfig) (bool, error) {
-	// 验证Bond名称
-	if bondConfig.Name == "" {
-		return false, fmt.Errorf("bond name cannot be empty")
-	}
 
-	// 验证IPv4地址格式
-	if bondConfig.Network.IP != "" {
-		if _, _, err := net.ParseCIDR(bondConfig.Network.IP); err != nil {
-			return false, fmt.Errorf("invalid IPv4 CIDR format: %s", bondConfig.Network.IP)
-		}
-	}
-
-	utils.Infof("bond", "[TEST MODE] Configuring KylinOS bond interface %s with NetworkManager", bondConfig.Name)
-
-	// 生成配置内容进行验证
-	_, err := nm.generateBondConfig(bondConfig)
-	if err != nil {
-		return false, fmt.Errorf("failed to generate bond config: %v", err)
-	}
-
-	utils.Infof("bond", "[TEST MODE] KylinOS NetworkManager bond config for %s would be updated", bondConfig.Name)
-	return true, nil
-}
 
 // generateBondConfig 生成Bond配置内容
 func (nm *KylinOSBondNetworkManager) generateBondConfig(bondConfig types.BondConfig) (string, error) {
@@ -205,67 +178,23 @@ func (nm *KylinOSBondNetworkManager) generateBondConfig(bondConfig types.BondCon
 
 // getTemplateContent 获取模板内容
 func (nm *KylinOSBondNetworkManager) getTemplateContent(tmplPath string) (string, error) {
-	if nm.testMode {
-		// 测试模式下使用内嵌模板
-		return nm.getEmbeddedTemplate(), nil
+	// 优先从外部文件读取
+	if _, err := os.Stat(tmplPath); err == nil {
+		content, err := os.ReadFile(tmplPath)
+		if err != nil {
+			return "", err
+		}
+		return string(content), nil
 	}
 
-	// 生产模式下从文件读取
-	if _, err := os.Stat(tmplPath); os.IsNotExist(err) {
-		// 如果模板文件不存在，使用内嵌模板
-		return nm.getEmbeddedTemplate(), nil
-	}
-
-	content, err := os.ReadFile(tmplPath)
-	if err != nil {
-		return "", err
-	}
-	return string(content), nil
+	// 如果外部模板文件不存在，使用embed嵌入的模板
+	return kylinOSBondNetworkManagerTemplate, nil
 }
 
-// getEmbeddedTemplate 获取内嵌模板
-func (nm *KylinOSBondNetworkManager) getEmbeddedTemplate() string {
-	return `# KylinOS NetworkManager Bond Configuration for {{.BondConfig.Name}}
-# Generated by nix-operator
-# Template: kylinos_bond_nmconnection.tpl
 
-[connection]
-id={{.BondConfig.Name}}
-uuid={{generateUUID}}
-type=bond
-interface-name={{.BondConfig.Name}}
-autoconnect=true
-
-[bond]
-mode={{.BondConfig.Mode}}
-{{if .BondConfig.Miimon}}miimon={{.BondConfig.Miimon}}{{end}}
-{{range $key, $value := .BondConfig.Options.ExtraOptions}}{{$key}}={{$value}}
-{{end}}
-
-{{if .BondConfig.Network.IP}}[ipv4]
-method=manual
-{{$ipParts := splitCIDR .BondConfig.Network.IP}}address1={{index $ipParts 0}}/{{index $ipParts 1}}
-{{if .BondConfig.Network.Gateway}}gateway={{.BondConfig.Network.Gateway}}{{end}}
-{{if .BondConfig.Network.DNSServers}}dns={{range $i, $dns := .BondConfig.Network.DNSServers}}{{if $i}};{{end}}{{$dns}}{{end}};{{end}}
-{{else}}[ipv4]
-method=auto
-{{end}}
-
-[ipv6]
-method=ignore
-
-{{if .BondConfig.Network.MTU}}[ethernet]
-mtu={{.BondConfig.Network.MTU}}
-{{end}}
-`
-}
 
 // ReloadIfy 重新加载Bond配置
 func (nm *KylinOSBondNetworkManager) ReloadIfy(ctx context.Context) error {
-	if nm.testMode {
-		return nm.mockReloadIfy()
-	}
-
 	// KylinOS特定的Bond NetworkManager重载逻辑
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -277,22 +206,56 @@ func (nm *KylinOSBondNetworkManager) ReloadIfy(ctx context.Context) error {
 	}
 
 	// 2. 重新加载NetworkManager配置
-	if err := nm.reloadNetworkManager(ctx); err != nil {
-		return fmt.Errorf("failed to reload NetworkManager: %v", err)
+	cmd = exec.CommandContext(ctx, "nmcli", "connection", "reload")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to reload KylinOS Bond NetworkManager config: %v, output: %s", err, string(output))
+	}
+	utils.Info("bond", "KylinOS Bond NetworkManager connections reloaded successfully")
+
+	// 3. 获取所有nix-operator管理的bond连接
+	utils.Info("bond", "Listing KylinOS Bond NetworkManager connections")
+	cmd = exec.CommandContext(ctx, "nmcli", "-t", "-f", "NAME", "connection", "show")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to list connections: %v", err)
 	}
 
-	// 3. 等待网络稳定
+	// 4. 激活所有nix-operator bond连接
+	connections := strings.Split(strings.TrimSpace(string(output)), "\n")
+	bondConnections := 0
+	var activationErrors []string
+	
+	for _, conn := range connections {
+		if strings.HasPrefix(conn, "nix-operator-bond-") {
+			bondConnections++
+			utils.Infof("bond", "Activating KylinOS Bond NetworkManager connection: %s", conn)
+			ctx2, cancel2 := context.WithTimeout(ctx, 15*time.Second)
+			cmd = exec.CommandContext(ctx2, "nmcli", "connection", "up", conn)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				errorMsg := fmt.Sprintf("Failed to activate bond connection %s: %v, output: %s", conn, err, string(output))
+				utils.Errorf("bond", errorMsg)
+				activationErrors = append(activationErrors, errorMsg)
+			} else {
+				utils.Infof("bond", "Bond connection %s activated successfully", conn)
+			}
+			cancel2()
+		}
+	}
+	
+	// 如果有激活失败的连接，返回错误
+	if len(activationErrors) > 0 {
+		return fmt.Errorf("failed to activate %d bond connections: %s", len(activationErrors), strings.Join(activationErrors, "; "))
+	}
+
+	// 5. 等待网络稳定
 	time.Sleep(5 * time.Second)
 
-	utils.Infof("bond", "KylinOS Bond NetworkManager configuration applied successfully")
+	utils.Infof("bond", "KylinOS Bond NetworkManager reload completed: %d bond connections processed", bondConnections)
 	return nil
 }
 
-// mockReloadIfy 模拟重载Bond配置（测试模式）
-func (nm *KylinOSBondNetworkManager) mockReloadIfy() error {
-	utils.Infof("bond", "[TEST MODE] Reloading KylinOS bond NetworkManager configuration")
-	return nil
-}
+
 
 // reloadNetworkManager 重新加载NetworkManager
 func (nm *KylinOSBondNetworkManager) reloadNetworkManager(ctx context.Context) error {
@@ -345,11 +308,185 @@ func (nm *KylinOSBondNetworkManager) installTemplate() error {
 	tmplPath := "/etc/nix-operator/templates/kylinos_bond_nmconnection.tpl"
 	if _, err := os.Stat(tmplPath); os.IsNotExist(err) {
 		// 模板文件不存在，创建它
-		tmplContent := nm.getEmbeddedTemplate()
+		tmplContent := kylinOSBondNetworkManagerTemplate
 		if err := utils.AtomicWriteFile([]byte(tmplContent), tmplPath, 0644); err != nil {
 			return fmt.Errorf("failed to write template file: %v", err)
 		}
 		utils.Infof("bond", "Installed KylinOS bond NetworkManager template to %s", tmplPath)
 	}
 	return nil
+}
+
+// getCurrentInterfaceStatus 获取当前Bond接口状态
+func (nm *KylinOSBondNetworkManager) getCurrentInterfaceStatus(ctx context.Context, bondName string) (types.BondConfig, error) {
+	var currentStatus types.BondConfig
+	currentStatus.Name = bondName
+
+	// 使用nmcli获取接口信息
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// 获取IP地址
+	cmd := exec.CommandContext(ctx, "nmcli", "-t", "-f", "IP4.ADDRESS", "device", "show", bondName)
+	output, err := cmd.Output()
+	if err == nil {
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "IP4.ADDRESS") {
+				parts := strings.Split(line, ":")
+				if len(parts) > 1 {
+					currentStatus.Network.IP = strings.TrimSpace(parts[1])
+					break
+				}
+			}
+		}
+	}
+
+	// 获取网关
+	cmd = exec.CommandContext(ctx, "nmcli", "-t", "-f", "IP4.GATEWAY", "device", "show", bondName)
+	output, err = cmd.Output()
+	if err == nil {
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "IP4.GATEWAY") {
+				parts := strings.Split(line, ":")
+				if len(parts) > 1 {
+					currentStatus.Network.Gateway = strings.TrimSpace(parts[1])
+					break
+				}
+			}
+		}
+	}
+
+	// 获取DNS服务器
+	cmd = exec.CommandContext(ctx, "nmcli", "-t", "-f", "IP4.DNS", "device", "show", bondName)
+	output, err = cmd.Output()
+	if err == nil {
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "IP4.DNS") {
+				parts := strings.Split(line, ":")
+				if len(parts) > 1 {
+					dnsServer := strings.TrimSpace(parts[1])
+					if dnsServer != "" {
+						currentStatus.Network.DNSServers = append(currentStatus.Network.DNSServers, dnsServer)
+					}
+				}
+			}
+		}
+	}
+
+	// 获取MTU
+	cmd = exec.CommandContext(ctx, "nmcli", "-t", "-f", "GENERAL.MTU", "device", "show", bondName)
+	output, err = cmd.Output()
+	if err == nil {
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "GENERAL.MTU") {
+				parts := strings.Split(line, ":")
+				if len(parts) > 1 {
+					mtuStr := strings.TrimSpace(parts[1])
+					if mtu, err := strconv.Atoi(mtuStr); err == nil {
+						currentStatus.Network.MTU = mtu
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return currentStatus, nil
+}
+
+// compareBondConfig 比较期望配置与当前状态
+func (nm *KylinOSBondNetworkManager) compareBondConfig(expected types.BondConfig, current types.BondConfig) bool {
+	// 比较IP地址
+	if !nm.compareIPAddress(expected.Network.IP, current.Network.IP) {
+		utils.Debugf("bond", "IP address mismatch: expected %s, current %s", expected.Network.IP, current.Network.IP)
+		return false
+	}
+
+	// 比较网关
+	if expected.Network.Gateway != current.Network.Gateway {
+		utils.Debugf("bond", "Gateway mismatch: expected %s, current %s", expected.Network.Gateway, current.Network.Gateway)
+		return false
+	}
+
+	// 比较MTU
+	if expected.Network.MTU != 0 && expected.Network.MTU != current.Network.MTU {
+		utils.Debugf("bond", "MTU mismatch: expected %d, current %d", expected.Network.MTU, current.Network.MTU)
+		return false
+	}
+
+	// 比较DNS服务器
+	if !nm.compareStringSlices(expected.Network.DNSServers, current.Network.DNSServers) {
+		utils.Debugf("bond", "DNS servers mismatch: expected %v, current %v", expected.Network.DNSServers, current.Network.DNSServers)
+		return false
+	}
+
+	return true
+}
+
+// compareIPAddress 比较IP地址，支持CIDR格式
+func (nm *KylinOSBondNetworkManager) compareIPAddress(expected, current string) bool {
+	if expected == "" && current == "" {
+		return true
+	}
+	if expected == "" || current == "" {
+		return false
+	}
+
+	// 标准化IP地址格式
+	expectedNorm := nm.normalizeIPAddress(expected)
+	currentNorm := nm.normalizeIPAddress(current)
+
+	return expectedNorm == currentNorm
+}
+
+// normalizeIPAddress 标准化IP地址格式
+func (nm *KylinOSBondNetworkManager) normalizeIPAddress(ipStr string) string {
+	if ipStr == "" {
+		return ""
+	}
+
+	// 尝试解析CIDR格式
+	if strings.Contains(ipStr, "/") {
+		_, ipNet, err := net.ParseCIDR(ipStr)
+		if err == nil {
+			return ipNet.String()
+		}
+	}
+
+	// 尝试解析纯IP地址
+	ip := net.ParseIP(ipStr)
+	if ip != nil {
+		return ip.String()
+	}
+
+	return ipStr
+}
+
+// compareStringSlices 比较字符串切片，忽略顺序
+func (nm *KylinOSBondNetworkManager) compareStringSlices(expected, current []string) bool {
+	if len(expected) != len(current) {
+		return false
+	}
+
+	// 创建副本并排序
+	expectedCopy := make([]string, len(expected))
+	currentCopy := make([]string, len(current))
+	copy(expectedCopy, expected)
+	copy(currentCopy, current)
+
+	sort.Strings(expectedCopy)
+	sort.Strings(currentCopy)
+
+	// 逐一比较
+	for i := range expectedCopy {
+		if expectedCopy[i] != currentCopy[i] {
+			return false
+		}
+	}
+
+	return true
 }

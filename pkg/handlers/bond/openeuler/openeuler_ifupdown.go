@@ -5,10 +5,14 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -21,8 +25,7 @@ import (
 // OpenEulerBondIfupdown openEuler系统Bond ifupdown管理器
 // 专注于Bond虚拟网卡配置，只负责主接口配置
 type OpenEulerBondIfupdown struct {
-	osInfo   *controller.OSInfo
-	testMode bool // 测试模式标志
+	osInfo *controller.OSInfo
 }
 
 //go:embed openeuler_bond_ifcfg.tpl
@@ -43,25 +46,11 @@ type BondIfcfgData struct {
 // NewOpenEulerBondIfupdown 创建openEuler Bond Ifupdown实例
 func NewOpenEulerBondIfupdown(osInfo *controller.OSInfo) *OpenEulerBondIfupdown {
 	return &OpenEulerBondIfupdown{
-		osInfo:   osInfo,
-		testMode: false,
-	}
-}
-
-// NewOpenEulerBondIfupdownForTest 创建测试用的openEuler Bond Ifupdown实例
-func NewOpenEulerBondIfupdownForTest(osInfo *controller.OSInfo) *OpenEulerBondIfupdown {
-	return &OpenEulerBondIfupdown{
-		osInfo:   osInfo,
-		testMode: true,
+		osInfo: osInfo,
 	}
 }
 
 func (obi *OpenEulerBondIfupdown) IsInstall(ctx context.Context) bool {
-	// 测试模式下模拟检测逻辑
-	if obi.testMode {
-		return obi.mockIsInstall()
-	}
-
 	// 检查传统网络脚本目录是否存在
 	networkScriptsDir := "/etc/sysconfig/network-scripts"
 	if _, err := os.Stat(networkScriptsDir); err != nil {
@@ -114,11 +103,6 @@ func (obi *OpenEulerBondIfupdown) Configure(ctx context.Context, bondConfig type
 }
 
 func (obi *OpenEulerBondIfupdown) ConfigureWithCheck(ctx context.Context, bondConfig types.BondConfig) (bool, error) {
-	// 测试模式下模拟配置逻辑
-	if obi.testMode {
-		return obi.mockConfigureWithCheck(bondConfig)
-	}
-
 	// 验证Bond名称不能为空
 	if bondConfig.Name == "" {
 		return false, fmt.Errorf("bond name cannot be empty")
@@ -130,13 +114,32 @@ func (obi *OpenEulerBondIfupdown) ConfigureWithCheck(ctx context.Context, bondCo
 		return false, fmt.Errorf("failed to configure bond interface: %v", err)
 	}
 
+	// 获取当前接口状态
+	currentStatus, err := obi.getCurrentInterfaceStatus(ctx, bondConfig.Name)
+	if err != nil {
+		utils.Debugf("bond", "Failed to get current interface status for bond %s: %v", bondConfig.Name, err)
+	}
+
+	// 比较期望配置与当前状态
+	statusMatches := obi.compareBondConfig(bondConfig, currentStatus)
+
+	// 双重检查：配置文件未变更且当前状态匹配期望配置
+	if !bondChanged && statusMatches {
+		utils.Debugf("bond", "OpenEuler Bond Ifupdown config and interface status for bond %s both match expected, skipping reload", bondConfig.Name)
+		return false, nil // 无需重新加载
+	}
+
 	if bondChanged {
 		utils.Infof("bond", "OpenEuler Bond Ifupdown configuration written for bond %s", bondConfig.Name)
 	} else {
 		utils.Debugf("bond", "OpenEuler Bond Ifupdown config for bond %s unchanged", bondConfig.Name)
 	}
 
-	return bondChanged, nil
+	if !statusMatches {
+		utils.Infof("bond", "OpenEuler Bond interface %s status does not match expected configuration, reload required", bondConfig.Name)
+	}
+
+	return true, nil // 需要重新加载
 }
 
 func (obi *OpenEulerBondIfupdown) configureBondInterface(bondConfig types.BondConfig) (bool, error) {
@@ -214,11 +217,6 @@ func (obi *OpenEulerBondIfupdown) configureBondInterface(bondConfig types.BondCo
 }
 
 func (obi *OpenEulerBondIfupdown) ReloadIfy(ctx context.Context) error {
-	// 测试模式下模拟重载逻辑
-	if obi.testMode {
-		return obi.mockReloadIfy()
-	}
-
 	// openEuler特定的Bond网络重载逻辑
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -310,33 +308,161 @@ func (obi *OpenEulerBondIfupdown) manualActivateBond(ctx context.Context) error 
 	return nil
 }
 
-// 测试模式相关方法
-func (obi *OpenEulerBondIfupdown) mockIsInstall() bool {
-	// 模拟检测逻辑：假设bond ifupdown总是可用
-	utils.Info("bond", "[TEST MODE] openEuler bond ifupdown tools detected")
-	return true
-}
 
-func (obi *OpenEulerBondIfupdown) mockConfigureWithCheck(bondConfig types.BondConfig) (bool, error) {
-	// 验证Bond名称
-	if bondConfig.Name == "" {
-		return false, fmt.Errorf("bond name cannot be empty")
-	}
 
-	// 验证IPv4地址格式
-	if bondConfig.Network.IP != "" {
-		if _, _, err := net.ParseCIDR(bondConfig.Network.IP); err != nil {
-			return false, fmt.Errorf("invalid IPv4 CIDR format: %s", bondConfig.Network.IP)
+// getCurrentInterfaceStatus 获取当前Bond接口状态
+func (obi *OpenEulerBondIfupdown) getCurrentInterfaceStatus(ctx context.Context, bondName string) (types.BondConfig, error) {
+	var currentStatus types.BondConfig
+	currentStatus.Name = bondName
+
+	// 使用ip命令获取接口信息
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// 获取IP地址
+	cmd := exec.CommandContext(ctx, "ip", "addr", "show", bondName)
+	output, err := cmd.Output()
+	if err == nil {
+		// 解析IP地址
+		re := regexp.MustCompile(`inet\s+(\S+)`)
+		matches := re.FindStringSubmatch(string(output))
+		if len(matches) > 1 {
+			currentStatus.Network.IP = matches[1]
 		}
 	}
 
-	// 模拟配置逻辑：总是返回配置已变更
-	utils.Infof("bond", "[TEST MODE] openEuler bond ifcfg configuration simulated for bond %s", bondConfig.Name)
-	return true, nil
+	// 获取网关
+	cmd = exec.CommandContext(ctx, "ip", "route", "show", "default")
+	output, err = cmd.Output()
+	if err == nil {
+		// 解析默认网关
+		re := regexp.MustCompile(`default\s+via\s+(\S+)`)
+		matches := re.FindStringSubmatch(string(output))
+		if len(matches) > 1 {
+			currentStatus.Network.Gateway = matches[1]
+		}
+	}
+
+	// 获取DNS服务器
+	if data, err := ioutil.ReadFile("/etc/resolv.conf"); err == nil {
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "nameserver") {
+				parts := strings.Fields(line)
+				if len(parts) >= 2 {
+					currentStatus.Network.DNSServers = append(currentStatus.Network.DNSServers, parts[1])
+				}
+			}
+		}
+	}
+
+	// 获取MTU
+	cmd = exec.CommandContext(ctx, "ip", "link", "show", bondName)
+	output, err = cmd.Output()
+	if err == nil {
+		// 解析MTU
+		re := regexp.MustCompile(`mtu\s+(\d+)`)
+		matches := re.FindStringSubmatch(string(output))
+		if len(matches) > 1 {
+			if mtu, err := strconv.Atoi(matches[1]); err == nil {
+				currentStatus.Network.MTU = mtu
+			}
+		}
+	}
+
+	return currentStatus, nil
 }
 
-func (obi *OpenEulerBondIfupdown) mockReloadIfy() error {
-	// 模拟重载逻辑：总是成功
-	utils.Info("bond", "[TEST MODE] openEuler bond network service restart simulated")
-	return nil
+// compareBondConfig 比较期望配置与当前状态
+func (obi *OpenEulerBondIfupdown) compareBondConfig(expected types.BondConfig, current types.BondConfig) bool {
+	// 比较IP地址
+	if !obi.compareIPAddress(expected.Network.IP, current.Network.IP) {
+		utils.Debugf("bond", "IP address mismatch: expected %s, current %s", expected.Network.IP, current.Network.IP)
+		return false
+	}
+
+	// 比较网关
+	if expected.Network.Gateway != current.Network.Gateway {
+		utils.Debugf("bond", "Gateway mismatch: expected %s, current %s", expected.Network.Gateway, current.Network.Gateway)
+		return false
+	}
+
+	// 比较MTU
+	if expected.Network.MTU != 0 && expected.Network.MTU != current.Network.MTU {
+		utils.Debugf("bond", "MTU mismatch: expected %d, current %d", expected.Network.MTU, current.Network.MTU)
+		return false
+	}
+
+	// 比较DNS服务器
+	if !obi.compareStringSlices(expected.Network.DNSServers, current.Network.DNSServers) {
+		utils.Debugf("bond", "DNS servers mismatch: expected %v, current %v", expected.Network.DNSServers, current.Network.DNSServers)
+		return false
+	}
+
+	return true
+}
+
+// compareIPAddress 比较IP地址，支持CIDR格式
+func (obi *OpenEulerBondIfupdown) compareIPAddress(expected, current string) bool {
+	if expected == "" && current == "" {
+		return true
+	}
+	if expected == "" || current == "" {
+		return false
+	}
+
+	// 标准化IP地址格式
+	expectedNorm := obi.normalizeIPAddress(expected)
+	currentNorm := obi.normalizeIPAddress(current)
+
+	return expectedNorm == currentNorm
+}
+
+// normalizeIPAddress 标准化IP地址格式
+func (obi *OpenEulerBondIfupdown) normalizeIPAddress(ipStr string) string {
+	if ipStr == "" {
+		return ""
+	}
+
+	// 尝试解析CIDR格式
+	if strings.Contains(ipStr, "/") {
+		_, ipNet, err := net.ParseCIDR(ipStr)
+		if err == nil {
+			return ipNet.String()
+		}
+	}
+
+	// 尝试解析纯IP地址
+	ip := net.ParseIP(ipStr)
+	if ip != nil {
+		return ip.String()
+	}
+
+	return ipStr
+}
+
+// compareStringSlices 比较字符串切片，忽略顺序
+func (obi *OpenEulerBondIfupdown) compareStringSlices(expected, current []string) bool {
+	if len(expected) != len(current) {
+		return false
+	}
+
+	// 创建副本并排序
+	expectedCopy := make([]string, len(expected))
+	currentCopy := make([]string, len(current))
+	copy(expectedCopy, expected)
+	copy(currentCopy, current)
+
+	sort.Strings(expectedCopy)
+	sort.Strings(currentCopy)
+
+	// 逐一比较
+	for i := range expectedCopy {
+		if expectedCopy[i] != currentCopy[i] {
+			return false
+		}
+	}
+
+	return true
 }

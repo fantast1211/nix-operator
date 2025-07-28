@@ -30,7 +30,7 @@ func TestOpenEulerIfupdown_IsInstall(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var oif *OpenEulerIfupdown
+			var oif types.INetworkManager
 			if tt.testMode {
 				oif = NewOpenEulerIfupdownForTest(tt.osInfo)
 			} else {

@@ -26,17 +26,6 @@ func NewKylinOSBondHandler() *KylinOSBondHandler {
 	return &KylinOSBondHandler{}
 }
 
-// NewKylinOSBondHandlerForTest 创建测试用的KylinOS Bond处理器
-func NewKylinOSBondHandlerForTest(osInfo controller.OSInfo) *KylinOSBondHandler {
-	handler := &KylinOSBondHandler{
-		osInfo:   osInfo,
-		managers: []types.IBondManager{},
-	}
-	// 初始化测试模式的Bond管理器
-	handler.initializeTestManagers()
-	return handler
-}
-
 // 初始化模板函数
 func init() {
 	// 注册模板函数
@@ -143,22 +132,13 @@ func (h *KylinOSBondHandler) isKylinOSSupported(versionID string) bool {
 func (h *KylinOSBondHandler) initializeManagers() {
 	h.managers = []types.IBondManager{
 		// 1. ifupdown（优先级最高）
-		NewKylinOSBondIfupdown(&h.osInfo),
+		// NewKylinOSBondIfupdown(&h.osInfo),
 		// 2. NetworkManager（中等优先级）
 		NewKylinOSBondNetworkManager(&h.osInfo),
 		// 3. Netplan（优先级最低）
-		NewKylinOSBondNetplan(&h.osInfo),
+		// NewKylinOSBondNetplan(&h.osInfo),
 	}
 	utils.Infof("bond", "Initialized KylinOS %s bond managers with priority: ifupdown > NetworkManager > Netplan", h.osInfo.VersionID)
-}
-
-// initializeTestManagers 初始化测试模式的Bond管理器
-func (h *KylinOSBondHandler) initializeTestManagers() {
-	h.managers = []types.IBondManager{
-		// 测试模式下只使用ifupdown管理器
-		NewKylinOSBondIfupdownForTest(&h.osInfo),
-	}
-	utils.Infof("bond", "Initialized KylinOS %s test bond managers", h.osInfo.VersionID)
 }
 
 // detectBondManager 检测并选择合适的Bond管理器

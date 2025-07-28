@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -150,11 +152,25 @@ func (cbif *CentOSBondIfupdown) ConfigureWithCheck(ctx context.Context, bondConf
 	// 检查配置文件是否存在以及内容是否相同
 	configPath := fmt.Sprintf("/etc/sysconfig/network-scripts/ifcfg-%s", bondConfig.Name)
 	existingData, err := os.ReadFile(configPath)
+	fileChanged := true
 	if err == nil {
 		// 文件存在，比较内容
 		if bytes.Equal(existingData, newConfigData) {
-			utils.Debugf("bond", "CentOS bond ifcfg config for bond %s unchanged, skipping write", bondConfig.Name)
-			return false, nil // 配置未变更
+			utils.Debugf("bond", "CentOS bond ifcfg config for bond %s unchanged", bondConfig.Name)
+			fileChanged = false
+		}
+	}
+
+	// 获取当前接口状态
+	currentStatus, err := cbif.getCurrentInterfaceStatus(ctx, bondConfig.Name)
+	if err != nil {
+		utils.Warnf("bond", "Failed to get current interface status for bond %s: %v", bondConfig.Name, err)
+		// 继续执行，但假设需要重新加载
+	} else {
+		// 比较期望配置与当前状态
+		if !fileChanged && cbif.compareBondConfig(bondConfig, currentStatus) {
+			utils.Infof("bond", "CentOS bond ifcfg config and interface status for bond %s are up-to-date, skipping reload", bondConfig.Name)
+			return false, nil // 配置和状态都未变更
 		}
 	}
 
@@ -163,9 +179,12 @@ func (cbif *CentOSBondIfupdown) ConfigureWithCheck(ctx context.Context, bondConf
 		return false, fmt.Errorf("failed to create directory %s: %v", filepath.Dir(configPath), err)
 	}
 
-	// 写入配置文件
-	if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
-		return false, fmt.Errorf("failed to write CentOS bond ifcfg config: %v", err)
+	// 写入配置文件（如果有变更）
+	if fileChanged {
+		if err := utils.AtomicWriteFile(newConfigData, configPath, 0644); err != nil {
+			return false, fmt.Errorf("failed to write CentOS bond ifcfg config: %v", err)
+		}
+		utils.Infof("bond", "CentOS bond ifcfg configuration written for bond %s", bondConfig.Name)
 	}
 
 	// 如果配置了DNS，更新 /etc/resolv.conf
@@ -175,8 +194,7 @@ func (cbif *CentOSBondIfupdown) ConfigureWithCheck(ctx context.Context, bondConf
 		}
 	}
 
-	utils.Infof("bond", "CentOS bond ifcfg configuration written for bond %s", bondConfig.Name)
-	return true, nil // 配置已变更
+	return true, nil // 配置已变更或需要重新加载
 }
 
 func (cbif *CentOSBondIfupdown) ReloadIfy(ctx context.Context) error {
@@ -232,4 +250,183 @@ func (cbif *CentOSBondIfupdown) updateResolvConf(nameservers []string) error {
 	}
 
 	return nil
+}
+
+// getCurrentInterfaceStatus 获取当前Bond接口状态
+func (cbif *CentOSBondIfupdown) getCurrentInterfaceStatus(ctx context.Context, bondName string) (types.BondConfig, error) {
+	var currentStatus types.BondConfig
+	currentStatus.Name = bondName
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// 获取IP地址和子网掩码
+	cmd := exec.CommandContext(ctx, "ip", "addr", "show", bondName)
+	output, err := cmd.Output()
+	if err == nil {
+		// 解析IP地址
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.Contains(line, "inet ") && !strings.Contains(line, "127.0.0.1") {
+				parts := strings.Fields(line)
+				for i, part := range parts {
+					if part == "inet" && i+1 < len(parts) {
+						currentStatus.Network.IP = parts[i+1]
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// 获取默认网关
+	cmd = exec.CommandContext(ctx, "ip", "route", "show", "default")
+	output, err = cmd.Output()
+	if err == nil {
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "default via") {
+				parts := strings.Fields(line)
+				for i, part := range parts {
+					if part == "via" && i+1 < len(parts) {
+						currentStatus.Network.Gateway = parts[i+1]
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// 获取MTU
+	cmd = exec.CommandContext(ctx, "ip", "link", "show", bondName)
+	output, err = cmd.Output()
+	if err == nil {
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "mtu") {
+				parts := strings.Fields(line)
+				for i, part := range parts {
+					if part == "mtu" && i+1 < len(parts) {
+						if mtu, err := strconv.Atoi(parts[i+1]); err == nil {
+							currentStatus.Network.MTU = mtu
+						}
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// 读取DNS服务器
+	if data, err := os.ReadFile("/etc/resolv.conf"); err == nil {
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "nameserver ") {
+				dnsServer := strings.TrimSpace(strings.TrimPrefix(line, "nameserver"))
+				if dnsServer != "" {
+					currentStatus.Network.DNSServers = append(currentStatus.Network.DNSServers, dnsServer)
+				}
+			}
+		}
+	}
+
+	return currentStatus, nil
+}
+
+// compareBondConfig 比较期望配置与当前状态
+func (cbif *CentOSBondIfupdown) compareBondConfig(expected types.BondConfig, current types.BondConfig) bool {
+	// 比较IP地址
+	if !cbif.compareIPAddress(expected.Network.IP, current.Network.IP) {
+		utils.Debugf("bond", "IP address mismatch: expected %s, current %s", expected.Network.IP, current.Network.IP)
+		return false
+	}
+
+	// 比较网关
+	if expected.Network.Gateway != current.Network.Gateway {
+		utils.Debugf("bond", "Gateway mismatch: expected %s, current %s", expected.Network.Gateway, current.Network.Gateway)
+		return false
+	}
+
+	// 比较MTU
+	if expected.Network.MTU != 0 && expected.Network.MTU != current.Network.MTU {
+		utils.Debugf("bond", "MTU mismatch: expected %d, current %d", expected.Network.MTU, current.Network.MTU)
+		return false
+	}
+
+	// 比较DNS服务器
+	if !cbif.compareStringSlices(expected.Network.DNSServers, current.Network.DNSServers) {
+		utils.Debugf("bond", "DNS servers mismatch: expected %v, current %v", expected.Network.DNSServers, current.Network.DNSServers)
+		return false
+	}
+
+	return true
+}
+
+// compareIPAddress 比较IP地址，支持CIDR格式
+func (cbif *CentOSBondIfupdown) compareIPAddress(expected, current string) bool {
+	if expected == "" && current == "" {
+		return true
+	}
+	if expected == "" || current == "" {
+		return false
+	}
+
+	// 标准化IP地址格式
+	expectedNorm := cbif.normalizeIPAddress(expected)
+	currentNorm := cbif.normalizeIPAddress(current)
+
+	return expectedNorm == currentNorm
+}
+
+// normalizeIPAddress 标准化IP地址格式
+func (cbif *CentOSBondIfupdown) normalizeIPAddress(ipStr string) string {
+	if ipStr == "" {
+		return ""
+	}
+
+	// 尝试解析CIDR格式
+	if strings.Contains(ipStr, "/") {
+		_, ipNet, err := net.ParseCIDR(ipStr)
+		if err == nil {
+			return ipNet.String()
+		}
+	}
+
+	// 尝试解析纯IP地址
+	ip := net.ParseIP(ipStr)
+	if ip != nil {
+		return ip.String()
+	}
+
+	return ipStr
+}
+
+// compareStringSlices 比较字符串切片，忽略顺序
+func (cbif *CentOSBondIfupdown) compareStringSlices(expected, current []string) bool {
+	if len(expected) != len(current) {
+		return false
+	}
+
+	// 创建副本并排序
+	expectedCopy := make([]string, len(expected))
+	currentCopy := make([]string, len(current))
+	copy(expectedCopy, expected)
+	copy(currentCopy, current)
+
+	sort.Strings(expectedCopy)
+	sort.Strings(currentCopy)
+
+	// 逐一比较
+	for i := range expectedCopy {
+		if expectedCopy[i] != currentCopy[i] {
+			return false
+		}
+	}
+
+	return true
 }

@@ -126,19 +126,30 @@ func (nm *NetworkManager) ReloadIfy(ctx context.Context) error {
 	// 3. 激活所有nix-operator连接
 	connections := strings.Split(strings.TrimSpace(string(output)), "\n")
 	nixOperatorConnections := 0
+	var activationErrors []string
+	
 	for _, conn := range connections {
 		if strings.HasPrefix(conn, "nix-operator-") {
 			nixOperatorConnections++
 			utils.Infof("network", "Activating Linux NetworkManager connection: %s", conn)
-			cmd = exec.CommandContext(ctx, "nmcli", "connection", "up", conn)
+			ctx2, cancel2 := context.WithTimeout(ctx, 15*time.Second)
+			cmd = exec.CommandContext(ctx2, "nmcli", "connection", "up", conn)
 			if output, err := cmd.CombinedOutput(); err != nil {
-				// 记录警告但继续处理其他连接
-				utils.Infof("network", "Warning: failed to activate connection %s: %v, output: %s", conn, err, string(output))
+				errorMsg := fmt.Sprintf("Failed to activate connection %s: %v, output: %s", conn, err, string(output))
+				utils.Errorf("network", errorMsg)
+				activationErrors = append(activationErrors, errorMsg)
 			} else {
 				utils.Infof("network", "Connection %s activated successfully", conn)
 			}
+			cancel2()
 		}
 	}
+	
+	// 如果有激活失败的连接，返回错误
+	if len(activationErrors) > 0 {
+		return fmt.Errorf("failed to activate %d connections: %s", len(activationErrors), strings.Join(activationErrors, "; "))
+	}
+	
 	utils.Infof("network", "Linux NetworkManager reload completed: %d nix-operator connections processed", nixOperatorConnections)
 
 	return nil

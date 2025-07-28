@@ -84,8 +84,8 @@ func TestKylinOSNetworkHandler_detectNetworkManager(t *testing.T) {
 	}
 
 	// 验证返回的是 ifupdown（优先级最高）
-	if _, ok := manager.(*KylinOSIfupdown); !ok {
-		t.Errorf("Expected KylinOSIfupdown manager, got %T", manager)
+	if _, ok := manager.(*MockKylinOSIfupdown); !ok {
+		t.Errorf("Expected MockKylinOSIfupdown manager, got %T", manager)
 	}
 }
 

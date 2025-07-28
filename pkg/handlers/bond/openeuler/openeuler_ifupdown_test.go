@@ -2,7 +2,6 @@ package openeuler
 
 import (
 	"context"
-	"net"
 	"testing"
 	"time"
 
@@ -31,12 +30,7 @@ func TestOpenEulerBondIfupdown_IsInstall(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var obi *OpenEulerBondIfupdown
-			if tt.testMode {
-				obi = NewOpenEulerBondIfupdownForTest(tt.osInfo)
-			} else {
-				obi = NewOpenEulerBondIfupdown(tt.osInfo)
-			}
+			obi := NewOpenEulerBondIfupdownForTest(tt.osInfo)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -173,37 +167,6 @@ func TestBondModeNames(t *testing.T) {
 			got := types.GetBondModeName(tt.mode)
 			if got != tt.want {
 				t.Errorf("GetBondModeName(%d) = %v, want %v", tt.mode, got, tt.want)
-			}
-		})
-	}
-}
-
-// TestCidrToNetmask 测试CIDR到子网掩码转换
-func TestCidrToNetmask(t *testing.T) {
-	tests := []struct {
-		cidr string
-		want string
-	}{
-		{"192.168.1.100/24", "255.255.255.0"},
-		{"10.0.0.1/8", "255.0.0.0"},
-		{"172.16.0.1/16", "255.255.0.0"},
-		{"192.168.1.100/30", "255.255.255.252"},
-	}
-
-	obi := NewOpenEulerBondIfupdownForTest(&controller.OSInfo{
-		ID:        "openeuler",
-		VersionID: "22.03",
-	})
-
-	for _, tt := range tests {
-		t.Run(tt.cidr, func(t *testing.T) {
-			_, ipNet, err := net.ParseCIDR(tt.cidr)
-			if err != nil {
-				t.Fatalf("Failed to parse CIDR %s: %v", tt.cidr, err)
-			}
-			got := obi.cidrToNetmask(ipNet)
-			if got != tt.want {
-				t.Errorf("cidrToNetmask(%s) = %v, want %v", tt.cidr, got, tt.want)
 			}
 		})
 	}

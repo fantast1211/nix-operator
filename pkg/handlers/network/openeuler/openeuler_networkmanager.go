@@ -20,8 +20,7 @@ import (
 
 // OpenEulerNetworkManager openEuler 专用的 NetworkManager 实现
 type OpenEulerNetworkManager struct {
-	osInfo   *controller.OSInfo
-	testMode bool // 测试模式标志
+	osInfo *controller.OSInfo
 }
 
 //go:embed openeuler_nmconnection.tpl
@@ -30,24 +29,11 @@ var openeulerNmConnectionTemplate string
 // NewOpenEulerNetworkManager 创建 openEuler NetworkManager 实例
 func NewOpenEulerNetworkManager(osInfo *controller.OSInfo) *OpenEulerNetworkManager {
 	return &OpenEulerNetworkManager{
-		osInfo:   osInfo,
-		testMode: false,
-	}
-}
-
-// NewOpenEulerNetworkManagerForTest 创建测试用的 openEuler NetworkManager 实例
-func NewOpenEulerNetworkManagerForTest(osInfo *controller.OSInfo) *OpenEulerNetworkManager {
-	return &OpenEulerNetworkManager{
-		osInfo:   osInfo,
-		testMode: true,
+		osInfo: osInfo,
 	}
 }
 
 func (onm *OpenEulerNetworkManager) IsInstall(ctx context.Context) bool {
-	// 测试模式下模拟检测逻辑
-	if onm.testMode {
-		return onm.mockIsInstall()
-	}
 
 	// 检查NetworkManager服务是否运行
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -89,9 +75,6 @@ func (onm *OpenEulerNetworkManager) Configure(ctx context.Context, iface types.I
 
 // getCurrentInterfaceStatus 获取当前网络接口的实际状态
 func (onm *OpenEulerNetworkManager) getCurrentInterfaceStatus(ctx context.Context, ifaceName string) (*types.Interface, error) {
-	if onm.testMode {
-		return nil, fmt.Errorf("test mode: interface status check not implemented")
-	}
 
 	currentIface := &types.Interface{
 		Name: ifaceName,
@@ -311,11 +294,6 @@ func (onm *OpenEulerNetworkManager) compareBondConfig(expected, current *types.B
 func (onm *OpenEulerNetworkManager) ConfigureWithCheck(ctx context.Context, iface types.Interface) (bool, error) {
 	utils.Infof("network", "Starting openEuler NetworkManager configuration for interface %s", iface.Name)
 
-	// 测试模式下模拟配置逻辑
-	if onm.testMode {
-		return onm.mockConfigureWithCheck(iface)
-	}
-
 	// 验证接口名称不能为空
 	if iface.Name == "" {
 		return false, fmt.Errorf("interface name cannot be empty")
@@ -432,10 +410,6 @@ func (onm *OpenEulerNetworkManager) ConfigureWithCheck(ctx context.Context, ifac
 }
 
 func (onm *OpenEulerNetworkManager) ReloadIfy(ctx context.Context) error {
-	// 测试模式下模拟重载逻辑
-	if onm.testMode {
-		return onm.mockReloadIfy()
-	}
 
 	// openEuler 特定的网络重载逻辑
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -457,43 +431,32 @@ func (onm *OpenEulerNetworkManager) ReloadIfy(ctx context.Context) error {
 
 	// 3. 激活所有nix-operator连接
 	connections := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var activationErrors []string
+	
 	for _, conn := range connections {
 		if strings.HasPrefix(conn, "nix-operator-") {
 			// openEuler 可能需要更长的等待时间
 			ctx2, cancel2 := context.WithTimeout(ctx, 15*time.Second)
 			cmd = exec.CommandContext(ctx2, "nmcli", "connection", "up", conn)
 			if output, err := cmd.CombinedOutput(); err != nil {
-				// 记录警告但继续处理其他连接
-				utils.Errorf("network", "Failed to activate connection %s: %v, output: %s", conn, err, string(output))
+				errorMsg := fmt.Sprintf("Failed to activate connection %s: %v, output: %s", conn, err, string(output))
+				utils.Errorf("network", errorMsg)
+				activationErrors = append(activationErrors, errorMsg)
 			} else {
 				utils.Infof("network", "Successfully activated connection %s", conn)
 			}
 			cancel2()
 		}
 	}
+	
+	// 如果有激活失败的连接，返回错误
+	if len(activationErrors) > 0 {
+		return fmt.Errorf("failed to activate %d connections: %s", len(activationErrors), strings.Join(activationErrors, "; "))
+	}
 
 	// 4. openEuler 特定：等待网络稳定
 	time.Sleep(2 * time.Second)
 
 	utils.Infof("network", "openEuler NetworkManager configuration reloaded successfully")
-	return nil
-}
-
-// 测试模式相关方法
-func (onm *OpenEulerNetworkManager) mockIsInstall() bool {
-	// 模拟检测逻辑：假设NetworkManager不可用（优先级低于ifupdown）
-	utils.Info("network", "[TEST MODE] openEuler NetworkManager not detected (simulated)")
-	return false
-}
-
-func (onm *OpenEulerNetworkManager) mockConfigureWithCheck(iface types.Interface) (bool, error) {
-	// 模拟配置逻辑：总是返回配置已变更
-	utils.Infof("network", "[TEST MODE] openEuler NetworkManager configuration simulated for interface %s", iface.Name)
-	return true, nil
-}
-
-func (onm *OpenEulerNetworkManager) mockReloadIfy() error {
-	// 模拟重载逻辑：总是成功
-	utils.Info("network", "[TEST MODE] openEuler NetworkManager reload simulated")
 	return nil
 }
