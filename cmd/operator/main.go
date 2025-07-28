@@ -94,7 +94,7 @@ func StartHTTPServer(ctx context.Context, logger *utils.Logger, cancel context.C
 // initializeLogger 初始化日志系统
 func initializeLogger() (*utils.Logger, error) {
 	// 初始化日志系统
-	if err := utils.InitLogger("xtopus"); err != nil {
+	if err := utils.InitLogger("xnixOperator"); err != nil {
 		return nil, fmt.Errorf("failed to initialize logger: %v", err)
 	}
 
@@ -194,7 +194,7 @@ func main() {
 		cancel() // 触发上下文取消，通知所有组件优雅关闭
 	}()
 
-	logger.Info("main", "Initializing xtopus operator with three-tier architecture...")
+	logger.Info("main", "Initializing xnixOperator operator with three-tier architecture...")
 
 	// 生成节点配置文件
 	if err := utils.GenerateNodeConfigFile(*nodeDir); err != nil {
@@ -228,7 +228,7 @@ func main() {
 		}
 	}
 
-	logger.Infof("main", "Starting xtopus operator with config directory: %s", *configDir)
+	logger.Infof("main", "Starting xnixOperator operator with config directory: %s", *configDir)
 
 	// 等待上下文取消（可能来自信号或组件错误）
 	<-ctx.Done()

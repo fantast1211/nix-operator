@@ -6,7 +6,7 @@
             "properties": {
                 "nodes": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.NodeConfig"
+                        "$ref": "#/definitions/api.system.v1.NodeConfig"
                     },
                     "type": "array"
                 }
@@ -15,7 +15,7 @@
             "type": "object",
             "title": "List Nodes Response"
         },
-        "xtopus.api.system.v1.NodeConfig": {
+        "api.system.v1.NodeConfig": {
             "properties": {
                 "name": {
                     "type": "string"

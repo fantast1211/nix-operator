@@ -5,7 +5,7 @@
         "BondConfigurationSpec": {
             "properties": {
                 "node_selector": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "$ref": "#/definitions/api.system.v1.NodeSelector",
                     "additionalProperties": true,
                     "description": "节点选择器"
                 },
@@ -23,12 +23,12 @@
                     "description": "链路监测间隔（单位：毫秒）"
                 },
                 "network": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.BondNetworkConfig",
+                    "$ref": "#/definitions/api.system.v1.BondNetworkConfig",
                     "additionalProperties": true,
                     "description": "网络配置（IP、网关、DNS、MTU）"
                 },
                 "options": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.BondOptions",
+                    "$ref": "#/definitions/api.system.v1.BondOptions",
                     "additionalProperties": true,
                     "description": "可选参数（如 downdelay、updelay）"
                 }
@@ -38,7 +38,7 @@
             "title": "Bond Configuration Spec",
             "description": "Bond 主设备配置项"
         },
-        "xtopus.api.system.v1.BondNetworkConfig": {
+        "api.system.v1.BondNetworkConfig": {
             "properties": {
                 "ip": {
                     "pattern": "^((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])(\\/([1-9]|[1-2][0-9]|3[0-2]))?$",
@@ -68,7 +68,7 @@
             "title": "Bond配置相关定义",
             "description": "Bond配置相关定义  Bond 接口网络配置"
         },
-        "xtopus.api.system.v1.BondOptions": {
+        "api.system.v1.BondOptions": {
             "properties": {
                 "extra_options": {
                     "additionalProperties": {
@@ -83,7 +83,7 @@
             "title": "Bond Options",
             "description": "Bond 高级选项（可选字段）"
         },
-        "xtopus.api.system.v1.NodeSelector": {
+        "api.system.v1.NodeSelector": {
             "properties": {
                 "machine_id": {
                     "type": "string",

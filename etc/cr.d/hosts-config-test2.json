@@ -13,7 +13,7 @@
     }
   },
   "spec":  {
-    "@type":  "type.googleapis.com/xtopus.api.system.v1.HostsConfigurationSpec",
+    "@type":  "type.googleapis.com/xnixOperator.api.system.v1.HostsConfigurationSpec",
     "nodeSelector":  {
       "machineId":  "different-machine-456"
     },

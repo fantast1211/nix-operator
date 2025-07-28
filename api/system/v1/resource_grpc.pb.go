@@ -44,7 +44,7 @@ func NewSystemConfigServiceClient(cc grpc.ClientConnInterface) SystemConfigServi
 
 func (c *systemConfigServiceClient) ListResourceConfigs(ctx context.Context, in *ListResourceConfigsRequest, opts ...grpc.CallOption) (*ListResourceConfigsResponse, error) {
 	out := new(ListResourceConfigsResponse)
-	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/ListResourceConfigs", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.system.v1.SystemConfigService/ListResourceConfigs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (c *systemConfigServiceClient) ListResourceConfigs(ctx context.Context, in 
 
 func (c *systemConfigServiceClient) GetResourceConfig(ctx context.Context, in *GetResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error) {
 	out := new(ResourceConfig)
-	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/GetResourceConfig", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.system.v1.SystemConfigService/GetResourceConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (c *systemConfigServiceClient) GetResourceConfig(ctx context.Context, in *G
 
 func (c *systemConfigServiceClient) UpdateResourceConfig(ctx context.Context, in *UpdateResourceConfigRequest, opts ...grpc.CallOption) (*ResourceConfig, error) {
 	out := new(ResourceConfig)
-	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/UpdateResourceConfig", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.system.v1.SystemConfigService/UpdateResourceConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (c *systemConfigServiceClient) UpdateResourceConfig(ctx context.Context, in
 
 func (c *systemConfigServiceClient) GetResourceSchemas(ctx context.Context, in *GetResourceSchemasRequest, opts ...grpc.CallOption) (*GetResourceSchemasResponse, error) {
 	out := new(GetResourceSchemasResponse)
-	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/GetResourceSchemas", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.system.v1.SystemConfigService/GetResourceSchemas", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (c *systemConfigServiceClient) GetResourceSchemas(ctx context.Context, in *
 
 func (c *systemConfigServiceClient) ListNodes(ctx context.Context, in *ListNodesRequest, opts ...grpc.CallOption) (*ListNodesResponse, error) {
 	out := new(ListNodesResponse)
-	err := c.cc.Invoke(ctx, "/xtopus.api.system.v1.SystemConfigService/ListNodes", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.system.v1.SystemConfigService/ListNodes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func _SystemConfigService_ListResourceConfigs_Handler(srv interface{}, ctx conte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xtopus.api.system.v1.SystemConfigService/ListResourceConfigs",
+		FullMethod: "/api.system.v1.SystemConfigService/ListResourceConfigs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemConfigServiceServer).ListResourceConfigs(ctx, req.(*ListResourceConfigsRequest))
@@ -164,7 +164,7 @@ func _SystemConfigService_GetResourceConfig_Handler(srv interface{}, ctx context
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xtopus.api.system.v1.SystemConfigService/GetResourceConfig",
+		FullMethod: "/api.system.v1.SystemConfigService/GetResourceConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemConfigServiceServer).GetResourceConfig(ctx, req.(*GetResourceConfigRequest))
@@ -182,7 +182,7 @@ func _SystemConfigService_UpdateResourceConfig_Handler(srv interface{}, ctx cont
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xtopus.api.system.v1.SystemConfigService/UpdateResourceConfig",
+		FullMethod: "/api.system.v1.SystemConfigService/UpdateResourceConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemConfigServiceServer).UpdateResourceConfig(ctx, req.(*UpdateResourceConfigRequest))
@@ -200,7 +200,7 @@ func _SystemConfigService_GetResourceSchemas_Handler(srv interface{}, ctx contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xtopus.api.system.v1.SystemConfigService/GetResourceSchemas",
+		FullMethod: "/api.system.v1.SystemConfigService/GetResourceSchemas",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemConfigServiceServer).GetResourceSchemas(ctx, req.(*GetResourceSchemasRequest))
@@ -218,7 +218,7 @@ func _SystemConfigService_ListNodes_Handler(srv interface{}, ctx context.Context
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/xtopus.api.system.v1.SystemConfigService/ListNodes",
+		FullMethod: "/api.system.v1.SystemConfigService/ListNodes",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemConfigServiceServer).ListNodes(ctx, req.(*ListNodesRequest))
@@ -230,7 +230,7 @@ func _SystemConfigService_ListNodes_Handler(srv interface{}, ctx context.Context
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var SystemConfigService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "xtopus.api.system.v1.SystemConfigService",
+	ServiceName: "api.system.v1.SystemConfigService",
 	HandlerType: (*SystemConfigServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

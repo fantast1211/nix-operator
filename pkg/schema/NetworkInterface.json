@@ -40,7 +40,7 @@
                     "description": "DNS 服务器列表"
                 },
                 "bonding_slave": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.BondingSlaveConfig",
+                    "$ref": "#/definitions/api.system.v1.BondingSlaveConfig",
                     "additionalProperties": true,
                     "description": "网卡作为 bond 从属配置"
                 }
@@ -50,7 +50,7 @@
             "title": "Network Interface",
             "description": "网络接口配置项"
         },
-        "xtopus.api.system.v1.BondingSlaveConfig": {
+        "api.system.v1.BondingSlaveConfig": {
             "properties": {
                 "enabled": {
                     "type": "boolean",

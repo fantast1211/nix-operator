@@ -254,7 +254,7 @@ func RegisterSystemConfigServiceHandlerServer(ctx context.Context, mux *runtime.
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/ListResourceConfigs", runtime.WithHTTPPathPattern("/v1/resources"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.system.v1.SystemConfigService/ListResourceConfigs", runtime.WithHTTPPathPattern("/v1/resources"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -278,7 +278,7 @@ func RegisterSystemConfigServiceHandlerServer(ctx context.Context, mux *runtime.
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/GetResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.system.v1.SystemConfigService/GetResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -302,7 +302,7 @@ func RegisterSystemConfigServiceHandlerServer(ctx context.Context, mux *runtime.
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/UpdateResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.system.v1.SystemConfigService/UpdateResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -326,7 +326,7 @@ func RegisterSystemConfigServiceHandlerServer(ctx context.Context, mux *runtime.
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/GetResourceSchemas", runtime.WithHTTPPathPattern("/v1/schemas"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.system.v1.SystemConfigService/GetResourceSchemas", runtime.WithHTTPPathPattern("/v1/schemas"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -350,7 +350,7 @@ func RegisterSystemConfigServiceHandlerServer(ctx context.Context, mux *runtime.
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/ListNodes", runtime.WithHTTPPathPattern("/v1/nodes"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.system.v1.SystemConfigService/ListNodes", runtime.WithHTTPPathPattern("/v1/nodes"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -413,7 +413,7 @@ func RegisterSystemConfigServiceHandlerClient(ctx context.Context, mux *runtime.
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/ListResourceConfigs", runtime.WithHTTPPathPattern("/v1/resources"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/api.system.v1.SystemConfigService/ListResourceConfigs", runtime.WithHTTPPathPattern("/v1/resources"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -434,7 +434,7 @@ func RegisterSystemConfigServiceHandlerClient(ctx context.Context, mux *runtime.
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/GetResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/api.system.v1.SystemConfigService/GetResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -455,7 +455,7 @@ func RegisterSystemConfigServiceHandlerClient(ctx context.Context, mux *runtime.
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/UpdateResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/api.system.v1.SystemConfigService/UpdateResourceConfig", runtime.WithHTTPPathPattern("/v1/resources/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -476,7 +476,7 @@ func RegisterSystemConfigServiceHandlerClient(ctx context.Context, mux *runtime.
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/GetResourceSchemas", runtime.WithHTTPPathPattern("/v1/schemas"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/api.system.v1.SystemConfigService/GetResourceSchemas", runtime.WithHTTPPathPattern("/v1/schemas"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -497,7 +497,7 @@ func RegisterSystemConfigServiceHandlerClient(ctx context.Context, mux *runtime.
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/xtopus.api.system.v1.SystemConfigService/ListNodes", runtime.WithHTTPPathPattern("/v1/nodes"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/api.system.v1.SystemConfigService/ListNodes", runtime.WithHTTPPathPattern("/v1/nodes"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return

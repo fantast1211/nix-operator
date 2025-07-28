@@ -5,7 +5,7 @@
         "TimeConfigurationSpec": {
             "properties": {
                 "node_selector": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "$ref": "#/definitions/api.system.v1.NodeSelector",
                     "additionalProperties": true,
                     "description": "节点选择器"
                 },
@@ -14,7 +14,7 @@
                     "description": "时区设置（如 Asia/Shanghai）"
                 },
                 "ntp": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.NtpConfig",
+                    "$ref": "#/definitions/api.system.v1.NtpConfig",
                     "additionalProperties": true,
                     "description": "NTP 配置"
                 }
@@ -24,7 +24,7 @@
             "title": "时间配置相关定义",
             "description": "时间配置相关定义  时间配置项"
         },
-        "xtopus.api.system.v1.NodeSelector": {
+        "api.system.v1.NodeSelector": {
             "properties": {
                 "machine_id": {
                     "type": "string",
@@ -36,7 +36,7 @@
             "title": "Node Selector",
             "description": "节点选择器"
         },
-        "xtopus.api.system.v1.NtpConfig": {
+        "api.system.v1.NtpConfig": {
             "properties": {
                 "enable": {
                     "type": "boolean",

@@ -5,7 +5,7 @@
         "HostsConfigurationSpec": {
             "properties": {
                 "node_selector": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "$ref": "#/definitions/api.system.v1.NodeSelector",
                     "additionalProperties": true,
                     "description": "节点选择器"
                 },
@@ -15,7 +15,7 @@
                 },
                 "hosts": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.HostEntry"
+                        "$ref": "#/definitions/api.system.v1.HostEntry"
                     },
                     "type": "array",
                     "description": "hosts 条目列表"
@@ -26,7 +26,7 @@
             "title": "Hosts 配置相关定义",
             "description": "Hosts 配置相关定义  Hosts 配置项"
         },
-        "xtopus.api.system.v1.HostEntry": {
+        "api.system.v1.HostEntry": {
             "properties": {
                 "ip": {
                     "type": "string",
@@ -45,7 +45,7 @@
             "title": "Host Entry",
             "description": "Hosts 条目"
         },
-        "xtopus.api.system.v1.NodeSelector": {
+        "api.system.v1.NodeSelector": {
             "properties": {
                 "machine_id": {
                     "type": "string",

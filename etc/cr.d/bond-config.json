@@ -11,7 +11,7 @@
       "annotations": {}
     },
     "spec": {
-      "@type": "type.googleapis.com/xtopus.api.system.v1.BondConfigurationSpec",
+      "@type": "type.googleapis.com/xnixOperator.api.system.v1.BondConfigurationSpec",
       "name": "bond0",
       "mode": 1,
       "miimon": 100,

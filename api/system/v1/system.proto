@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package xtopus.api.system.v1;
+package api.system.v1;
 
 option go_package = "go.xbrother.com/nix-operator/api/system/v1";
 

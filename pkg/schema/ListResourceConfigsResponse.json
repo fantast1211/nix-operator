@@ -6,7 +6,7 @@
             "properties": {
                 "resources": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig"
+                        "$ref": "#/definitions/api.system.v1.ResourceConfig"
                     },
                     "type": "array"
                 }
@@ -15,7 +15,7 @@
             "type": "object",
             "title": "List Resource Configs Response"
         },
-        "xtopus.api.system.v1.Metadata": {
+        "api.system.v1.Metadata": {
             "properties": {
                 "name": {
                     "type": "string"
@@ -49,7 +49,7 @@
             "type": "object",
             "title": "Metadata"
         },
-        "xtopus.api.system.v1.ResourceConfig": {
+        "api.system.v1.ResourceConfig": {
             "properties": {
                 "api_version": {
                     "type": "string"
@@ -59,7 +59,7 @@
                     "description": "HostsConfiguration, TimeConfiguration, NetworkConfiguration"
                 },
                 "metadata": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.Metadata",
+                    "$ref": "#/definitions/api.system.v1.Metadata",
                     "additionalProperties": true
                 },
                 "spec": {
@@ -80,7 +80,7 @@
                     "description": "使用Any类型支持强类型"
                 },
                 "status": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceStatus",
+                    "$ref": "#/definitions/api.system.v1.ResourceStatus",
                     "additionalProperties": true,
                     "description": "资源状态"
                 }
@@ -90,7 +90,7 @@
             "title": "Resource Config",
             "description": "资源配置"
         },
-        "xtopus.api.system.v1.ResourceStatus": {
+        "api.system.v1.ResourceStatus": {
             "properties": {
                 "phase": {
                     "type": "string",

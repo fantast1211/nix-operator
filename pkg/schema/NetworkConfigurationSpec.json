@@ -5,13 +5,13 @@
         "NetworkConfigurationSpec": {
             "properties": {
                 "node_selector": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.NodeSelector",
+                    "$ref": "#/definitions/api.system.v1.NodeSelector",
                     "additionalProperties": true,
                     "description": "节点选择器（用于定位目标节点）"
                 },
                 "interfaces": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.NetworkInterface"
+                        "$ref": "#/definitions/api.system.v1.NetworkInterface"
                     },
                     "type": "array",
                     "description": "网络接口列表"
@@ -22,7 +22,7 @@
             "title": "网络相关配置定义",
             "description": "网络相关配置定义  多接口网络配置项"
         },
-        "xtopus.api.system.v1.BondingSlaveConfig": {
+        "api.system.v1.BondingSlaveConfig": {
             "properties": {
                 "enabled": {
                     "type": "boolean",
@@ -38,7 +38,7 @@
             "title": "Bonding Slave Config",
             "description": "网卡作为 bond 从属配置"
         },
-        "xtopus.api.system.v1.NetworkInterface": {
+        "api.system.v1.NetworkInterface": {
             "properties": {
                 "name": {
                     "type": "string",
@@ -76,7 +76,7 @@
                     "description": "DNS 服务器列表"
                 },
                 "bonding_slave": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.BondingSlaveConfig",
+                    "$ref": "#/definitions/api.system.v1.BondingSlaveConfig",
                     "additionalProperties": true,
                     "description": "网卡作为 bond 从属配置"
                 }
@@ -86,7 +86,7 @@
             "title": "Network Interface",
             "description": "网络接口配置项"
         },
-        "xtopus.api.system.v1.NodeSelector": {
+        "api.system.v1.NodeSelector": {
             "properties": {
                 "machine_id": {
                     "type": "string",

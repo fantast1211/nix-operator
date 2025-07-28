@@ -6,7 +6,7 @@
             "properties": {
                 "schemas": {
                     "items": {
-                        "$ref": "#/definitions/xtopus.api.system.v1.ResourceSchema"
+                        "$ref": "#/definitions/api.system.v1.ResourceSchema"
                     },
                     "type": "array"
                 }
@@ -15,7 +15,7 @@
             "type": "object",
             "title": "Get Resource Schemas Response"
         },
-        "xtopus.api.system.v1.ResourceSchema": {
+        "api.system.v1.ResourceSchema": {
             "properties": {
                 "kind": {
                     "type": "string",

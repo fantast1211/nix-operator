@@ -12,7 +12,7 @@
                     "description": "HostsConfiguration, TimeConfiguration, NetworkConfiguration"
                 },
                 "metadata": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.Metadata",
+                    "$ref": "#/definitions/api.system.v1.Metadata",
                     "additionalProperties": true
                 },
                 "spec": {
@@ -33,7 +33,7 @@
                     "description": "使用Any类型支持强类型"
                 },
                 "status": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceStatus",
+                    "$ref": "#/definitions/api.system.v1.ResourceStatus",
                     "additionalProperties": true,
                     "description": "资源状态"
                 }
@@ -43,7 +43,7 @@
             "title": "Resource Config",
             "description": "资源配置"
         },
-        "xtopus.api.system.v1.Metadata": {
+        "api.system.v1.Metadata": {
             "properties": {
                 "name": {
                     "type": "string"
@@ -77,7 +77,7 @@
             "type": "object",
             "title": "Metadata"
         },
-        "xtopus.api.system.v1.ResourceStatus": {
+        "api.system.v1.ResourceStatus": {
             "properties": {
                 "phase": {
                     "type": "string",

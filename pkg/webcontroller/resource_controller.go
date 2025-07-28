@@ -95,7 +95,7 @@ func (s *SystemConfigServiceServer) GetResourceSchemas(ctx context.Context, req 
 	for _, info := range schemaInfos {
 		// 根据 kind 生成 typeUrl
 		typeUrl := s.generateTypeUrl(info.Kind)
-		
+
 		schemas = append(schemas, &v1.ResourceSchema{
 			Kind:        info.Kind,
 			DisplayName: info.DisplayName,
@@ -129,7 +129,7 @@ func (s *SystemConfigServiceServer) ListNodes(ctx context.Context, req *v1.ListN
 
 // generateTypeUrl 根据 kind 生成 typeUrl
 func (s *SystemConfigServiceServer) generateTypeUrl(kind string) string {
-	return fmt.Sprintf("type.googleapis.com/xtopus.api.system.v1.%sSpec", kind)
+	return fmt.Sprintf("type.googleapis.com/api.system.v1.%sSpec", kind)
 }
 
 // validateSpec 校验 spec 内容

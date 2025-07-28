@@ -5,15 +5,15 @@
         "Resource": {
             "properties": {
                 "config": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
+                    "$ref": "#/definitions/xnixOperator.api.system.v1.ResourceConfig",
                     "additionalProperties": true
                 },
                 "effective_config": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceConfig",
+                    "$ref": "#/definitions/xnixOperator.api.system.v1.ResourceConfig",
                     "additionalProperties": true
                 },
                 "status": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.ResourceStatus",
+                    "$ref": "#/definitions/xnixOperator.api.system.v1.ResourceStatus",
                     "additionalProperties": true
                 }
             },
@@ -21,7 +21,7 @@
             "type": "object",
             "title": "Resource"
         },
-        "xtopus.api.system.v1.Metadata": {
+        "xnixOperator.api.system.v1.Metadata": {
             "properties": {
                 "name": {
                     "type": "string"
@@ -55,7 +55,7 @@
             "type": "object",
             "title": "Metadata"
         },
-        "xtopus.api.system.v1.ResourceConfig": {
+        "xnixOperator.api.system.v1.ResourceConfig": {
             "properties": {
                 "api_version": {
                     "type": "string"
@@ -65,7 +65,7 @@
                     "description": "HostsConfiguration, TimeConfiguration, NetworkConfiguration"
                 },
                 "metadata": {
-                    "$ref": "#/definitions/xtopus.api.system.v1.Metadata",
+                    "$ref": "#/definitions/xnixOperator.api.system.v1.Metadata",
                     "additionalProperties": true
                 },
                 "spec": {
@@ -91,7 +91,7 @@
             "title": "Resource Config",
             "description": "资源配置"
         },
-        "xtopus.api.system.v1.ResourceStatus": {
+        "xnixOperator.api.system.v1.ResourceStatus": {
             "properties": {
                 "phase": {
                     "type": "string",

@@ -11,7 +11,7 @@
     "annotations":  {}
   },
   "spec":  {
-    "@type":  "type.googleapis.com/xtopus.api.system.v1.NetworkConfigurationSpec",
+    "@type":  "type.googleapis.com/xnixOperator.api.system.v1.NetworkConfigurationSpec",
     "nodeSelector":  {
       "machineId":  "f73d3081950241aa90f73dc54ebc57e0",
       "ip":  ""

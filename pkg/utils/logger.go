@@ -70,7 +70,7 @@ func NewLogger(serviceName string) (*Logger, error) {
 
 	// 创建带轮转的日志写入器
 	infoWriter := &lumberjack.Logger{
-		Filename:   filepath.Join(logDir, "xtopus.log"),
+		Filename:   filepath.Join(logDir, "xnixOperator.log"),
 		MaxSize:    getEnvInt("LOG_MAX_SIZE", 1), // MB
 		MaxBackups: getEnvInt("LOG_MAX_BACKUPS", 5),
 		MaxAge:     getEnvInt("LOG_MAX_AGE", 30), // days
@@ -78,7 +78,7 @@ func NewLogger(serviceName string) (*Logger, error) {
 	}
 
 	errorWriter := &lumberjack.Logger{
-		Filename:   filepath.Join(logDir, "xtopus_error.log"),
+		Filename:   filepath.Join(logDir, "xnixOperator_error.log"),
 		MaxSize:    getEnvInt("LOG_MAX_SIZE", 10), // MB
 		MaxBackups: getEnvInt("LOG_MAX_BACKUPS", 5),
 		MaxAge:     getEnvInt("LOG_MAX_AGE", 30), // days
